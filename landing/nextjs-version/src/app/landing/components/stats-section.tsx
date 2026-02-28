@@ -13,27 +13,27 @@ import { DotPattern } from '@/components/dot-pattern'
 const stats = [
   {
     icon: Package,
-    value: '500+',
-    label: 'Components',
-    description: 'Ready-to-use blocks'
+    value: '3k+',
+    label: 'Clientes',
+    description: 'Mais de 3 mil clientes ativos na plataforma'
   },
   {
     icon: Download,
-    value: '25K+',
-    label: 'Downloads',
-    description: 'Trusted worldwide'
+    value: '700M+',
+    label: 'Em investimento',
+    description: 'Mais de R$ 700 milhões controlados'
   },
   {
     icon: Users,
-    value: '10K+',
-    label: 'Developers',
-    description: 'Active community'
+    value: '100K+',
+    label: 'Economia',
+    description: 'Mais de R$ 100 mil economizados em taxas e impostos'
   },
   {
     icon: Star,
-    value: '4.9',
-    label: 'Rating',
-    description: 'User satisfaction'
+    value: '4.8',
+    label: 'Nota',
+    description: 'Nota excelente em satisfação do cliente'
   }
 ]
 
