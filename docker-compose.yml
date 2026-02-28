@@ -1,0 +1,46 @@
+services:
+  back:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    restart: always
+    env_file:
+      - .env
+
+  front:
+    build:
+      context: ./front/vite-version
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - back
+    restart: always
+    env_file:
+      - .env
+
+  landing:
+    build:
+      context: ./landing/nextjs-version
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    restart: always
+    env_file:
+      - .env
+
+  db:
+    image: postgres:18
+    container_name: rendatop-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.data/postgres:/var/lib/postgresql
+    restart: always
+    env_file:
+      - .env
+
+volumes:
+  postgres_data:

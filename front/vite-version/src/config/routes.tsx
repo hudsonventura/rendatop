@@ -12,6 +12,9 @@ const Users = lazy(() => import('@/app/users/page'))
 const FAQs = lazy(() => import('@/app/faqs/page'))
 const Pricing = lazy(() => import('@/app/pricing/page'))
 
+// Pages
+const NovoInvestimentoPage = lazy(() => import('@/app/pages/NovoInvestimentoPage'))
+
 // Auth pages
 const SignIn = lazy(() => import('@/app/auth/sign-in/page'))
 const SignIn2 = lazy(() => import('@/app/auth/sign-in-2/page'))
@@ -51,7 +54,6 @@ export const routes: RouteConfig[] = [
     path: "/",
     element: <Navigate to="dashboard" replace />
   },
-
 
   // Dashboard Routes
   {
@@ -93,6 +95,12 @@ export const routes: RouteConfig[] = [
   {
     path: "/pricing",
     element: <Pricing />
+  },
+
+  // Pages
+  {
+    path: "/NovoInvestimento",
+    element: <NovoInvestimentoPage />
   },
 
   // Authentication Routes
