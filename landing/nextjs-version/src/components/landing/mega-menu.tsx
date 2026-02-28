@@ -16,89 +16,53 @@ import {
 
 const menuSections = [
   {
-    title: 'Browse Products',
+    title: 'Controle Financeiro',
     items: [
       {
-        title: 'Free Blocks',
-        description: 'Essential UI components and sections',
+        title: 'Controle de juros',
+        description: 'Saiba exatamente quanto você receberá de juros',
         icon: Package,
         href: '#free-blocks'
       },
       {
-        title: 'Premium Templates',
-        description: 'Complete page templates and layouts',
+        title: 'Taxas e impostos',
+        description: 'Controle as taxas e impostos para minimizar os custos',
         icon: Crown,
         href: '#premium-templates'
-      },
-      {
-        title: 'Admin Dashboards',
-        description: 'Full-featured dashboard solutions',
-        icon: BarChart3,
-        href: '#admin-dashboards'
-      },
-      {
-        title: 'Landing Pages',
-        description: 'Marketing and product landing templates',
-        icon: Layout,
-        href: '#landing-pages'
       }
     ]
   },
   {
-    title: 'Categories',
+    title: 'Controle de Tempo',
     items: [
       {
-        title: 'E-commerce',
-        description: 'Online store admin panels and components',
+        title: 'Notificações',
+        description: 'Seja notificado antes do vencimento do investimento',
         icon: Building2,
         href: '#ecommerce'
       },
       {
-        title: 'SaaS Dashboards',
-        description: 'Application admin interfaces',
+        title: 'Próximos vencimentos',
+        description: 'Sabas quais serão os próximos investimentos a serem liquidados',
         icon: Rocket,
         href: '#saas-dashboards'
-      },
-      {
-        title: 'Analytics',
-        description: 'Data visualization and reporting templates',
-        icon: BarChart3,
-        href: '#analytics'
-      },
-      {
-        title: 'Authentication',
-        description: 'Login, signup, and user management pages',
-        icon: Shield,
-        href: '#authentication'
       }
     ]
   },
   {
-    title: 'Resources',
+    title: 'Controle Gráfico',
     items: [
       {
-        title: 'Documentation',
-        description: 'Integration guides and setup instructions',
+        title: 'Graficos e Indicadores',
+        description: 'Acompanhe a evolução do seu patrimonio',
         icon: Database,
         href: '#docs'
       },
       {
-        title: 'Component Showcase',
-        description: 'Interactive preview of all components',
+        title: 'Relatórios',
+        description: 'Liste e exporte para TXT, PDF ou Excel todos os seus investimento',
         icon: Palette,
         href: '#showcase'
-      },
-      {
-        title: 'GitHub Repository',
-        description: 'Open source foundation and community',
-        icon: Settings,
-        href: '#github'
-      },
-      {
-        title: 'Design System',
-        description: 'shadcn/ui standards and customization',
-        icon: Zap,
-        href: '#design-system'
       }
     ]
   }

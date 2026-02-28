@@ -31,7 +31,6 @@ import { useTheme } from '@/hooks/use-theme'
 
 const navigationItems = [
     { name: 'Home', href: '#hero' },
-    //{ name: 'Features', href: '#features' },
     { name: 'Características', href: '#features', hasMegaMenu: true },
     { name: 'Team', href: '#team' },
     //{ name: 'Pricing', href: '#pricing' },
@@ -41,7 +40,7 @@ const navigationItems = [
 
 // Solutions menu items for mobile
 const solutionsItems = [
-    { title: 'Browse Products' },
+    { title: 'Browse ssss' },
     { name: 'Free Blocks', href: '#free-blocks' },
     { name: 'Premium Templates', href: '#premium-templates' },
     { name: 'Admin Dashboards', href: '#admin-dashboards' },
