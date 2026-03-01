@@ -5,11 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "back (launch)",
+            "name": "api (launch)",
             "type": "coreclr",
             "request": "launch",
-            "program": "${command:dotrush.activeTargetPath}",
-            "preLaunchTask": "dotrush: Build"
+            "preLaunchTask": "dotrush: Build",
+            "program": "${workspaceFolder}/api/bin/Debug/net10.0/api.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "console": "internalConsole"
         }
     ]
 }

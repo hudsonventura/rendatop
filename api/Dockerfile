@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
 WORKDIR /src
 
 # Copy csproj and restore dependencies
-COPY back.csproj .
+COPY api.csproj .
 RUN dotnet restore
 
 # Copy the rest and publish
@@ -19,4 +19,4 @@ COPY --from=build /app/publish .
 EXPOSE 5000
 ENV ASPNETCORE_URLS=http://+:5000
 
-ENTRYPOINT ["dotnet", "back.dll"]
+ENTRYPOINT ["dotnet", "api.dll"]
