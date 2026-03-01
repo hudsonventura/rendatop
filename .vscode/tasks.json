@@ -1,0 +1,43 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "docker compose up db",
+            "type": "shell",
+            "command": "docker compose up -d db",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "docker compose down",
+            "type": "shell",
+            "command": "docker compose down",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Prepare Debug",
+            "dependsOn": [
+                "docker compose up db",
+                "dotrush: Build"
+            ],
+            "dependsOrder": "sequence"
+        },
+        {
+            "label": "Cleanup Debug",
+            "dependsOn": [
+                "docker compose down"
+            ]
+        }
+    ]
+}
