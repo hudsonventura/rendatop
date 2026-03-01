@@ -10,7 +10,10 @@ namespace back;
 
 public class DBContext : DbContext
 {
-    public DBContext(DbContextOptions<DBContext> options, IConfiguration appsettings) : base(options);
+    public DBContext(DbContextOptions<DBContext> options, IConfiguration appsettings) : base(options)
+    {
+        
+    }
 
 
     public DbSet<User> Users { get; set; }
