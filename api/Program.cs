@@ -1,4 +1,6 @@
+using api.repositories;
 using back;
+using back.domain;
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,8 +34,23 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+if (app.Environment.IsDevelopment())
+{
+    await PopulateFakeDatabase();
+}
+
 app.Run();
 
+
+void AutoMigration()
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        var context = services.GetRequiredService<DBContext>();
+        context.Database.Migrate();
+    }
+}
 
 void DepenciesInjection()
 {
@@ -54,16 +71,27 @@ void DepenciesInjection()
         Console.WriteLine(connectionString);
         options.UseNpgsql(connectionString);
     });
+
+    builder.Services.AddScoped<UserRepository>();
 }
 
 
 
-void AutoMigration()
+
+
+
+async Task PopulateFakeDatabase()
 {
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
-        var context = services.GetRequiredService<DBContext>();
-        context.Database.Migrate();
+        var user_repo = services.GetRequiredService<UserRepository>();
+
+        await user_repo.Create(new User
+        {
+            Name = "Hudson Ventura",
+            Email = "[EMAIL_ADDRESS]",
+            Password = "[PASSWORD]"
+        });
     }
 }

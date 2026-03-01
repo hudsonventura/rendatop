@@ -10,11 +10,7 @@ namespace back;
 
 public class DBContext : DbContext
 {
-    private string stringConnection = $@"NOT SET YET";
-    public DBContext(DbContextOptions<DBContext> options, IConfiguration appsettings) : base(options)
-    {
-        stringConnection = appsettings.GetConnectionString("DefaultConnection");
-    }
+    public DBContext(DbContextOptions<DBContext> options, IConfiguration appsettings) : base(options);
 
 
     public DbSet<User> Users { get; set; }
