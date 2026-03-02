@@ -35,5 +35,9 @@ public class User
     [Column("password")]
     public string Password { get; set; } = string.Empty;
 
-
+    /// <summary>
+    /// Salt para criptografia
+    /// </summary>
+    [Column("salt")]
+    public string Salt { get; set; } = string.Empty;
 }

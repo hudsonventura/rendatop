@@ -1,4 +1,5 @@
 using api.repositories;
+using api.services;
 using back;
 using back.domain;
 using DotNetEnv;
@@ -15,12 +16,26 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-DepenciesInjection();
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins(
+                Environment.GetEnvironmentVariable("CORS_ORIGIN") ?? "http://localhost:5173"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
+bool go_on = DepenciesInjection();
+
 
 
 var app = builder.Build();
 
-AutoMigration();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -30,14 +45,21 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("AllowFrontend");
+
 app.UseAuthorization();
 
 app.MapControllers();
 
 if (app.Environment.IsDevelopment())
 {
+    Thread.Sleep(TimeSpan.FromSeconds(10));
+    AutoMigration();
     await PopulateFakeDatabase();
 }
+
+if (!go_on)
+    return;
 
 app.Run();
 
@@ -52,27 +74,29 @@ void AutoMigration()
     }
 }
 
-void DepenciesInjection()
+bool DepenciesInjection()
 {
 
+    string host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? string.Empty;
+    string port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? string.Empty;
+    string db = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? string.Empty;
+    string user = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? string.Empty;
+    string password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? string.Empty;
+
+    string connectionString = $"Host={host};Port={port};Database={db};Username={user};Password={password}";
+
+    
+    Console.WriteLine(connectionString);
     builder.Services.AddDbContext<DBContext>(options =>
     {
-        string host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? string.Empty;
-        string port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? string.Empty;
-        string db = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? string.Empty;
-        string user = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? string.Empty;
-        string password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? string.Empty;
-
-        string connectionString = $"Host={host};Port={port};Database={db};Username={user};Password={password}";
-
-        if (string.IsNullOrEmpty(host))
-            throw new Exception($"Is the .env file in the correct place? I cannot read POSTGRES_HOST. I'm looking at {Environment.CurrentDirectory}");
-
-        Console.WriteLine(connectionString);
         options.UseNpgsql(connectionString);
     });
+    if (string.IsNullOrEmpty(host)) return false; //em caso de não conseguir obter o host do banco, retorna false e impede que o app inicie. //TODO: Melhorar o retorno do erro
+    //    throw new Exception($"Is the .env file in the correct place? I cannot read POSTGRES_HOST. I'm looking at {Environment.CurrentDirectory}");
+
 
     builder.Services.AddScoped<UserRepository>();
+    return true;
 }
 
 
@@ -90,8 +114,9 @@ async Task PopulateFakeDatabase()
         await user_repo.Create(new User
         {
             Name = "Hudson Ventura",
-            Email = "[EMAIL_ADDRESS]",
-            Password = "[PASSWORD]"
+            Email = "teste@teste.com",
+            Password = Encrypt.HashPassword("123456", Guid.NewGuid().ToString()),
+            Salt = Guid.NewGuid().ToString()
         });
     }
 }

@@ -13,6 +13,7 @@ const FAQs = lazy(() => import('@/app/faqs/page'))
 const Pricing = lazy(() => import('@/app/pricing/page'))
 
 // Pages
+const LoginPage = lazy(() => import('@/app/pages/Login'))
 const NovoInvestimentoPage = lazy(() => import('@/app/pages/NovoInvestimentoPage'))
 
 // Auth pages
@@ -98,6 +99,10 @@ export const routes: RouteConfig[] = [
   },
 
   // Pages
+  {
+    path: "/login",
+    element: <LoginPage />
+  },
   {
     path: "/NovoInvestimento",
     element: <NovoInvestimentoPage />

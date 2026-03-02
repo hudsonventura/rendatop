@@ -36,6 +36,8 @@ public class UserRepository
     {
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+        user.Password = null;
+        user.Salt = null;
         return user;
     }
 
