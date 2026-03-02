@@ -30,7 +30,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-bool go_on = DepenciesInjection();
+Result go_on = DepenciesInjection();
 
 
 
@@ -58,8 +58,11 @@ if (app.Environment.IsDevelopment())
     await PopulateFakeDatabase();
 }
 
-if (!go_on)
+if (go_on.IsFailure)
+{
+    Console.WriteLine(go_on.Message);
     return;
+}
 
 app.Run();
 
@@ -74,7 +77,7 @@ void AutoMigration()
     }
 }
 
-bool DepenciesInjection()
+Result DepenciesInjection()
 {
 
     string host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? string.Empty;
@@ -91,12 +94,12 @@ bool DepenciesInjection()
     {
         options.UseNpgsql(connectionString);
     });
-    if (string.IsNullOrEmpty(host)) return false; //em caso de não conseguir obter o host do banco, retorna false e impede que o app inicie. //TODO: Melhorar o retorno do erro
-    //    throw new Exception($"Is the .env file in the correct place? I cannot read POSTGRES_HOST. I'm looking at {Environment.CurrentDirectory}");
+    if (string.IsNullOrEmpty(host))
+        return Result.Failure($"Is the .env file in the correct place? I cannot read POSTGRES_HOST. I'm looking at {Environment.CurrentDirectory}");
 
 
     builder.Services.AddScoped<UserRepository>();
-    return true;
+    return Result.Success();
 }
 
 

@@ -20,7 +20,7 @@ const NovoInvestimentoPage = lazy(() => import('@/app/pages/NovoInvestimentoPage
 const SignIn = lazy(() => import('@/app/auth/sign-in/page'))
 const SignIn2 = lazy(() => import('@/app/auth/sign-in-2/page'))
 const SignIn3 = lazy(() => import('@/app/auth/sign-in-3/page'))
-const SignUp = lazy(() => import('@/app/auth/sign-up/page'))
+const SignUp = lazy(() => import('@/app/pages/SingUp'))
 const SignUp2 = lazy(() => import('@/app/auth/sign-up-2/page'))
 const SignUp3 = lazy(() => import('@/app/auth/sign-up-3/page'))
 const ForgotPassword = lazy(() => import('@/app/auth/forgot-password/page'))

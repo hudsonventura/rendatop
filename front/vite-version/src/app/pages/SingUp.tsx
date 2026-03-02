@@ -1,4 +1,4 @@
-import { SignupForm1 } from "./components/signup-form-1"
+import { SignupForm1 } from "../auth/sign-up/components/signup-form-1"
 import { Logo } from "@/components/logo"
 
 export default function SignUpPage() {
@@ -9,7 +9,7 @@ export default function SignUpPage() {
           <div className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-md">
             <Logo size={24} />
           </div>
-          ShadcnStore
+          RendaTop
         </a>
         <SignupForm1 />
       </div>

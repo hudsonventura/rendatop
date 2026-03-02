@@ -14,6 +14,32 @@
             }
         },
         {
+            "label": "npm run dev",
+            "type": "shell",
+            "command": "npm run dev",
+            "isBackground": true,
+            "options": {
+                "cwd": "${workspaceFolder}/front/vite-version"
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "dedicated"
+            },
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^$",
+                    "file": 1,
+                    "line": 2,
+                    "message": 3
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "VITE",
+                    "endsPattern": "ready in"
+                }
+            }
+        },
+        {
             "label": "docker compose down",
             "type": "shell",
             "command": "docker compose down",
@@ -26,12 +52,20 @@
             }
         },
         {
-            "label": "Prepare Debug",
+            "label": "Prepare Infra",
             "dependsOn": [
                 "docker compose up db",
                 "dotrush: Build"
             ],
             "dependsOrder": "sequence"
+        },
+        {
+            "label": "Prepare Debug",
+            "dependsOn": [
+                "npm run dev",
+                "Prepare Infra"
+            ],
+            "dependsOrder": "parallel"
         },
         {
             "label": "Cleanup Debug",
