@@ -113,13 +113,13 @@ async Task PopulateFakeDatabase()
     {
         var services = scope.ServiceProvider;
         var user_repo = services.GetRequiredService<UserRepository>();
-
+        string salt = Guid.NewGuid().ToString();
         await user_repo.Create(new User
         {
             Name = "Hudson Ventura",
             Email = "teste@teste.com",
-            Password = Encrypt.HashPassword("123456", Guid.NewGuid().ToString()),
-            Salt = Guid.NewGuid().ToString()
+            Password = Encrypt.HashPassword("123456", salt),
+            Salt = salt
         });
     }
 }

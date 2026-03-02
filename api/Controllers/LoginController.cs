@@ -21,9 +21,16 @@ public class LoginController : ControllerBase
 
 
     [HttpPost("/login")]
-    public IActionResult Post(LoginRequest request)
+    public async Task<Result> Post(LoginRequest request)
     {
-        return Ok();
+        var user = _userRepository.GetByEmail(request.Email);
+        if (user is null)
+            return Result.Failure("Usuário ou senha incorretos");
+        
+        if (!Encrypt.VerifyPassword(request.Password, user.Salt, user.Password))
+            return  Result.Failure("Usuário ou senha incorretos");
+        
+        return Result.Success();
     }
 
     [HttpPost("/login/create")]

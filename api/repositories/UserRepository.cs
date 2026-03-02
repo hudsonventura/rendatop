@@ -22,9 +22,9 @@ public class UserRepository
         return await _context.Users.FindAsync(id);
     }
 
-    public async Task<User> GetByEmail(string email)
+    public User GetByEmail(string email)
     {
-        return await _context.Users.FirstOrDefaultAsync<User>(u => u.Email == email);
+        return _context.Users.FirstOrDefault(u => u.Email == email);
     }
 
     public async Task<List<User>> GetAll()

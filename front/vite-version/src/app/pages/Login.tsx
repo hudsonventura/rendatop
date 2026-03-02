@@ -52,26 +52,30 @@ export default function LoginPage() {
         setErrorMessage(null)
 
         try {
-            const response = await httpClient.post<{ token?: string }>("/login", {
+            const response = await httpClient.post<{
+                isSuccess: boolean
+                isFailure: boolean
+                message?: string
+                data?: { token?: string }
+            }>("/login", {
                 email: data.email,
                 password: data.password,
             })
 
+            if (response.isFailure) {
+                setErrorMessage(response.message || "E-mail ou senha incorretos.")
+                return
+            }
+
             // Se a API retornar um token, salva no localStorage
-            if (response && typeof response === "object" && "token" in response) {
-                localStorage.setItem("token", response.token as string)
+            if (response.data?.token) {
+                localStorage.setItem("token", response.data.token)
             }
 
             navigate("/dashboard")
         } catch (error) {
             if (error instanceof HttpError) {
-                if (error.status === 401) {
-                    setErrorMessage("E-mail ou senha incorretos.")
-                } else if (error.status === 400) {
-                    setErrorMessage("Dados inválidos. Verifique os campos e tente novamente.")
-                } else {
-                    setErrorMessage("Erro ao fazer login. Tente novamente mais tarde.")
-                }
+                setErrorMessage("Erro ao fazer login. Tente novamente mais tarde.")
             } else {
                 setErrorMessage("Erro de conexão. Verifique sua internet e tente novamente.")
             }
@@ -102,12 +106,6 @@ export default function LoginPage() {
                             <Form {...form}>
                                 <form onSubmit={form.handleSubmit(onSubmit)}>
                                     <div className="grid gap-6">
-                                        {errorMessage && (
-                                            <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
-                                                {errorMessage}
-                                            </div>
-                                        )}
-
                                         <div className="grid gap-4">
                                             <FormField
                                                 control={form.control}
@@ -121,6 +119,7 @@ export default function LoginPage() {
                                                                 placeholder="seu@email.com"
                                                                 disabled={isLoading}
                                                                 {...field}
+                                                                onFocus={() => setErrorMessage(null)}
                                                             />
                                                         </FormControl>
                                                         <FormMessage />
@@ -146,6 +145,7 @@ export default function LoginPage() {
                                                                 type="password"
                                                                 disabled={isLoading}
                                                                 {...field}
+                                                                onFocus={() => setErrorMessage(null)}
                                                             />
                                                         </FormControl>
                                                         <FormMessage />
@@ -166,6 +166,12 @@ export default function LoginPage() {
                                                     "Entrar"
                                                 )}
                                             </Button>
+
+                                            {errorMessage && (
+                                                <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                                                    {errorMessage}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="text-center text-sm">
