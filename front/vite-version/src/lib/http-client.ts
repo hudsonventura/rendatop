@@ -15,16 +15,9 @@ class HttpClient {
     }
 
     private getHeaders(): HeadersInit {
-        const headers: HeadersInit = {
+        return {
             "Content-Type": "application/json",
         };
-
-        const token = localStorage.getItem("token");
-        if (token) {
-            headers["Authorization"] = `Bearer ${token}`;
-        }
-
-        return headers;
     }
 
     private async request<T>(
@@ -39,6 +32,7 @@ class HttpClient {
                 ...this.getHeaders(),
                 ...(rest.headers || {}),
             },
+            credentials: "include",
             body: body ? JSON.stringify(body) : undefined,
         });
 

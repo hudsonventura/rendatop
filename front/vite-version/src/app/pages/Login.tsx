@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -39,6 +39,15 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+    // Se já estiver logado, redireciona para o dashboard
+    useEffect(() => {
+        httpClient.get("/login/me").then(() => {
+            navigate("/dashboard", { replace: true })
+        }).catch(() => {
+            // Não autenticado, permanece na página de login
+        })
+    }, [navigate])
+
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginFormSchema),
         defaultValues: {
@@ -56,7 +65,6 @@ export default function LoginPage() {
                 isSuccess: boolean
                 isFailure: boolean
                 message?: string
-                data?: { token?: string }
             }>("/login", {
                 email: data.email,
                 password: data.password,
@@ -67,11 +75,7 @@ export default function LoginPage() {
                 return
             }
 
-            // Se a API retornar um token, salva no localStorage
-            if (response.data?.token) {
-                localStorage.setItem("token", response.data.token)
-            }
-
+            // Sessão definida via cookie HttpOnly pelo servidor
             navigate("/dashboard")
         } catch (error) {
             if (error instanceof HttpError) {

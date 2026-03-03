@@ -3,7 +3,9 @@ using api.services;
 using back;
 using back.domain;
 using DotNetEnv;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 
 Env.Load();
@@ -15,6 +17,37 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = "rendatop",
+            ValidAudience = "rendatop",
+            IssuerSigningKey = JwtService.GetSecurityKey(),
+            NameClaimType = "name",
+        };
+
+        // Ler o token do cookie "session" ao invés do header Authorization
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var cookie = context.Request.Cookies["session"];
+                if (!string.IsNullOrEmpty(cookie))
+                {
+                    context.Token = cookie;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
 
 // CORS
 builder.Services.AddCors(options =>
@@ -47,9 +80,11 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowFrontend");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
 
 if (app.Environment.IsDevelopment())
 {

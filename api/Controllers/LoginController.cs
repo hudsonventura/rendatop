@@ -1,7 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using api.repositories;
 using api.services;
 using back.domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace back.Controllers;
@@ -13,12 +15,13 @@ namespace back.Controllers;
 public class LoginController : ControllerBase
 {
     private readonly UserRepository _userRepository;
+    private readonly IWebHostEnvironment _env;
 
-    public LoginController(UserRepository userRepository)
+    public LoginController(UserRepository userRepository, IWebHostEnvironment env)
     {
         _userRepository = userRepository;
+        _env = env;
     }
-
 
     [HttpPost("/login")]
     public async Task<Result> Post(LoginRequest request)
@@ -28,9 +31,37 @@ public class LoginController : ControllerBase
             return Result.Failure("Usuário ou senha incorretos");
         
         if (!Encrypt.VerifyPassword(request.Password, user.Salt, user.Password))
-            return  Result.Failure("Usuário ou senha incorretos");
-        
+            return Result.Failure("Usuário ou senha incorretos");
+
+        // Gerar JWT e definir cookie de sessão
+        string token = JwtService.GenerateToken(user);
+        Response.Cookies.Append("session", token, BuildCookieOptions());
+
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Retorna os dados do usuário autenticado a partir do token JWT no cookie.
+    /// </summary>
+    [Authorize]
+    [HttpGet("/login/me")]
+    public IActionResult Me()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var email = User.FindFirstValue(ClaimTypes.Email);
+        var name = User.FindFirstValue("name");
+
+        return Ok(new { id = userId, email, name });
+    }
+
+    /// <summary>
+    /// Encerra a sessão do usuário removendo o cookie.
+    /// </summary>
+    [HttpPost("/login/logout")]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete("session", BuildCookieOptions());
+        return Ok(Result.Success());
     }
 
     [HttpPost("/login/create")]
@@ -48,6 +79,18 @@ public class LoginController : ControllerBase
 
         await _userRepository.Create(newUser);
         return Ok(newUser);
+    }
+
+    private CookieOptions BuildCookieOptions()
+    {
+        return new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = !_env.IsDevelopment(), // false em dev (HTTP), true em produção (HTTPS)
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddDays(JwtService.ExpirationDays),
+            Path = "/"
+        };
     }
 
     /// <summary>
@@ -101,3 +144,4 @@ public class LoginController : ControllerBase
         public string Name { get; set; } = string.Empty;
     }
 }
+
