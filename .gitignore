@@ -55,3 +55,4 @@ nunit-*.xml
 landing/nextjs-version/docs/*
 .env
 .vscode/settings.json
+.data/*

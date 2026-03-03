@@ -1,10 +1,11 @@
+using api.domain;
 using api.repositories;
 using api.services;
-using api.domain;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 
 
 Env.Load();
@@ -69,11 +70,7 @@ Result go_on = DepenciesInjection();
 var app = builder.Build();
 
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+
 
 app.UseHttpsRedirection();
 
@@ -90,6 +87,9 @@ if (app.Environment.IsDevelopment())
     Thread.Sleep(TimeSpan.FromSeconds(10));
     AutoMigration();
     await PopulateFakeDatabase();
+
+    app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 if (go_on.IsFailure)
@@ -122,7 +122,7 @@ Result DepenciesInjection()
 
     string connectionString = $"Host={host};Port={port};Database={db};Username={user};Password={password}";
 
-    
+
     Console.WriteLine(connectionString);
     builder.Services.AddDbContext<DBContext>(options =>
     {
