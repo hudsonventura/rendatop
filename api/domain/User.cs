@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace back.domain;
+namespace api.domain;
 
 [Table("user")]
 public class User

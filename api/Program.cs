@@ -1,7 +1,6 @@
 using api.repositories;
 using api.services;
-using back;
-using back.domain;
+using api.domain;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;

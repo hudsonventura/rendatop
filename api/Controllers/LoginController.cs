@@ -2,11 +2,11 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using api.repositories;
 using api.services;
-using back.domain;
+using api.domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace back.Controllers;
+namespace api.Controllers;
 
 /// <summary>
 /// Controller de login
