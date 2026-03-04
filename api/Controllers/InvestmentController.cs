@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using api.services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -12,6 +13,7 @@ namespace api.Controllers;
 /// <summary>
 /// Controller de investimentos
 /// </summary>
+[Authorize]
 [Route("[controller]")]
 public class InvestmentController : Controller
 {
