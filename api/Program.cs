@@ -1,4 +1,5 @@
 using api.domain;
+using api.middlewares;
 using api.repositories;
 using api.services;
 using DotNetEnv;
@@ -78,6 +79,7 @@ app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseJwtMiddleware();
 
 app.MapControllers();
 

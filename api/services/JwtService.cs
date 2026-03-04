@@ -55,4 +55,45 @@ public static class JwtService
     /// Duração do token em dias.
     /// </summary>
     public static int ExpirationDays => _expirationDays;
+
+    /// <summary>
+    /// Valida um token JWT verificando a assinatura, issuer, audience e expiração.
+    /// Retorna o ClaimsPrincipal se válido, ou null se inválido.
+    /// </summary>
+    public static ClaimsPrincipal? ValidateToken(string token)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = GetSecurityKey();
+
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = "rendatop",
+            ValidAudience = "rendatop",
+            IssuerSigningKey = key,
+            NameClaimType = "name",
+            ClockSkew = TimeSpan.Zero // sem tolerância de tempo
+        };
+
+        try
+        {
+            var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
+
+            // Garante que o algoritmo usado é o esperado (HMAC-SHA256)
+            if (validatedToken is JwtSecurityToken jwtToken &&
+                !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return principal;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }
