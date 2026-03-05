@@ -11,14 +11,21 @@ services:
     volumes:
       - ./.data/postgres:/var/lib/postgresql
     
+  redis:
+    image: redis:7
+    container_name: rendatop-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./.data/redis:/data
 
 
-
-  api:
+  server:
     build:
-      context: ./api
+      context: ./server
       dockerfile: Dockerfile
-    container_name: rendatop-api
+    container_name: rendatop-server
     restart: always
     env_file:
       - .env
@@ -30,16 +37,16 @@ services:
       - "5000:5000"
     
 
-  front:
+  client:
     build:
-      context: ./front/vite-version
+      context: ./client
       dockerfile: Dockerfile
-    container_name: rendatop-front
+    container_name: rendatop-client
     restart: always
     env_file:
       - .env
     depends_on: 
-      - api
+      - server
     ports:
       - "3000:80"
     

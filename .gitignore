@@ -56,3 +56,8 @@ landing/nextjs-version/docs/*
 .env
 .vscode/settings.json
 .data/*
+
+
+model-api/*
+model-front/*
+client/node_modules/*

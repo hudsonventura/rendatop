@@ -1,0 +1,165 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using server.Domain;
+using server.RequestObjects;
+using server.Utils;
+
+namespace server.Controllers;
+
+/// <summary>
+/// Conjunto de endpoints de controle de investimentos
+/// </summary>
+[ApiController]
+public class InvestmentsController : AuthenticatedController
+{
+    Context _context;
+    ILogger _logger;
+    INotification _notify;
+
+    public InvestmentsController(ILogger<InvestmentsController> logger, IHttpContextAccessor httpContextAccessor, Context context, INotification notify) : base(httpContextAccessor)
+    {
+        _context = context;
+        _logger = logger;
+
+        _logger.LogInformation("Apenas um teste");
+
+        _notify = notify;
+    }
+
+    private Investment GetInvestmentByID(Guid id)
+    {
+        return _context.investments
+                            .Where(x => x.owner.id == _user.id && x.id == id)
+                            .FirstOrDefault();
+    }
+
+    /// <summary>
+	/// Lista todos os investimentos do usuário
+	/// </summary>
+	/// <returns>Lista todos os investimentos do usuário</returns>
+	[ProducesResponseType(typeof(List<Error>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [HttpGet("Investments")]
+    public List<Investment> Get()
+    {
+        List<Investment> investments = _context.investments
+                                                .AsNoTracking()
+                                                .Include(x => x.owner)
+                                                .Where(x => x.owner.id == _user.id)
+                                                .ToList();
+        foreach (var invest in investments)
+        {
+            var calcType = typeof(ICalculator).Assembly.GetType(
+                $"server.Domain.Calculator_{invest.index.ToString()}"
+            );
+
+            if (calcType == null)
+            {
+                throw new ExpectedException($"Tipo de calculo nao encontrado: Calculator_{invest.index}");
+            }
+
+            var calc = (ICalculator)Activator.CreateInstance(calcType, _context)!;
+
+            invest.calculated = calc.Calculate(invest.ToRequest());
+        }
+
+
+        return investments;
+    }
+
+
+
+
+    /// <summary>
+    /// Lista todos os investimentos do usuário
+    /// </summary>
+    /// <returns>Lista todos os investimentos do usuário</returns>
+    [ProducesResponseType(typeof(List<Error>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [HttpGet("Investments/{id}")]
+    public Investment Get(Guid id)
+        => GetInvestmentByID(id);
+
+
+    /// <summary>
+	/// Adiciona um novo investimento
+	/// </summary>
+	/// <returns>Retono com o id do investimento</returns>
+	[ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [HttpPost("Investments")]
+    public Guid Insert([FromBody] InvestmentRequest request)
+    {
+        Investment investment = new Investment(request, _user);
+        _context.Entry(investment.owner).State = EntityState.Unchanged; //Evita o erro de "The instance of entity type 'User' cannot be tracked because another instance with the same key value for {'id'} is already being tracked."
+        _context.investments.Add(investment);
+        _context.SaveChanges();
+
+        return investment.id;
+    }
+
+
+
+    /// <summary>
+    /// Edita um investimento já adicionado anteiormente
+    /// </summary>
+    /// <returns>Retono vazio</returns>
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [HttpPatch("Investments/{id}")]
+    public void Update(Guid id, [FromBody] InvestmentRequest request)
+    {
+        Investment investment = GetInvestmentByID(id);
+        investment.Update(request);
+        _context.investments.Update(investment);
+        _context.SaveChanges();
+    }
+
+
+    /// <summary>
+    /// Remove um investimento
+    /// </summary>
+    /// <returns>Retono vazio</returns>
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [HttpDelete("Investments/{id}")]
+    public void Delete(Guid id)
+    {
+        var investment = GetInvestmentByID(id);
+
+        if (investment == null)
+            throw new ExpectedException("Investimento não encontrado ou já removido");
+
+
+        _context.investments.Remove(investment);
+        _context.SaveChanges();
+
+    }
+
+
+    /// <summary>
+    /// Resgata um investimento parcial ou totalmente
+    /// </summary>
+    /// <returns>Retono vazio</returns>
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [HttpPut("Investments/{id}")]
+    public Investment Redeem(Guid id, [FromBody] RedemptionRequest request)
+    {
+        var invest = _context.investments.Where(x => x.id == id && x.owner.id == _user.id && x.id == id).FirstOrDefault();
+
+        Redemption redemption = new Redemption(invest, request);
+
+        _context.redemptions.Add(redemption);
+        _context.SaveChanges();
+
+        return invest;
+    }
+
+}

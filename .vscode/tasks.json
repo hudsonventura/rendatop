@@ -4,7 +4,7 @@
         {
             "label": "docker compose up db",
             "type": "shell",
-            "command": "docker compose up -d db",
+            "command": "docker compose up -d db redis",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -19,7 +19,7 @@
             "command": "npm run dev",
             "isBackground": true,
             "options": {
-                "cwd": "${workspaceFolder}/front/vite-version"
+                "cwd": "${workspaceFolder}/client"
             },
             "presentation": {
                 "reveal": "silent",
