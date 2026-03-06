@@ -13,88 +13,69 @@ public class LoginController : ControllerBase
     private readonly ILogger _logger;
     private readonly Context _context;
     private readonly IDatabase _redis;
+    private readonly IWebHostEnvironment _env;
 
-
-
-    public LoginController(Context context, IConnectionMultiplexer muxer_redis)
+    public LoginController(Context context, IConnectionMultiplexer muxer_redis, IWebHostEnvironment env)
     {
         _context = context;
         _redis = muxer_redis.GetDatabase();
+        _env = env;
     }
 
     /// <summary>
-    /// Realiza o processo de login
+    /// Realiza o processo de login e define o cookie JWT HttpOnly
     /// </summary>
-    /// <returns></returns>
     [HttpPost("login")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(string),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
-    public string Login([FromBody] LoginRecord credentials)
+    public IActionResult Login([FromBody] LoginRecord credentials)
     {
         var user = _context.users.AsNoTracking().Where(x => x.email == credentials.email).FirstOrDefault();
-        if(user is null){
+        if (user is null)
             throw new ExpectedException("Usuário nao encontrado ou senha incorreta", System.Net.HttpStatusCode.Unauthorized);
-        }
 
-        if(!user.CheckPass(credentials.password)){
-            throw new ExpectedException("Usuário nao encontrado ou senha incorreta",System.Net.HttpStatusCode.Unauthorized);
-        }
-
+        if (!user.CheckPass(credentials.password))
+            throw new ExpectedException("Usuário nao encontrado ou senha incorreta", System.Net.HttpStatusCode.Unauthorized);
 
         ITokenService token_service = new TokenServiceJWT();
-
-        // Gera o Token
         var token = token_service.Generate(user, "Common User");
 
-        //obtem o tempo de expiraçao configurado no token -> NÃO ESTÁ SENDO RESPEITADO E ESTÁ TRAZENDO SEMPRE 2H
-        //var claims = (ClaimsPrincipal) token_service.GetTokenData(token);
-        //var tokenExp = User.Claims.First(claim => claim.Type.Equals("exp")).Value;
-        //var expiration = DateTime.UnixEpoch.AddSeconds(long.Parse(tokenExp));
-
-        
-        TimeSpan timeSpanUntilExpiration = DateTime.UtcNow.AddDays(30) - DateTime.UtcNow; 
-
+        TimeSpan timeSpanUntilExpiration = TimeSpan.FromDays(30);
         _redis.StringSetAsync(token, user.GetJsonSerialized(), timeSpanUntilExpiration);
 
+        // Determine if the cookie should be Secure based on env var or environment
+        var cookieSecureEnv = Environment.GetEnvironmentVariable("COOKIE_SECURE");
+        bool secureCookie = cookieSecureEnv?.Equals("true", StringComparison.OrdinalIgnoreCase) == true
+            || (!_env.IsDevelopment() && cookieSecureEnv != "false");
 
-        return token;
+        Response.Cookies.Append("jwt", token, new CookieOptions
+        {
+            HttpOnly = true,
+            SameSite = SameSiteMode.Lax,
+            Secure = secureCookie,
+            Expires = DateTimeOffset.UtcNow.Add(timeSpanUntilExpiration),
+            Path = "/"
+        });
+
+        // Return user display info (not the token — it lives only in the HttpOnly cookie)
+        return Ok(new LoginResponse(user.name, user.email));
     }
 
 
-
     /// <summary>
-    /// Realiza a renovação do token
+    /// Realiza o logout limpando o cookie JWT
     /// </summary>
-    /// <returns></returns>
-    // [HttpPost("renew")]
-    // [AllowAnonymous]
-    // [ProducesResponseType(typeof(string),StatusCodes.Status200OK)]
-    // [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
-    // [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
-    // public string Renew([FromHeader] string Authorization){
-    //     string token = Authorization.Split(" ")[1];
-    //     ITokenService token_service = new TokenServiceJWT();
-    //     try
-    //     {
-    //         token_service.Validate(token);
-    //     }
-    //     catch (System.Exception)
-    //     {
-    //         throw new ExpectedException("Validação de token falhou", System.Net.HttpStatusCode.Forbidden);
-    //     }
-        
-
-    //     var user = _context.users.AsNoTracking().Where(x => x.email == User.Identity.Name).FirstOrDefault();
-
-        
-    //     var token_new = token_service.Renew(token);
-
-    //     TimeSpan timeSpanUntilExpiration = DateTime.UtcNow.AddDays(30) - DateTime.UtcNow; 
-        
-    //     _redis.StringSetAsync(token_new, user.GetJsonSerialized(), timeSpanUntilExpiration);
-
-    //     return token_new;
-    // }
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete("jwt", new CookieOptions { Path = "/" });
+        return Ok();
+    }
 }
+
+
+public record LoginResponse(string name, string email);

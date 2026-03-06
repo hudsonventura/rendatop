@@ -95,25 +95,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
         options.Events = new JwtBearerEvents
         {
+            // Allow [Authorize] to read the JWT from the HttpOnly cookie
+            // Prefer Authorization header (Scalar/Swagger still works), fall back to cookie
+            OnMessageReceived = context =>
+            {
+                if (string.IsNullOrEmpty(context.Token))
+                    context.Token = context.Request.Cookies["jwt"];
+                return Task.CompletedTask;
+            },
             OnChallenge = async context =>
             {
-                // Impede que a resposta padrão do OnChallenge seja executada
                 context.HandleResponse();
-
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 context.Response.ContentType = "application/json";
-
                 var errorResponse = new Error()
                 {
                     StatusCode = StatusCodes.Status401Unauthorized,
                     Message = string.IsNullOrEmpty(context.ErrorDescription) ? "Token de autenticação ausente ou inválido." : context.ErrorDescription
                 };
-
                 await context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse));
             }
         };
-
     });
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<Context>();
@@ -152,11 +156,17 @@ builder.Services.AddHostedService<NotificationBackgroudService>(provider =>
 
 var app = builder.Build();
 
+// CORS — requires explicit origins when credentials (cookies) are used
+var corsOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS")
+    ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? new[] { "http://localhost:5173", "http://localhost:5174" };
+
 app.UseCors(builder =>
     {
-        builder.AllowAnyOrigin()
+        builder.WithOrigins(corsOrigins)
                .AllowAnyMethod()
-               .AllowAnyHeader();
+               .AllowAnyHeader()
+               .AllowCredentials();
     });
 app.Use(async (context, next) =>
 {

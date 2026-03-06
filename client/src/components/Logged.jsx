@@ -3,39 +3,26 @@ import { useEffect } from 'react';
 import axiosInstance from '../utils/axiosConfig';
 
 /**
- * A pagina que incorporar este componente, necessitará estar logado para seer visitada. 
- * Caso contrato este componente redicionará para a tela de login
+ * Componente que garante que a página só é acessível se o usuário estiver logado.
+ * Redireciona para /login se o cookie JWT não for válido ou estiver ausente.
  */
 const Logged = () => {
 
     useEffect(() => {
-        const token = sessionStorage.getItem('token');
-        if (!token) {
-            return;
-        }
+        axiosInstance
+            .get("/Authenticated")
+            .then(() => {
+                // Cookie válido — nada a fazer
+            })
+            .catch((error) => {
+                if (error.response?.status === 401) {
+                    sessionStorage.clear();
+                    window.location.href = '/login';
+                }
+            });
     }, []);
 
-    useEffect(() => {
-        axiosInstance
-          .get("/Authenticated") // `/posts` será concatenado ao `baseURL`
-          .then((response) => {
-
-          })
-          .catch((error) => {
-            if (error.response?.status === 401) {
-                sessionStorage.clear();
-                window.location.href = '/Login';
-              }
-          });
-      }, []);
-
-
-    return (
-        <>
-            
-        </>
-    );
+    return <></>;
 };
 
 export default Logged;
-

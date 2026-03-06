@@ -14,11 +14,10 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
-        const token = sessionStorage.getItem('token');
-        if (token) {
-            window.location.href = '/home';
-            return;
-        }
+        // If a valid session cookie already exists, skip login page
+        axiosInstance.get('/Authenticated')
+            .then(() => { window.location.href = '/home'; })
+            .catch(() => { /* not logged in, stay on login page */ });
     }, []);
 
     const handleLogin = async (event) => {
@@ -32,11 +31,10 @@ const Login = () => {
         axiosInstance
             .post("/login", { email, password })
             .then((response) => {
-                const token = response.data;
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                sessionStorage.setItem('token', token);
-                sessionStorage.setItem('name', payload.Name);
-                sessionStorage.setItem('email', payload.Email);
+                // Server sets the HttpOnly cookie — we only store display info
+                const { name, email: userEmail } = response.data;
+                sessionStorage.setItem('name', name);
+                sessionStorage.setItem('email', userEmail);
                 window.location.href = '/home';
             })
             .catch((error) => {

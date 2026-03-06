@@ -2,10 +2,7 @@ using server.Domain;
 using server.Utils;
 using StackExchange.Redis;
 
-
-
 namespace server.Middlewares;
-
 
 public static class AuthenticationMiddlewarePlugin
 {
@@ -21,47 +18,43 @@ public class AuthenticationMiddleware
     private readonly RequestDelegate _next;
     private StackExchange.Redis.IDatabase _redis;
 
-
     public AuthenticationMiddleware(RequestDelegate next, IConnectionMultiplexer muxer_redis)
     {
         _redis = muxer_redis.GetDatabase();
         _next = next;
     }
 
-
     public async Task Invoke(HttpContext context)
     {
-        // Extrai as informações do contexto
-        var authorization = context.Request.Headers.Where(x => x.Key == "Authorization").FirstOrDefault().Value.ToString();
-        if(authorization != string.Empty){
+        // Read the JWT from the HttpOnly cookie (falls back to Authorization header for backwards compat / Scalar UI)
+        string? token = context.Request.Cookies["jwt"];
 
-            var token = authorization.Split(" ")[1];
+        if (string.IsNullOrEmpty(token))
+        {
+            // Fallback: accept Bearer token from Authorization header (e.g. Scalar / Swagger UI)
+            var authorization = context.Request.Headers["Authorization"].ToString();
+            if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
+                token = authorization["Bearer ".Length..];
+        }
 
-            string json = _redis.StringGet(token);
-            if(json is null){
-                //o token não foi localizado no cache. Pode até ser que usuario tenha feito login com sucesso no passsado, mas o token expirou
+        if (!string.IsNullOrEmpty(token))
+        {
+            string? json = _redis.StringGet(token);
+            if (json is null)
+            {
+                // Token not found in cache — expired or invalid
                 throw new ExpectedException("Token de autenticação ausente ou inválido...", System.Net.HttpStatusCode.Unauthorized);
             }
 
-            //injeta o User nos Items
+            // Inject the User into HttpContext.Items so controllers can access it
             User user = User.Deserialize(json);
             context.Items["User"] = user;
 
-            //Adia o vencimento do token para caso o usuario use constantemente, a sessão dele não caia
-            TimeSpan timeSpanUntilExpiration = DateTime.UtcNow.AddDays(30) - DateTime.UtcNow; 
+            // Slide the expiration so active users don't get kicked out
+            TimeSpan timeSpanUntilExpiration = TimeSpan.FromDays(30);
             _redis.StringSetAsync(token, user.GetJsonSerialized(), timeSpanUntilExpiration);
         }
-        
-        
 
-        // Chama o próximo middleware na cadeia
         await _next(context);
     }
-
-
-
-
-    
-
-
 }

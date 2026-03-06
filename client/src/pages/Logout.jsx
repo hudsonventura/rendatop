@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, LogOut as LogOutIcon } from 'lucide-react';
+import axiosInstance from '@/utils/axiosConfig';
 
 const Logout = () => {
     const [clearing, setClearing] = useState(true);
 
     useEffect(() => {
-        sessionStorage.clear();
-        const timer = setTimeout(() => {
-            setClearing(false);
-            window.location.href = '/login';
-        }, 800);
-        return () => clearTimeout(timer);
+        // Tell the server to clear the HttpOnly cookie
+        axiosInstance.post('/logout')
+            .catch(() => { /* ignore errors — clear locally regardless */ })
+            .finally(() => {
+                sessionStorage.clear();
+                const timer = setTimeout(() => {
+                    setClearing(false);
+                    window.location.href = '/login';
+                }, 800);
+            });
     }, []);
 
     return (
