@@ -7,6 +7,7 @@ import InvestmentsTable from "@/components/InvestmentsTable";
 import InvestmentsAdd from "@/components/InvestmentsAdd";
 import InvestmentsResume from "@/components/InvestmentsResume";
 import Logged from "@/components/Logged";
+import BanksPieChart from "@/components/BanksPieChart";
 
 const Home = () => {
 
@@ -28,6 +29,7 @@ const Home = () => {
             <Logged />
             <BaseLayout title="Investimentos" description="Acompanhe e gerencie seus investimentos de renda fixa">
                 <div className="px-4 lg:px-6 space-y-6">
+                    <BanksPieChart investments={investments.length > 0 ? investments : null} />
                     <InvestmentsResume investments={investments} />
 
                     <div className="flex items-center justify-between">
