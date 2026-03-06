@@ -111,12 +111,20 @@ public class InvestmentsController : AuthenticatedController
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [HttpPatch("Investments/{id}")]
-    public void Update(Guid id, [FromBody] InvestmentRequest request)
+    public IActionResult Update(Guid id, [FromBody] InvestmentRequest request)
     {
-        Investment investment = GetInvestmentByID(id);
-        investment.Update(request);
-        _context.investments.Update(investment);
-        _context.SaveChanges();
+        try
+        {
+            Investment investment = GetInvestmentByID(id);
+            investment.Update(request);
+            _context.investments.Update(investment);
+            _context.SaveChanges();
+            return Ok();
+        }
+        catch (Exception e)
+        {
+            throw new ExpectedException(e.Message);
+        }
     }
 
 

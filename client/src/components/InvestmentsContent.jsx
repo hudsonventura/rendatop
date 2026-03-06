@@ -1,8 +1,9 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import InvestmentsEdit from "@/components/InvestmentsEdit"
 
-export default function InvestmentsContent({ investment }) {
+export default function InvestmentsContent({ investment, setReload }) {
 
     const formatCurrency = (val) => val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -44,7 +45,7 @@ export default function InvestmentsContent({ investment }) {
     ];
 
     return (
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {items.map((item, index) => (
                     <div key={index} className="flex flex-col gap-1">
@@ -56,8 +57,11 @@ export default function InvestmentsContent({ investment }) {
                 ))}
             </div>
             {!investment.date_expected_sell && (
-                <p className="text-xs text-muted-foreground mt-3">* Valores estimados baseados na data atual (liquidez diária)</p>
+                <p className="text-xs text-muted-foreground">* Valores estimados baseados na data atual (liquidez diária)</p>
             )}
+            <div className="flex justify-end pt-1">
+                <InvestmentsEdit investment={investment} setReload={setReload} />
+            </div>
         </div>
     );
 }

@@ -37,7 +37,7 @@ const Home = () => {
                         <InvestmentsAdd setReload={setReload} />
                     </div>
 
-                    <InvestmentsTable investments={investments} />
+                    <InvestmentsTable investments={investments} setReload={setReload} />
                 </div>
             </BaseLayout>
         </>

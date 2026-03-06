@@ -67,7 +67,7 @@ import axiosInstance from "../utils/axiosConfig";
 const formSchema = z.object({
 	title: z.string().min(1, { required_error: "Este campo é obrigatório." }),
 	date_buy: z.date({ required_error: "Campo obrigatório" }),
-	date_expected_sell: z.date().optional(),
+	date_expected_sell: z.date().nullable().optional(),
 	liquidez_diaria: z.boolean().optional(),
 	taxes: z.boolean().optional(),
 	bank: z.string({ required_error: "Selecione ou crie um banco", }),

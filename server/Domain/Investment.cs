@@ -91,7 +91,6 @@ public class Investment
 
     public void Update(InvestmentRequest request)
     {
-        this.owner = owner;
         this.title = request.title;
         this.bank = request.bank;
         this.value = request.value;
@@ -99,6 +98,10 @@ public class Investment
         this.index_percent = request.index_percent;
         this.index_value = request.index_value;
         this.taxes = request.taxes;
+        this.date_buy = DateTime.SpecifyKind(request.date_buy, DateTimeKind.Utc);
+        this.date_expected_sell = request.date_expected_sell is null
+            ? null
+            : DateTime.SpecifyKind((DateTime)request.date_expected_sell, DateTimeKind.Utc);
     }
 
     internal InvestmentRequest ToRequest()

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/accordion"
 
 
-export default function InvestmentsTable({ investments }) {
+export default function InvestmentsTable({ investments, setReload }) {
 
 	return (
 		<div className="space-y-2">
@@ -23,7 +23,7 @@ export default function InvestmentsTable({ investments }) {
 							<InvestmentsTitle investment={investment} />
 						</AccordionTrigger>
 						<AccordionContent className="border-t">
-							<InvestmentsContent investment={investment} />
+							<InvestmentsContent investment={investment} setReload={setReload} />
 						</AccordionContent>
 					</AccordionItem>
 				</Accordion>
