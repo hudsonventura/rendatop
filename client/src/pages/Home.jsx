@@ -1,11 +1,12 @@
 import React from 'react';
 import { useState, useEffect } from "react";
-import axiosInstance from "../utils/axiosConfig";
+import axiosInstance from "@/utils/axiosConfig";
 
-
-import InvestmentsTable from "../components/InvestmentsTable";
-import InvestmentsAdd from "../components/InvestmentsAdd";
-import InvestmentsResume from "@/components/InvestmentsResume"
+import { BaseLayout } from "@/components/layouts/base-layout";
+import InvestmentsTable from "@/components/InvestmentsTable";
+import InvestmentsAdd from "@/components/InvestmentsAdd";
+import InvestmentsResume from "@/components/InvestmentsResume";
+import Logged from "@/components/Logged";
 
 const Home = () => {
 
@@ -22,13 +23,21 @@ const Home = () => {
             });
     }, [reload]);
 
-
     return (
         <>
-            <h1>Home Page</h1>
-            <InvestmentsResume investments={investments} />
-            <InvestmentsAdd setReload={setReload} />
-            <InvestmentsTable investments={investments} />
+            <Logged />
+            <BaseLayout title="Investimentos" description="Acompanhe e gerencie seus investimentos de renda fixa">
+                <div className="px-4 lg:px-6 space-y-6">
+                    <InvestmentsResume investments={investments} />
+
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold tracking-tight">Meus Investimentos</h2>
+                        <InvestmentsAdd setReload={setReload} />
+                    </div>
+
+                    <InvestmentsTable investments={investments} />
+                </div>
+            </BaseLayout>
         </>
     );
 };
