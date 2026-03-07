@@ -6,6 +6,7 @@ import { SidebarConfigProvider } from '@/contexts/sidebar-context'
 import Login from "@/pages/Login"
 import Home from "@/pages/Home"
 import Logout from "@/pages/Logout"
+import CalendarPage from "@/pages/CalendarPage"
 
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
                             <Route path="/login" element={<Login />} />
                             <Route path="/logout" element={<Logout />} />
                             <Route path="/home" element={<Home />} />
+                            <Route path="/calendar" element={<CalendarPage />} />
                         </Routes>
                     </Router>
                 </SidebarConfigProvider>

@@ -61,3 +61,4 @@ landing/nextjs-version/docs/*
 model-api/*
 model-front/*
 client/node_modules/*
+client/dist/*

@@ -4,6 +4,7 @@ import {
     TrendingUp,
     LogOut,
     CircleUser,
+    CalendarDays,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
@@ -35,6 +36,11 @@ const navItems = [
         title: "Investimentos",
         url: "/home",
         icon: TrendingUp,
+    },
+    {
+        title: "Calendário",
+        url: "/calendar",
+        icon: CalendarDays,
     },
 ]
 
