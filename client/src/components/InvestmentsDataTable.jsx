@@ -29,13 +29,6 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
     Select,
     SelectContent,
     SelectItem,
@@ -185,9 +178,23 @@ function DeleteDialog({ investment, open, onOpenChange, onConfirm }) {
 // ── Actions Cell ──────────────────────────────────────────────────────────────
 
 function ActionsCell({ investment, setReload }) {
+    const [menuOpen, setMenuOpen] = useState(false)
     const [viewOpen, setViewOpen] = useState(false)
     const [editOpen, setEditOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
+    const menuRef = React.useRef(null)
+
+    // Close menu when clicking outside
+    React.useEffect(() => {
+        if (!menuOpen) return
+        const handleClick = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setMenuOpen(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClick)
+        return () => document.removeEventListener("mousedown", handleClick)
+    }, [menuOpen])
 
     const handleDelete = () => {
         axiosInstance
@@ -200,37 +207,43 @@ function ActionsCell({ investment, setReload }) {
     }
 
     return (
-        <>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        className="data-[state=open]:bg-muted text-muted-foreground flex size-8 cursor-pointer"
-                        size="icon"
+        <div className="relative" ref={menuRef}>
+            <Button
+                variant="ghost"
+                className="text-muted-foreground flex size-8 cursor-pointer"
+                size="icon"
+                onClick={() => setMenuOpen((prev) => !prev)}
+            >
+                <EllipsisVertical />
+                <span className="sr-only">Abrir menu</span>
+            </Button>
+
+            {menuOpen && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-md border bg-popover p-1 shadow-md">
+                    <button
+                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
+                        onClick={() => { setMenuOpen(false); setViewOpen(true) }}
                     >
-                        <EllipsisVertical />
-                        <span className="sr-only">Abrir menu</span>
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40">
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => setViewOpen(true)}>
-                        <Eye className="h-4 w-4 mr-2" />
+                        <Eye className="h-4 w-4" />
                         Visualizar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => setEditOpen(true)}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                        className="cursor-pointer text-destructive focus:text-destructive"
-                        onClick={() => setDeleteOpen(true)}
+                    </button>
+                    <button
+                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
+                        onClick={() => { setMenuOpen(false); setEditOpen(true) }}
                     >
-                        <Trash2 className="h-4 w-4 mr-2" />
+                        <Pencil className="h-4 w-4" />
+                        Editar
+                    </button>
+                    <div className="my-1 h-px bg-border" />
+                    <button
+                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 cursor-pointer"
+                        onClick={() => { setMenuOpen(false); setDeleteOpen(true) }}
+                    >
+                        <Trash2 className="h-4 w-4" />
                         Excluir
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                    </button>
+                </div>
+            )}
 
             {/* View Dialog */}
             <ViewDialog
@@ -256,7 +269,7 @@ function ActionsCell({ investment, setReload }) {
                 onOpenChange={setDeleteOpen}
                 onConfirm={handleDelete}
             />
-        </>
+        </div>
     )
 }
 
