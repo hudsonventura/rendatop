@@ -95,8 +95,16 @@ function formatDecimalDisplay(num) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-const InvestmentsEdit = ({ investment, setReload }) => {
-    const [isOpen, setIsOpen] = useState(false)
+const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose }) => {
+    const [internalOpen, setInternalOpen] = useState(false)
+    const isOpen = externalOpen !== undefined ? externalOpen : internalOpen
+    const setIsOpen = (val) => {
+        if (externalOpen !== undefined) {
+            if (!val && onExternalClose) onExternalClose()
+        } else {
+            setInternalOpen(val)
+        }
+    }
     const [bankList, setBankList] = useState([])
     const [popbank, setPopbank] = useState(false)
     const [liquidez_diaria, setLiquidezDiaria] = useState(!investment.due_date)
@@ -154,17 +162,19 @@ const InvestmentsEdit = ({ investment, setReload }) => {
 
     return (
         <Dialog open={isOpen}>
-            <DialogTrigger asChild>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsOpen(true)}
-                >
-                    <Pencil className="h-4 w-4 mr-1" />
-                    Editar
-                </Button>
-            </DialogTrigger>
+            {externalOpen === undefined && (
+                <DialogTrigger asChild>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsOpen(true)}
+                    >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Editar
+                    </Button>
+                </DialogTrigger>
+            )}
 
             <DialogContent className="max-w-4xl w-[90vw] md:w-[60vw] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>

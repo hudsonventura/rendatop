@@ -3,11 +3,13 @@ import { useState, useEffect } from "react";
 import axiosInstance from "@/utils/axiosConfig";
 
 import { BaseLayout } from "@/components/layouts/base-layout";
-import InvestmentsTable from "@/components/InvestmentsTable";
+import InvestmentsDataTable from "@/components/InvestmentsDataTable";
 import InvestmentsAdd from "@/components/InvestmentsAdd";
 import InvestmentsResume from "@/components/InvestmentsResume";
 import Logged from "@/components/Logged";
 import BanksPieChart from "@/components/BanksPieChart";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 const Home = () => {
 
@@ -62,25 +64,24 @@ const Home = () => {
                         <InvestmentsAdd setReload={setReload} />
                     </div>
 
-                    {/* Available for redemption */}
-                    {available.length > 0 && (
-                        <div className="space-y-2">
-                            <h3 className="text-md font-medium text-green-600 dark:text-green-400">
-                                Disponíveis para resgate ({available.length})
-                            </h3>
-                            <InvestmentsTable investments={available} setReload={setReload} />
-                        </div>
-                    )}
-
-                    {/* Locked investments */}
-                    {locked.length > 0 && (
-                        <div className="space-y-2">
-                            <h3 className="text-md font-medium text-muted-foreground">
-                                Bloqueados até o vencimento ({locked.length})
-                            </h3>
-                            <InvestmentsTable investments={locked} setReload={setReload} />
-                        </div>
-                    )}
+                    <Tabs defaultValue="available" className="w-full">
+                        <TabsList>
+                            <TabsTrigger value="available" className="cursor-pointer">
+                                Disponíveis para resgate
+                                <Badge variant="secondary" className="ml-1.5">{available.length}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="locked" className="cursor-pointer">
+                                Bloqueados até o vencimento
+                                <Badge variant="secondary" className="ml-1.5">{locked.length}</Badge>
+                            </TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="available">
+                            <InvestmentsDataTable investments={available} setReload={setReload} />
+                        </TabsContent>
+                        <TabsContent value="locked">
+                            <InvestmentsDataTable investments={locked} setReload={setReload} />
+                        </TabsContent>
+                    </Tabs>
                 </div>
             </BaseLayout>
         </>
@@ -88,3 +89,4 @@ const Home = () => {
 };
 
 export default Home;
+
