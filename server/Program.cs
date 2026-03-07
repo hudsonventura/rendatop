@@ -246,7 +246,7 @@ void MigrateDatabase(){
                     title = "13o parte 2 - LCA PRE - Banco ABC Brasil SA",
                     value = 2000,
                     date_buy = new DateTime(2024, 12, 20).ToUniversalTime(),
-                    date_expected_sell = new DateTime(2025, 12, 16).ToUniversalTime(),
+                    due_date = new DateTime(2025, 12, 16).ToUniversalTime(),
                     index = IdexesType.PERCENT_YEAR,
                     index_percent = 13.5m,
                     taxes = false
@@ -259,7 +259,7 @@ void MigrateDatabase(){
                     title = "Reinvestimento. Não sei o que era",
                     value = 1470,
                     date_buy = new DateTime(2024, 12, 20).ToUniversalTime(),
-                    date_expected_sell = new DateTime(2026, 06, 22).ToUniversalTime(),
+                    due_date = new DateTime(2026, 06, 22).ToUniversalTime(),
                     index = IdexesType.PERCENT_YEAR,
                     index_percent = 14.9m,
                     taxes = true
@@ -284,7 +284,7 @@ void MigrateDatabase(){
                     title = "LCI PRE - qualqwuer coisa",
                     value = 1000,
                     date_buy = new DateTime(2024, 12, 20).ToUniversalTime(),
-                    date_expected_sell = new DateTime(2026, 06, 22).ToUniversalTime(),
+                    due_date = new DateTime(2026, 06, 22).ToUniversalTime(),
                     index = IdexesType.IPCA_MAIS,
                     index_value = 5.9m,
                     taxes = true

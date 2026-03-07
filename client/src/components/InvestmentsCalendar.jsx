@@ -58,7 +58,7 @@ function getIndexLabel(investment) {
  * Convert an array of investments into calendar events.
  * Each investment produces 1 or 2 events:
  *   - "start" event on date_buy (green)
- *   - "due" event on date_expected_sell (blue), if present
+ *   - "due" event on due_date (blue), if present
  */
 function investmentsToEvents(investments) {
     const events = []
@@ -74,12 +74,12 @@ function investmentsToEvents(investments) {
         })
 
         // Due date event (only if set)
-        if (inv.date_expected_sell) {
+        if (inv.due_date) {
             events.push({
                 id: `${inv.id}-due`,
                 investment: inv,
                 title: inv.title,
-                date: new Date(inv.date_expected_sell),
+                date: new Date(inv.due_date),
                 type: "due",
                 color: "bg-blue-600",
             })

@@ -60,7 +60,7 @@ import axiosInstance from "../utils/axiosConfig"
 const formSchema = z.object({
     title: z.string().min(1, { required_error: "Este campo é obrigatório." }),
     date_buy: z.date({ required_error: "Campo obrigatório" }),
-    date_expected_sell: z.date().nullable().optional(),
+    due_date: z.date().nullable().optional(),
     liquidez_diaria: z.boolean().optional(),
     taxes: z.boolean().optional(),
     bank: z.string({ required_error: "Selecione ou crie um banco" }),
@@ -99,7 +99,7 @@ const InvestmentsEdit = ({ investment, setReload }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [bankList, setBankList] = useState([])
     const [popbank, setPopbank] = useState(false)
-    const [liquidez_diaria, setLiquidezDiaria] = useState(!investment.date_expected_sell)
+    const [liquidez_diaria, setLiquidezDiaria] = useState(!investment.due_date)
 
     useEffect(() => {
         axiosInstance
@@ -113,10 +113,10 @@ const InvestmentsEdit = ({ investment, setReload }) => {
         defaultValues: {
             title: investment.title,
             date_buy: new Date(investment.date_buy),
-            date_expected_sell: investment.date_expected_sell
-                ? new Date(investment.date_expected_sell)
+            due_date: investment.due_date
+                ? new Date(investment.due_date)
                 : undefined,
-            liquidez_diaria: !investment.date_expected_sell,
+            liquidez_diaria: !investment.due_date,
             taxes: investment.taxes ?? true,
             bank: investment.bank,
             value: formatDecimalDisplay(investment.value),
@@ -207,7 +207,7 @@ const InvestmentsEdit = ({ investment, setReload }) => {
                             />
                             <FormField
                                 control={form.control}
-                                name="date_expected_sell"
+                                name="due_date"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Data do vencimento / resgate</FormLabel>

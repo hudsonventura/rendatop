@@ -30,14 +30,14 @@ export default function InvestmentsContent({ investment, setReload }) {
         },
         {
             label: "Rend. líq. estimado no venc.",
-            value: `R$ ${investment.date_expected_sell
+            value: `R$ ${investment.due_date
                 ? formatCurrency(investment.calculated[1].profit_liq)
                 : formatCurrency(investment.calculated[0].profit_liq) + ' *'}`,
             variant: "default"
         },
         {
             label: "Valor líq. estimado no venc.",
-            value: `R$ ${investment.date_expected_sell
+            value: `R$ ${investment.due_date
                 ? formatCurrency(investment.calculated[1].value_liq)
                 : formatCurrency(investment.calculated[0].value_liq) + ' *'}`,
             variant: "default"
@@ -56,7 +56,7 @@ export default function InvestmentsContent({ investment, setReload }) {
                     </div>
                 ))}
             </div>
-            {!investment.date_expected_sell && (
+            {!investment.due_date && (
                 <p className="text-xs text-muted-foreground">* Valores estimados baseados na data atual (liquidez diária)</p>
             )}
             <div className="flex justify-end pt-1">

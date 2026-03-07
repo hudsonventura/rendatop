@@ -33,10 +33,10 @@ const Home = () => {
         const locked = [];
 
         for (const inv of investments) {
-            if (!inv.date_expected_sell) {
+            if (!inv.due_date) {
                 available.push(inv);
             } else {
-                const due = new Date(inv.date_expected_sell);
+                const due = new Date(inv.due_date);
                 due.setHours(0, 0, 0, 0);
                 if (due <= today) {
                     available.push(inv);

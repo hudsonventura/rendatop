@@ -53,13 +53,13 @@ export default function InvestmentsTitle({ investment }) {
                 )}
 
                 {/* Liquidez Badge */}
-                {!investment.date_expected_sell ? (
+                {!investment.due_date ? (
                     <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
                         Liquidez diária
                     </Badge>
                 ) : (
                     <Badge variant="secondary" className="text-xs">
-                        Venc: {formatDate(investment.date_expected_sell)}
+                        Venc: {formatDate(investment.due_date)}
                     </Badge>
                 )}
 

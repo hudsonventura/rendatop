@@ -45,13 +45,13 @@ public class NotificationBackgroudService : IHostedService
             _logger.LogInformation("Verificando notificações a serem enviadas");
             
             var investiments = _context.investments
-                                        .Where(i => i.date_expected_sell <= DateTime.Now.AddDays(7).ToUniversalTime())
+                                        .Where(i => i.due_date <= DateTime.Now.AddDays(7).ToUniversalTime())
                                         .ToList();
 
             NotificarDiasDistantes(investiments);
 
             var investimentsHJ = _context.investments
-                                        .Where(i => i.date_expected_sell <= DateTime.Now.AddDays(1).ToUniversalTime())
+                                        .Where(i => i.due_date <= DateTime.Now.AddDays(1).ToUniversalTime())
                                         .ToList();
 
             NotificarDiasHoje(investimentsHJ);
@@ -68,7 +68,7 @@ public class NotificationBackgroudService : IHostedService
 
             _notification.Notify(
                 "RESGATE DE INVESTIMENTO HOJE!!!", 
-                $"{item.title}<br>Valor: R$ {item.value:N2}<br>Rend. Líq.: R$ {item.calculated[1].value_liq:N2}<br>Banco: {item.bank}<br>Vencimento: {((DateTime)item.date_expected_sell).ToString("dd/MM/yyyy")}");
+                $"{item.title}<br>Valor: R$ {item.value:N2}<br>Rend. Líq.: R$ {item.calculated[1].value_liq:N2}<br>Banco: {item.bank}<br>Vencimento: {((DateTime)item.due_date).ToString("dd/MM/yyyy")}");
         }
     }
 
@@ -82,7 +82,7 @@ public class NotificationBackgroudService : IHostedService
 
             _notification.Notify(
                 "Investimento próximo do vencimento", 
-                $"{item.title}<br>Valor: R$ {item.value:N2}<br>Rend. Líq.: R$ {item.calculated[1].value_liq:N2}<br>Banco: {item.bank}<br>Vencimento: {((DateTime)item.date_expected_sell).ToString("dd/MM/yyyy")}");
+                $"{item.title}<br>Valor: R$ {item.value:N2}<br>Rend. Líq.: R$ {item.calculated[1].value_liq:N2}<br>Banco: {item.bank}<br>Vencimento: {((DateTime)item.due_date).ToString("dd/MM/yyyy")}");
         }
     }
     

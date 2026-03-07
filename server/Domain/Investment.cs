@@ -40,7 +40,7 @@ public class Investment
     /// <summary>
     /// Data esperada da venda/liquidação em conta. Pode ser vazia
     /// </summary>
-    public DateTime? date_expected_sell { get; set; }
+    public DateTime? due_date { get; set; }
 
     /// <summary>
     /// Valor do investido
@@ -68,6 +68,7 @@ public class Investment
     public bool taxes { get; set; }
 
 
+    
     [NotMapped] //impede que vá para o entity
     public List<Calculated> calculated { get; set; }
 
@@ -86,9 +87,12 @@ public class Investment
         this.index_value = request.index_value;
         this.taxes = request.taxes;
         this.date_buy = DateTime.SpecifyKind(request.date_buy, DateTimeKind.Utc);
-        this.date_expected_sell = request.date_expected_sell is null ? null : DateTime.SpecifyKind((DateTime) request.date_expected_sell, DateTimeKind.Utc);
+        this.due_date = request.date_expected_sell is null ? null : DateTime.SpecifyKind((DateTime) request.date_expected_sell, DateTimeKind.Utc);
     }
 
+
+    
+    
     public void Update(InvestmentRequest request)
     {
         this.title = request.title;
@@ -99,7 +103,7 @@ public class Investment
         this.index_value = request.index_value;
         this.taxes = request.taxes;
         this.date_buy = DateTime.SpecifyKind(request.date_buy, DateTimeKind.Utc);
-        this.date_expected_sell = request.date_expected_sell is null
+        this.due_date = request.date_expected_sell is null
             ? null
             : DateTime.SpecifyKind((DateTime)request.date_expected_sell, DateTimeKind.Utc);
     }
@@ -115,7 +119,7 @@ public class Investment
             index_value = this.index_value,
             taxes = this.taxes,
             date_buy = this.date_buy,
-            date_expected_sell = this.date_expected_sell
+            date_expected_sell = this.due_date
         };
     }
 }
