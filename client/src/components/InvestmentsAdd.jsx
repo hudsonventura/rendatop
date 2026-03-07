@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useState } from "react";
 
 import { useForm } from "react-hook-form"
@@ -34,7 +34,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select"
 
-import { Check, ChevronsUpDown, Plus } from "lucide-react"
+import { Check, ChevronsUpDown, Plus, TrendingUp } from "lucide-react"
 
 import {
 	Command,
@@ -54,6 +54,7 @@ import {
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import Calendario from "@/components/Calendario"
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -61,6 +62,141 @@ import { z } from "zod"
 
 import axiosInstance from "../utils/axiosConfig";
 
+
+// ── IR / IOF helpers (mirror backend logic) ──────────────────────────────────
+
+function getIRPercent(taxes, days) {
+	if (!taxes) return 0
+	if (days <= 180) return 22.5
+	if (days <= 365) return 20
+	if (days <= 730) return 17.5
+	return 15
+}
+
+function getIOFPercent(days) {
+	if (days >= 30) return 0
+	return 100 - days * 3.333333333333
+}
+
+function formatBRL(v) {
+	return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+// ── Preview Component ─────────────────────────────────────────────────────────
+
+function InvestmentPreview({ form }) {
+	const watchValue = form.watch("value")
+	const watchIndex = form.watch("index")
+	const watchIndexPercent = form.watch("index_percent")
+	const watchDateBuy = form.watch("date_buy")
+	const watchDueDate = form.watch("due_date")
+	const watchTaxes = form.watch("taxes")
+	const watchLiquidez = form.watch("liquidez_diaria")
+
+	const preview = useMemo(() => {
+		// Parse value (remove dots, replace comma with dot)
+		const rawValue = typeof watchValue === "string"
+			? parseFloat(watchValue.replace(/\./g, "").replace(",", "."))
+			: Number(watchValue)
+		if (!rawValue || rawValue <= 0) return null
+
+		const indexType = parseInt(watchIndex, 10)
+		if (isNaN(indexType)) return null
+
+		// Parse index_percent
+		const rawPercent = typeof watchIndexPercent === "string"
+			? parseFloat(watchIndexPercent.replace(/\./g, "").replace(",", "."))
+			: Number(watchIndexPercent)
+		if (!rawPercent || rawPercent <= 0) return null
+
+		if (!watchDateBuy) return null
+
+		const dateBuy = new Date(watchDateBuy)
+		const sellDate = watchLiquidez || !watchDueDate ? new Date() : new Date(watchDueDate)
+
+		if (sellDate <= dateBuy) return null
+
+		const days = Math.floor((sellDate - dateBuy) / (1000 * 60 * 60 * 24))
+		if (days <= 0) return null
+
+		const taxes = watchTaxes ?? true
+		const IR = getIRPercent(taxes, days) / 100
+		const IOF = getIOFPercent(days) / 100
+
+		let effectivePercent = 0
+
+		// CDI (index=0): approximate using ~13% Selic annual (reasonable current estimate)
+		if (indexType === 0) {
+			const selicApprox = 0.1315 // approximate annual Selic
+			effectivePercent = selicApprox / 365 * days * rawPercent / 100
+		}
+		// %a.a. (index=2) or IPCA+ (index=1)
+		else {
+			effectivePercent = rawPercent / 366 * (days - 3) / 100
+		}
+
+		const profitBrute = rawValue * effectivePercent
+		const profitBruteIOF = profitBrute * (1 - IOF)
+		const irValue = profitBruteIOF * IR
+		const profitLiq = profitBruteIOF * (1 - IR)
+
+		return {
+			profitBrute,
+			irPercent: IR * 100,
+			irValue,
+			profitLiq,
+			days,
+			isEstimate: indexType === 0,
+		}
+	}, [watchValue, watchIndex, watchIndexPercent, watchDateBuy, watchDueDate, watchTaxes, watchLiquidez])
+
+	if (!preview) return null
+
+	return (
+		<div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4 space-y-3">
+			<div className="flex items-center gap-2">
+				<TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+				<span className="text-sm font-medium">Simulação do investimento</span>
+				{preview.isEstimate && (
+					<Badge variant="outline" className="text-xs text-muted-foreground">
+						Selic estimada
+					</Badge>
+				)}
+			</div>
+			<div className="grid grid-cols-3 gap-4">
+				<div className="flex flex-col gap-1">
+					<span className="text-xs text-muted-foreground">Rendimento Bruto</span>
+					<span className="text-sm font-medium text-green-600 dark:text-green-400">
+						R$ {formatBRL(preview.profitBrute)}
+					</span>
+				</div>
+				<div className="flex flex-col gap-1">
+					<span className="text-xs text-muted-foreground">
+						IR ({preview.irPercent.toFixed(1)}%)
+					</span>
+					<span className="text-sm font-medium text-red-500">
+						- R$ {formatBRL(preview.irValue)}
+					</span>
+				</div>
+				<div className="flex flex-col gap-1">
+					<span className="text-xs text-muted-foreground">Rendimento Líquido</span>
+					<div className="flex items-center gap-1.5">
+						<span className="text-sm font-semibold text-green-600 dark:text-green-400">
+							R$ {formatBRL(preview.profitLiq)}
+						</span>
+						<Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
+							<TrendingUp className="h-3 w-3 mr-0.5" />
+							+{(preview.profitLiq / (parseFloat(String(watchValue).replace(/\./g, "").replace(",", ".")) || 1) * 100).toFixed(1)}%
+						</Badge>
+					</div>
+				</div>
+			</div>
+			<p className="text-xs text-muted-foreground">
+				Estimativa para {preview.days} dias. Valores podem variar.
+			</p>
+		</div>
+	)
+}
 
 
 
@@ -83,10 +219,6 @@ const formSchema = z.object({
 		.transform((value) => value.replace(/\./g, ""))
 		.transform((value) => value.replace(/\,/g, ".")),
 });
-
-
-
-
 
 
 
@@ -114,6 +246,7 @@ const InvestmentsAdd = ({ setReload }) => {
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			username: "",
+			taxes: true,
 		},
 	})
 
@@ -169,7 +302,7 @@ const InvestmentsAdd = ({ setReload }) => {
 
 
 	return (
-		<Dialog className="max-w-[45rem]" open={isOpen} >
+		<Dialog className="max-w-[95rem]" open={isOpen} >
 			<DialogTrigger asChild>
 				<Button
 					type="button"
@@ -180,7 +313,7 @@ const InvestmentsAdd = ({ setReload }) => {
 					Adicionar investimento
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="max-w-4xl w-[90vw] md:w-[60vw] max-h-[90vh] overflow-y-auto">
+			<DialogContent className="w-[95vw] sm:max-w-5xl md:w-[85vw] max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>Adicionando novo investimento</DialogTitle>
 					<DialogDescription>Preencha os dados do seu novo investimento.</DialogDescription>
@@ -398,6 +531,9 @@ const InvestmentsAdd = ({ setReload }) => {
 							/>
 						</div>
 
+						{/* Investment Preview */}
+						<InvestmentPreview form={form} />
+
 						<DialogFooter className="flex justify-between pt-4">
 							<Button
 								type="button"
@@ -421,3 +557,4 @@ const InvestmentsAdd = ({ setReload }) => {
 	);
 };
 export default InvestmentsAdd;
+

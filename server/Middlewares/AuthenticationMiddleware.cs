@@ -26,6 +26,17 @@ public class AuthenticationMiddleware
 
     public async Task Invoke(HttpContext context)
     {
+        // Skip authentication for public paths
+        var path = context.Request.Path.Value ?? "";
+        if (path.StartsWith("/scalar", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/openapi", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/Auth/login", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/login", StringComparison.OrdinalIgnoreCase))
+        {
+            await _next(context);
+            return;
+        }
+
         // Read the JWT from the HttpOnly cookie (falls back to Authorization header for backwards compat / Scalar UI)
         string? token = context.Request.Cookies["jwt"];
 

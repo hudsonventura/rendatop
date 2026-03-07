@@ -7,10 +7,10 @@ public class Context : DbContext
 {
     private string _stringConnection = $@"NOT SET YET";
     public Context() : base(){
-        string Host = Environment.GetEnvironmentVariable("DB_HOST");
-        string Username = Environment.GetEnvironmentVariable("DB_USER");
-        string Password = Environment.GetEnvironmentVariable("DB_PASSWORD");
-        string Database = Environment.GetEnvironmentVariable("DB_NAME");
+        string Host = Environment.GetEnvironmentVariable("POSTGRES_HOST");
+        string Username = Environment.GetEnvironmentVariable("POSTGRES_USER");
+        string Password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+        string Database = Environment.GetEnvironmentVariable("POSTGRES_DB");
         _stringConnection = $"Host={Host};Username={Username};Password={Password};Database={Database}";
     }
 
