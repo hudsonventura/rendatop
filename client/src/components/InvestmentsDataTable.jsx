@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import ReactDOM from "react-dom"
 import {
     flexRender,
     getCoreRowModel,
@@ -16,6 +17,7 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    TrendingUp,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -97,6 +99,8 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onDelete }) {
             label: "Valor líquido atual",
             value: `R$ ${formatCurrency(calc.value_liq)}`,
             variant: "default",
+            showTrend: true,
+            pct: investment.value > 0 ? ((calc.value_liq - investment.value) / investment.value * 100) : 0,
         },
         {
             label: "Rend. líq. estimado no venc.",
@@ -104,6 +108,10 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onDelete }) {
                 ? formatCurrency(calcDue.profit_liq)
                 : formatCurrency(calc.profit_liq) + " *"}`,
             variant: "default",
+            showTrend: true,
+            pct: investment.value > 0
+                ? ((investment.due_date ? calcDue.profit_liq : calc.profit_liq) / investment.value * 100)
+                : 0,
         },
         {
             label: "Valor líq. estimado no venc.",
@@ -127,9 +135,17 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onDelete }) {
                     {items.map((item, i) => (
                         <div key={i} className="flex flex-col gap-1">
                             <span className="text-xs text-muted-foreground">{item.label}</span>
-                            <Badge variant={item.variant} className="w-fit text-xs">
-                                {item.value}
-                            </Badge>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <Badge variant={item.variant} className="w-fit text-xs">
+                                    {item.value}
+                                </Badge>
+                                {item.showTrend && item.pct !== 0 && (
+                                    <Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
+                                        <TrendingUp className="h-3 w-3 mr-0.5" />
+                                        +{item.pct.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
+                                    </Badge>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -197,34 +213,61 @@ function DeleteDialog({ investment, open, onOpenChange, onConfirm }) {
 
 function ActionsCell({ investment, onView, onEdit, onDelete }) {
     const [menuOpen, setMenuOpen] = useState(false)
+    const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+    const btnRef = React.useRef(null)
     const menuRef = React.useRef(null)
 
-    // Close menu when clicking outside
+    // Close menu when clicking outside or scrolling
     React.useEffect(() => {
         if (!menuOpen) return
+        const close = () => setMenuOpen(false)
         const handleClick = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target)) {
-                setMenuOpen(false)
+            if (
+                menuRef.current && !menuRef.current.contains(e.target) &&
+                btnRef.current && !btnRef.current.contains(e.target)
+            ) {
+                close()
             }
         }
         document.addEventListener("mousedown", handleClick)
-        return () => document.removeEventListener("mousedown", handleClick)
+        window.addEventListener("scroll", close, true)
+        window.addEventListener("resize", close)
+        return () => {
+            document.removeEventListener("mousedown", handleClick)
+            window.removeEventListener("scroll", close, true)
+            window.removeEventListener("resize", close)
+        }
     }, [menuOpen])
 
-    return (
-        <div className="relative" ref={menuRef}>
-            <Button
-                variant="ghost"
-                className="text-muted-foreground flex size-8 cursor-pointer"
-                size="icon"
-                onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev) }}
-            >
-                <EllipsisVertical />
-                <span className="sr-only">Abrir menu</span>
-            </Button>
+    const toggleMenu = (e) => {
+        e.stopPropagation()
+        if (!menuOpen && btnRef.current) {
+            const rect = btnRef.current.getBoundingClientRect()
+            setMenuPos({ top: rect.bottom + 4, left: rect.right - 160 }) // 160 = menu width (w-40)
+        }
+        setMenuOpen((prev) => !prev)
+    }
 
-            {menuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-md border bg-popover p-1 shadow-md">
+    return (
+        <>
+            <span ref={btnRef} className="inline-flex">
+                <Button
+                    variant="ghost"
+                    className="text-muted-foreground flex size-8 cursor-pointer"
+                    size="icon"
+                    onClick={toggleMenu}
+                >
+                    <EllipsisVertical />
+                    <span className="sr-only">Abrir menu</span>
+                </Button>
+            </span>
+
+            {menuOpen && ReactDOM.createPortal(
+                <div
+                    ref={menuRef}
+                    className="fixed z-50 w-40 rounded-md border bg-popover p-1 shadow-md"
+                    style={{ top: menuPos.top, left: menuPos.left }}
+                >
                     <button
                         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
                         onClick={() => { setMenuOpen(false); onView(investment) }}
@@ -247,9 +290,10 @@ function ActionsCell({ investment, onView, onEdit, onDelete }) {
                         <Trash2 className="h-4 w-4" />
                         Excluir
                     </button>
-                </div>
+                </div>,
+                document.body
             )}
-        </div>
+        </>
     )
 }
 
@@ -325,11 +369,24 @@ function getColumns(setReload, onView, onEdit, onDelete) {
         {
             id: "profit_liq",
             header: "Lucro líquido",
-            cell: ({ row }) => (
-                <span className="text-green-600 dark:text-green-400 whitespace-nowrap">
-                    R$ {formatCurrency(row.original.calculated[0].profit_liq)}
-                </span>
-            ),
+            cell: ({ row }) => {
+                const profit = row.original.calculated[0].profit_liq
+                const invested = row.original.value
+                const pct = invested > 0 ? (profit / invested * 100) : 0
+                return (
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        <span className="text-green-600 dark:text-green-400">
+                            R$ {formatCurrency(profit)}
+                        </span>
+                        {pct > 0 && (
+                            <Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
+                                <TrendingUp className="h-3 w-3 mr-0.5" />
+                                +{pct.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
+                            </Badge>
+                        )}
+                    </div>
+                )
+            },
             sortingFn: (rowA, rowB) =>
                 rowA.original.calculated[0].profit_liq - rowB.original.calculated[0].profit_liq,
         },
