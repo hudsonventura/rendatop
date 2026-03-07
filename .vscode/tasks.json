@@ -52,6 +52,15 @@
             }
         },
         {
+            "label": "stop npm dev",
+            "type": "shell",
+            "command": "kill $(lsof -ti:5173) 2>/dev/null; echo 'npm dev stopped'",
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            }
+        },
+        {
             "label": "Prepare Infra",
             "dependsOn": [
                 "docker compose up db",
@@ -70,6 +79,7 @@
         {
             "label": "Cleanup Debug",
             "dependsOn": [
+                "stop npm dev",
                 "docker compose down"
             ]
         }
