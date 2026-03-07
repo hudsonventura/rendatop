@@ -71,7 +71,7 @@ function getIndexLabel(investment) {
 
 // ── View Dialog (investment details) ──────────────────────────────────────────
 
-function ViewDialog({ investment, open, onOpenChange }) {
+function ViewDialog({ investment, open, onOpenChange, onEdit, onDelete }) {
     if (!investment) return null
 
     const calc = investment.calculated?.[0]
@@ -138,6 +138,24 @@ function ViewDialog({ investment, open, onOpenChange }) {
                         * Valores estimados baseados na data atual (liquidez diária)
                     </p>
                 )}
+                <DialogFooter className="flex gap-2 sm:gap-2 pt-2">
+                    <Button
+                        variant="outline"
+                        className="cursor-pointer"
+                        onClick={() => { onOpenChange(false); onEdit() }}
+                    >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Editar
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        className="cursor-pointer"
+                        onClick={() => { onOpenChange(false); onDelete() }}
+                    >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Excluir
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     )
@@ -177,11 +195,8 @@ function DeleteDialog({ investment, open, onOpenChange, onConfirm }) {
 
 // ── Actions Cell ──────────────────────────────────────────────────────────────
 
-function ActionsCell({ investment, setReload }) {
+function ActionsCell({ investment, onView, onEdit, onDelete }) {
     const [menuOpen, setMenuOpen] = useState(false)
-    const [viewOpen, setViewOpen] = useState(false)
-    const [editOpen, setEditOpen] = useState(false)
-    const [deleteOpen, setDeleteOpen] = useState(false)
     const menuRef = React.useRef(null)
 
     // Close menu when clicking outside
@@ -196,23 +211,13 @@ function ActionsCell({ investment, setReload }) {
         return () => document.removeEventListener("mousedown", handleClick)
     }, [menuOpen])
 
-    const handleDelete = () => {
-        axiosInstance
-            .delete(`/Investments/${investment.id}`)
-            .then(() => {
-                setDeleteOpen(false)
-                setReload(Math.floor(Math.random() * 10000) + 1)
-            })
-            .catch((err) => console.error("Erro ao excluir:", err))
-    }
-
     return (
         <div className="relative" ref={menuRef}>
             <Button
                 variant="ghost"
                 className="text-muted-foreground flex size-8 cursor-pointer"
                 size="icon"
-                onClick={() => setMenuOpen((prev) => !prev)}
+                onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev) }}
             >
                 <EllipsisVertical />
                 <span className="sr-only">Abrir menu</span>
@@ -222,14 +227,14 @@ function ActionsCell({ investment, setReload }) {
                 <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-md border bg-popover p-1 shadow-md">
                     <button
                         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
-                        onClick={() => { setMenuOpen(false); setViewOpen(true) }}
+                        onClick={() => { setMenuOpen(false); onView(investment) }}
                     >
                         <Eye className="h-4 w-4" />
                         Visualizar
                     </button>
                     <button
                         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
-                        onClick={() => { setMenuOpen(false); setEditOpen(true) }}
+                        onClick={() => { setMenuOpen(false); onEdit(investment) }}
                     >
                         <Pencil className="h-4 w-4" />
                         Editar
@@ -237,45 +242,20 @@ function ActionsCell({ investment, setReload }) {
                     <div className="my-1 h-px bg-border" />
                     <button
                         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 cursor-pointer"
-                        onClick={() => { setMenuOpen(false); setDeleteOpen(true) }}
+                        onClick={() => { setMenuOpen(false); onDelete(investment) }}
                     >
                         <Trash2 className="h-4 w-4" />
                         Excluir
                     </button>
                 </div>
             )}
-
-            {/* View Dialog */}
-            <ViewDialog
-                investment={investment}
-                open={viewOpen}
-                onOpenChange={setViewOpen}
-            />
-
-            {/* Edit Dialog — controlled externally */}
-            {editOpen && (
-                <InvestmentsEdit
-                    investment={investment}
-                    setReload={setReload}
-                    externalOpen={editOpen}
-                    onExternalClose={() => setEditOpen(false)}
-                />
-            )}
-
-            {/* Delete Dialog */}
-            <DeleteDialog
-                investment={investment}
-                open={deleteOpen}
-                onOpenChange={setDeleteOpen}
-                onConfirm={handleDelete}
-            />
         </div>
     )
 }
 
 // ── Column definitions ────────────────────────────────────────────────────────
 
-function getColumns(setReload) {
+function getColumns(setReload, onView, onEdit, onDelete) {
     return [
         {
             accessorKey: "title",
@@ -383,7 +363,12 @@ function getColumns(setReload) {
             id: "actions",
             header: () => null,
             cell: ({ row }) => (
-                <ActionsCell investment={row.original} setReload={setReload} />
+                <ActionsCell
+                    investment={row.original}
+                    onView={onView}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                />
             ),
             enableSorting: false,
         },
@@ -396,7 +381,29 @@ export default function InvestmentsDataTable({ investments, setReload }) {
     const [sorting, setSorting] = useState([])
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
 
-    const columns = React.useMemo(() => getColumns(setReload), [setReload])
+    // Shared dialog state (for double-click + actions menu)
+    const [selectedInvestment, setSelectedInvestment] = useState(null)
+    const [viewOpen, setViewOpen] = useState(false)
+    const [editOpen, setEditOpen] = useState(false)
+    const [deleteOpen, setDeleteOpen] = useState(false)
+
+    const openView = (inv) => { setSelectedInvestment(inv); setViewOpen(true) }
+    const openEdit = (inv) => { setSelectedInvestment(inv); setEditOpen(true) }
+    const openDelete = (inv) => { setSelectedInvestment(inv); setDeleteOpen(true) }
+
+    const handleDelete = () => {
+        if (!selectedInvestment) return
+        axiosInstance
+            .delete(`/Investments/${selectedInvestment.id}`)
+            .then(() => {
+                setDeleteOpen(false)
+                setSelectedInvestment(null)
+                setReload(Math.floor(Math.random() * 10000) + 1)
+            })
+            .catch((err) => console.error("Erro ao excluir:", err))
+    }
+
+    const columns = React.useMemo(() => getColumns(setReload, openView, openEdit, openDelete), [setReload])
 
     const table = useReactTable({
         data: investments,
@@ -430,7 +437,11 @@ export default function InvestmentsDataTable({ investments, setReload }) {
                     <TableBody>
                         {table.getRowModel().rows?.length ? (
                             table.getRowModel().rows.map((row) => (
-                                <TableRow key={row.id}>
+                                <TableRow
+                                    key={row.id}
+                                    className="cursor-pointer"
+                                    onDoubleClick={() => openView(row.original)}
+                                >
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell key={cell.id}>
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -518,6 +529,33 @@ export default function InvestmentsDataTable({ investments, setReload }) {
                     </div>
                 </div>
             )}
+
+            {/* Shared View Dialog */}
+            <ViewDialog
+                investment={selectedInvestment}
+                open={viewOpen}
+                onOpenChange={setViewOpen}
+                onEdit={() => openEdit(selectedInvestment)}
+                onDelete={() => openDelete(selectedInvestment)}
+            />
+
+            {/* Shared Edit Dialog */}
+            {editOpen && selectedInvestment && (
+                <InvestmentsEdit
+                    investment={selectedInvestment}
+                    setReload={setReload}
+                    externalOpen={editOpen}
+                    onExternalClose={() => { setEditOpen(false); setSelectedInvestment(null) }}
+                />
+            )}
+
+            {/* Shared Delete Dialog */}
+            <DeleteDialog
+                investment={selectedInvestment}
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                onConfirm={handleDelete}
+            />
         </div>
     )
 }
