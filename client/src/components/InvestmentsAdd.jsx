@@ -166,7 +166,7 @@ function InvestmentPreview({ form }) {
 			<div className="grid grid-cols-3 gap-4">
 				<div className="flex flex-col gap-1">
 					<span className="text-xs text-muted-foreground">Rendimento Bruto</span>
-					<span className="text-sm font-medium text-green-600 dark:text-green-400">
+					<span className="text-sm font-medium">
 						R$ {formatBRL(preview.profitBrute)}
 					</span>
 				</div>
@@ -192,7 +192,9 @@ function InvestmentPreview({ form }) {
 				</div>
 			</div>
 			<p className="text-xs text-muted-foreground">
-				Estimativa para {preview.days} dias. Valores podem variar.
+				Estimativa para {preview.days} dias. Valores podem variar. Aqui é considerado que o IPCA ou CDI permanecerão os mesmo até a data de vencimento. <br />
+				A taxa de juros pode variar durante o período conforme os ídices IPCA e CDI variarem. <br />
+				Isso é apenas uma estimativa para enteder o seu investimento.
 			</p>
 		</div>
 	)
@@ -302,7 +304,7 @@ const InvestmentsAdd = ({ setReload }) => {
 
 
 	return (
-		<Dialog className="max-w-[95rem]" open={isOpen} >
+		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			<DialogTrigger asChild>
 				<Button
 					type="button"
