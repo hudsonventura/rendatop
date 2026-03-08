@@ -15,9 +15,9 @@ public class InvestmentRequest
     public string title { get; set; }
 
     /// <summary>
-    /// String que represta o banco onde o investimento foi feito
+    /// Código do banco onde o investimento foi feito
     /// </summary>
-    public string bank { get; set; }
+    public int bank_code { get; set; }
 
 
     /// <summary>

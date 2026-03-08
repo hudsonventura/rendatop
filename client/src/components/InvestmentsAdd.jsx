@@ -209,7 +209,7 @@ const formSchema = z.object({
 	due_date: z.date().nullable().optional(),
 	liquidez_diaria: z.boolean().optional(),
 	taxes: z.boolean().optional(),
-	bank: z.string({ required_error: "Selecione ou crie um banco", }),
+	bank_code: z.number({ required_error: "Selecione um banco", invalid_type_error: "Selecione um banco" }),
 	value: z
 		.string()
 		.min(1, { message: "O valor deve ser um número decimal.", required_error: "Este campo é obrigatório." })
@@ -260,7 +260,7 @@ const InvestmentsAdd = ({ setReload }) => {
 
 
 		axiosInstance
-			.post("/Investments", JSON.stringify(values)) // `/posts` será concatenado ao `baseURL`
+			.post("/Investments", JSON.stringify(values))
 			.then((response) => {
 				setIsOpen(false);
 				setReload(Math.floor(Math.random() * 10000) + 1);
@@ -402,7 +402,7 @@ const InvestmentsAdd = ({ setReload }) => {
 						<div className="flex flex-wrap gap-4">
 							<FormField
 								control={form.control}
-								name="bank"
+								name="bank_code"
 								render={({ field }) => {
 									const [search, setSearch] = React.useState("")
 									const ref = React.useRef(null)
@@ -418,6 +418,7 @@ const InvestmentsAdd = ({ setReload }) => {
 										return () => document.removeEventListener("mousedown", handler)
 									}, [popbank])
 
+									const displayName = bankList.find((b) => b.code === field.value)?.name
 									const filtered = bankList.filter((b) =>
 										b.name.toLowerCase().includes(search.toLowerCase())
 									)
@@ -437,7 +438,7 @@ const InvestmentsAdd = ({ setReload }) => {
 														)}
 														onClick={() => setPopbank((v) => !v)}
 													>
-														{field.value || "Selecione seu banco"}
+														{displayName || "Selecione seu banco"}
 														<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 													</Button>
 													{popbank && (
@@ -462,11 +463,11 @@ const InvestmentsAdd = ({ setReload }) => {
 																		key={bank.id}
 																		className={cn(
 																			"flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
-																			field.value === bank.name && "bg-accent"
+																			field.value === bank.code && "bg-accent"
 																		)}
 																		onMouseDown={(e) => {
 																			e.preventDefault()
-																			field.onChange(bank.name)
+																			field.onChange(bank.code)
 																			setSearch("")
 																			setPopbank(false)
 																		}}
@@ -474,7 +475,7 @@ const InvestmentsAdd = ({ setReload }) => {
 																		<Check
 																			className={cn(
 																				"h-4 w-4 shrink-0",
-																				field.value === bank.name ? "opacity-100" : "opacity-0"
+																				field.value === bank.code ? "opacity-100" : "opacity-0"
 																			)}
 																		/>
 																		{bank.name}

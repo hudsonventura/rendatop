@@ -63,7 +63,7 @@ const formSchema = z.object({
     due_date: z.date().nullable().optional(),
     liquidez_diaria: z.boolean().optional(),
     taxes: z.boolean().optional(),
-    bank: z.string({ required_error: "Selecione ou crie um banco" }),
+    bank_code: z.number({ required_error: "Selecione um banco", invalid_type_error: "Selecione um banco" }),
     value: z
         .string()
         .min(1, { message: "O valor deve ser um número decimal.", required_error: "Este campo é obrigatório." })
@@ -126,7 +126,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                 : undefined,
             liquidez_diaria: !investment.due_date,
             taxes: investment.taxes ?? true,
-            bank: investment.bank,
+            bank_code: investment.bank?.code ?? investment.bank ?? 0,
             value: formatDecimalDisplay(investment.value),
             index: INDEX_MAP[investment.index] ?? "0",
             index_percent: formatDecimalDisplay(investment.index_percent),
@@ -154,11 +154,6 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
         form.setValue(input.name, input.value)
     }
 
-    const CreateBank = (e) => {
-        if (e.key === "Enter") {
-            form.setValue("bank", e.target.value)
-        }
-    }
 
     return (
         <Dialog open={isOpen}>
@@ -275,62 +270,94 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                             {/* Bank combobox */}
                             <FormField
                                 control={form.control}
-                                name="bank"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Banco</FormLabel>
-                                        <Popover open={popbank} onOpenChange={(open) => setPopbank(open)}>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
+                                name="bank_code"
+                                render={({ field }) => {
+                                    const [search, setSearch] = React.useState("")
+                                    const ref = React.useRef(null)
+
+                                    React.useEffect(() => {
+                                        if (!popbank) return
+                                        const handler = (e) => {
+                                            if (ref.current && !ref.current.contains(e.target)) {
+                                                setPopbank(false)
+                                            }
+                                        }
+                                        document.addEventListener("mousedown", handler)
+                                        return () => document.removeEventListener("mousedown", handler)
+                                    }, [popbank])
+
+                                    const displayName = bankList.find((b) => b.code === field.value)?.name
+                                    const filtered = bankList.filter((b) =>
+                                        b.name.toLowerCase().includes(search.toLowerCase())
+                                    )
+
+                                    return (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel>Banco</FormLabel>
+                                            <FormControl>
+                                                <div ref={ref} className="relative w-[200px]">
                                                     <Button
+                                                        type="button"
                                                         variant="outline"
                                                         role="combobox"
-                                                        className={cn("w-[200px] justify-between", !field.value && "text-muted-foreground")}
+                                                        className={cn(
+                                                            "w-full justify-between",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                        onClick={() => setPopbank((v) => !v)}
                                                     >
-                                                        {field.value ? field.value : "Selecione seu banco"}
+                                                        {displayName || "Selecione seu banco"}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-[200px] p-0">
-                                                <Command>
-                                                    <CommandInput
-                                                        placeholder="Buscar ou criar"
-                                                        onKeyDown={(event) => {
-                                                            if (event.key === "Enter") {
-                                                                event.preventDefault()
-                                                                event.stopPropagation()
-                                                                setPopbank(false)
-                                                                CreateBank(event)
-                                                            }
-                                                        }}
-                                                    />
-                                                    <CommandList>
-                                                        <CommandEmpty>ENTER para criar novo banco</CommandEmpty>
-                                                        <CommandGroup>
-                                                            {bankList.map((bank) => (
-                                                                <CommandItem
-                                                                    value={bank}
-                                                                    key={bank}
-                                                                    onSelect={() => {
-                                                                        form.setValue("bank", bank)
-                                                                        setPopbank(false)
-                                                                    }}
-                                                                >
-                                                                    {bank}
-                                                                    <Check
-                                                                        className={cn("ml-auto", bank === field.value ? "opacity-100" : "opacity-0")}
-                                                                    />
-                                                                </CommandItem>
-                                                            ))}
-                                                        </CommandGroup>
-                                                    </CommandList>
-                                                </Command>
-                                            </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
+                                                    {popbank && (
+                                                        <div className="absolute z-50 top-full mt-1 w-full rounded-md border bg-popover shadow-md">
+                                                            <div className="p-1 border-b">
+                                                                <input
+                                                                    autoFocus
+                                                                    className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground px-2 py-1"
+                                                                    placeholder="Buscar banco..."
+                                                                    value={search}
+                                                                    onChange={(e) => setSearch(e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div className="max-h-[180px] overflow-y-auto p-1">
+                                                                {filtered.length === 0 && (
+                                                                    <p className="text-sm text-muted-foreground text-center py-2">
+                                                                        Nenhum banco encontrado.
+                                                                    </p>
+                                                                )}
+                                                                {filtered.map((bank) => (
+                                                                    <div
+                                                                        key={bank.id}
+                                                                        className={cn(
+                                                                            "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                                                                            field.value === bank.code && "bg-accent"
+                                                                        )}
+                                                                        onMouseDown={(e) => {
+                                                                            e.preventDefault()
+                                                                            field.onChange(bank.code)
+                                                                            setSearch("")
+                                                                            setPopbank(false)
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "h-4 w-4 shrink-0",
+                                                                                field.value === bank.code ? "opacity-100" : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {bank.name}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )
+                                }}
                             />
 
                             {/* Value */}

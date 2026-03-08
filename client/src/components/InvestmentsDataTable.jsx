@@ -128,7 +128,7 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onDelete }) {
                 <DialogHeader>
                     <DialogTitle>{investment.title}</DialogTitle>
                     <DialogDescription>
-                        {investment.bank} · {getIndexLabel(investment)}
+                        {investment.bank?.name || "Banco Desconhecido"} · {getIndexLabel(investment)}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -329,6 +329,15 @@ function getColumns(setReload, onView, onEdit, onDelete) {
                     <ArrowUpDown className="ml-1 h-4 w-4" />
                 </Button>
             ),
+            cell: ({ row }) => {
+                const bankName = row.original.bank?.name || "Banco Desconhecido"
+                return <span className="whitespace-nowrap">{bankName}</span>
+            },
+            sortingFn: (rowA, rowB) => {
+                const a = rowA.original.bank?.name || ""
+                const b = rowB.original.bank?.name || ""
+                return a.localeCompare(b)
+            }
         },
         {
             id: "index",

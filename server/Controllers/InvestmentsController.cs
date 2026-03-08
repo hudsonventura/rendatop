@@ -29,6 +29,7 @@ public class InvestmentsController : AuthenticatedController
     private Investment GetInvestmentByID(Guid id)
     {
         return _context.investments
+                            .Include(x => x.bank)
                             .Where(x => x.owner.id == _user.id && x.id == id)
                             .FirstOrDefault();
     }
@@ -46,6 +47,7 @@ public class InvestmentsController : AuthenticatedController
         List<Investment> investments = _context.investments
                                                 .AsNoTracking()
                                                 .Include(x => x.owner)
+                                                .Include(x => x.bank)
                                                 .Where(x => x.owner.id == _user.id)
                                                 .ToList();
         foreach (var invest in investments)
@@ -93,8 +95,12 @@ public class InvestmentsController : AuthenticatedController
     [HttpPost("Investments")]
     public Guid Insert([FromBody] InvestmentRequest request)
     {
-        Investment investment = new Investment(request, _user);
-        _context.Entry(investment.owner).State = EntityState.Unchanged; //Evita o erro de "The instance of entity type 'User' cannot be tracked because another instance with the same key value for {'id'} is already being tracked."
+        var bank = _context.banks.FirstOrDefault(b => b.Code == (ushort)request.bank_code)
+            ?? throw new ExpectedException($"Banco com código {request.bank_code} não encontrado.");
+
+        Investment investment = new Investment(request, _user, bank);
+        _context.Entry(investment.owner).State = EntityState.Unchanged;
+        _context.Entry(investment.bank).State = EntityState.Unchanged;
         _context.investments.Add(investment);
         _context.SaveChanges();
 
@@ -115,8 +121,11 @@ public class InvestmentsController : AuthenticatedController
     {
         try
         {
+            var bank = _context.banks.FirstOrDefault(b => b.Code == (ushort)request.bank_code)
+                ?? throw new ExpectedException($"Banco com código {request.bank_code} não encontrado.");
+
             Investment investment = GetInvestmentByID(id);
-            investment.Update(request);
+            investment.Update(request, bank);
             _context.investments.Update(investment);
             _context.SaveChanges();
             return Ok();

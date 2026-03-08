@@ -29,7 +29,9 @@ public class Investment
     /// <summary>
     /// String que represta o banco onde o investimento foi feito
     /// </summary>
-    public string bank { get; set; }
+    [ForeignKey("bank")]
+    public Guid bank_id { get; set; }
+    public Bank bank { get; set; }
 
     /// <summary>
     /// Data de compra
@@ -76,11 +78,11 @@ public class Investment
 
     public Investment(){}
 
-    public Investment(InvestmentRequest request, User owner)
+    public Investment(InvestmentRequest request, User owner, Bank bank)
     {
         this.owner = owner;
         this.title = request.title;
-        this.bank = request.bank;
+        this.bank = bank;
         this.value = request.value;
         this.index = request.index;
         this.index_percent = request.index_percent;
@@ -93,10 +95,10 @@ public class Investment
 
     
     
-    public void Update(InvestmentRequest request)
+    public void Update(InvestmentRequest request, Bank bank)
     {
         this.title = request.title;
-        this.bank = request.bank;
+        this.bank = bank;
         this.value = request.value;
         this.index = request.index;
         this.index_percent = request.index_percent;
@@ -112,7 +114,7 @@ public class Investment
     {
         return new InvestmentRequest(){
             title = this.title,
-            bank = this.bank,
+            bank_code = (int)(this.bank?.Code ?? 0),
             value = this.value,
             index = this.index,
             index_percent = this.index_percent,

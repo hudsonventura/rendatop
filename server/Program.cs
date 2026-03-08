@@ -233,71 +233,7 @@ void MigrateDatabase(){
             dbContext.SaveChanges();
         }
 
-        //adiciona um investimento
-        if (!dbContext.Set<Investment>().Any())
-        {
-            List<Investment> investments = new List<Investment>();
-            investments.AddRange(
-                new Investment
-                {
-                    id = SnowflakeGuid.NewGuid(),
-                    owner = user,
-                    bank = "Sofisa",
-                    title = "13o parte 2 - LCA PRE - Banco ABC Brasil SA",
-                    value = 2000,
-                    date_buy = new DateTime(2024, 12, 20).ToUniversalTime(),
-                    due_date = new DateTime(2025, 12, 16).ToUniversalTime(),
-                    index = IdexesType.PERCENT_YEAR,
-                    index_percent = 13.5m,
-                    taxes = false
-                },
-                new Investment
-                {
-                    id = SnowflakeGuid.NewGuid(),
-                    owner = user,
-                    bank = "Sofisa",
-                    title = "Reinvestimento. Não sei o que era",
-                    value = 1470,
-                    date_buy = new DateTime(2024, 12, 20).ToUniversalTime(),
-                    due_date = new DateTime(2026, 06, 22).ToUniversalTime(),
-                    index = IdexesType.PERCENT_YEAR,
-                    index_percent = 14.9m,
-                    taxes = true
-                },
-                new Investment
-                {
-                    id = SnowflakeGuid.NewGuid(),
-                    owner = user,
-                    bank = "Banco Inter",
-                    title = "Teste Liquidez diária",
-                    value = 2000,
-                    date_buy = new DateTime(2024, 7, 12).ToUniversalTime(),
-                    //date_expected_sell = new DateTime(2026, 06, 22).ToUniversalTime(),
-                    index = IdexesType.CDI,
-                    index_percent = 100m,
-                    taxes = true
-                },              new Investment
-                {
-                    id = SnowflakeGuid.NewGuid(),
-                    owner = user,
-                    bank = "C6 Bank",
-                    title = "LCI PRE - qualqwuer coisa",
-                    value = 1000,
-                    date_buy = new DateTime(2024, 12, 20).ToUniversalTime(),
-                    due_date = new DateTime(2026, 06, 22).ToUniversalTime(),
-                    index = IdexesType.IPCA_MAIS,
-                    index_value = 5.9m,
-                    taxes = true
-                }
-            );
-
-            foreach (var item in investments)
-            {
-                dbContext.Set<Investment>().Add(item);
-            }
-            dbContext.SaveChanges();
-        }
-
+        // Seed banks first so investments can reference them
         if (!dbContext.Set<Bank>().Any())
         {
             List<Bank> banks = new List<Bank>();
@@ -316,7 +252,7 @@ void MigrateDatabase(){
                     Name = "Banco Inter",
                     CompanyName = "Banco Inter S.A.",
                     Cnpj = "977878978678",
-                    Code = 876
+                    Code = 77
                 },
                 new Bank
                 {
@@ -324,12 +260,81 @@ void MigrateDatabase(){
                     Name = "C6 Bank",
                     CompanyName = "C6 Bank S.A.",
                     Cnpj = "977878978678",
-                    Code = 876
+                    Code = 336
                 }
             );
             foreach (var item in banks)
             {
                 dbContext.Set<Bank>().Add(item);
+            }
+            dbContext.SaveChanges();
+        }
+
+        //adiciona um investimento
+        if (!dbContext.Set<Investment>().Any())
+        {
+            var sofisa   = dbContext.Set<Bank>().First(b => b.Name == "Sofisa");
+            var inter    = dbContext.Set<Bank>().First(b => b.Name == "Banco Inter");
+            var c6       = dbContext.Set<Bank>().First(b => b.Name == "C6 Bank");
+
+            List<Investment> investments = new List<Investment>();
+            investments.AddRange(
+                new Investment
+                {
+                    id = SnowflakeGuid.NewGuid(),
+                    owner = user,
+                    bank = sofisa,
+                    title = "13o parte 2 - LCA PRE - Banco ABC Brasil SA",
+                    value = 2000,
+                    date_buy = new DateTime(2024, 12, 20).ToUniversalTime(),
+                    due_date = new DateTime(2025, 12, 16).ToUniversalTime(),
+                    index = IdexesType.PERCENT_YEAR,
+                    index_percent = 13.5m,
+                    taxes = false
+                },
+                new Investment
+                {
+                    id = SnowflakeGuid.NewGuid(),
+                    owner = user,
+                    bank = sofisa,
+                    title = "Reinvestimento. Não sei o que era",
+                    value = 1470,
+                    date_buy = new DateTime(2024, 12, 20).ToUniversalTime(),
+                    due_date = new DateTime(2026, 06, 22).ToUniversalTime(),
+                    index = IdexesType.PERCENT_YEAR,
+                    index_percent = 14.9m,
+                    taxes = true
+                },
+                new Investment
+                {
+                    id = SnowflakeGuid.NewGuid(),
+                    owner = user,
+                    bank = inter,
+                    title = "Teste Liquidez diária",
+                    value = 2000,
+                    date_buy = new DateTime(2024, 7, 12).ToUniversalTime(),
+                    index = IdexesType.CDI,
+                    index_percent = 100m,
+                    taxes = true
+                },
+                new Investment
+                {
+                    id = SnowflakeGuid.NewGuid(),
+                    owner = user,
+                    bank = c6,
+                    title = "LCI PRE - qualqwuer coisa",
+                    value = 1000,
+                    date_buy = new DateTime(2024, 12, 20).ToUniversalTime(),
+                    due_date = new DateTime(2026, 06, 22).ToUniversalTime(),
+                    index = IdexesType.IPCA_MAIS,
+                    index_value = 5.9m,
+                    taxes = true
+                }
+            );
+
+            foreach (var item in investments)
+            {
+                dbContext.Set<Investment>().Add(item);
             }
             dbContext.SaveChanges();
         }

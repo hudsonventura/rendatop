@@ -35,7 +35,8 @@ function buildChartData(investments) {
     for (const inv of investments) {
         const firstCalc = inv.calculated?.[0]
         const liquidValue = firstCalc?.value_liq ?? inv.value
-        map.set(inv.bank, (map.get(inv.bank) ?? 0) + liquidValue)
+        const bankName = inv.bank?.name || "Banco Desconhecido"
+        map.set(bankName, (map.get(bankName) ?? 0) + liquidValue)
     }
 
     return Array.from(map.entries()).map(([bank, value], index) => ({
