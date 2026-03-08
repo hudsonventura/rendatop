@@ -150,14 +150,12 @@ function InvestmentPreview({ form }) {
 		}
 	}, [watchValue, watchIndex, watchIndexPercent, watchDateBuy, watchDueDate, watchTaxes, watchLiquidez])
 
-	if (!preview) return null
-
 	return (
 		<div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4 space-y-3">
 			<div className="flex items-center gap-2">
 				<TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
 				<span className="text-sm font-medium">Simulação do investimento</span>
-				{preview.isEstimate && (
+				{preview?.isEstimate && (
 					<Badge variant="outline" className="text-xs text-muted-foreground">
 						Selic estimada
 					</Badge>
@@ -167,34 +165,37 @@ function InvestmentPreview({ form }) {
 				<div className="flex flex-col gap-1">
 					<span className="text-xs text-muted-foreground">Rendimento Bruto</span>
 					<span className="text-sm font-medium">
-						R$ {formatBRL(preview.profitBrute)}
+						{preview ? `R$ ${formatBRL(preview.profitBrute)}` : "-"}
 					</span>
 				</div>
 				<div className="flex flex-col gap-1">
 					<span className="text-xs text-muted-foreground">
-						IR ({preview.irPercent.toFixed(1)}%)
+						IR {preview ? `(${preview.irPercent.toFixed(1)}%)` : ""}
 					</span>
 					<span className="text-sm font-medium text-red-500">
-						- R$ {formatBRL(preview.irValue)}
+						{preview ? `- R$ ${formatBRL(preview.irValue)}` : "-"}
 					</span>
 				</div>
 				<div className="flex flex-col gap-1">
 					<span className="text-xs text-muted-foreground">Rendimento Líquido</span>
 					<div className="flex items-center gap-1.5">
 						<span className="text-sm font-semibold text-green-600 dark:text-green-400">
-							R$ {formatBRL(preview.profitLiq)}
+							{preview ? `R$ ${formatBRL(preview.profitLiq)}` : "-"}
 						</span>
-						<Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
-							<TrendingUp className="h-3 w-3 mr-0.5" />
-							+{(preview.profitLiq / (parseFloat(String(watchValue).replace(/\./g, "").replace(",", ".")) || 1) * 100).toFixed(1)}%
-						</Badge>
+						{preview && (
+							<Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
+								<TrendingUp className="h-3 w-3 mr-0.5" />
+								+{(preview.profitLiq / (parseFloat(String(watchValue).replace(/\./g, "").replace(",", ".")) || 1) * 100).toFixed(1)}%
+							</Badge>
+						)}
 					</div>
 				</div>
 			</div>
 			<p className="text-xs text-muted-foreground">
-				Estimativa para {preview.days} dias. Valores podem variar. Aqui é considerado que o IPCA ou CDI permanecerão os mesmo até a data de vencimento. <br />
-				A taxa de juros pode variar durante o período conforme os ídices IPCA e CDI variarem. <br />
-				Isso é apenas uma estimativa para enteder o seu investimento.
+				{preview
+					? <>Estimativa para {preview.days} dias. Valores podem variar. Aqui é considerado que o IPCA ou CDI permanecerão os mesmo até a data de vencimento. <br />A taxa de juros pode variar durante o período conforme os ídices IPCA e CDI variarem. <br />Isso é apenas uma estimativa para enteder o seu investimento.</>
+					: "Preencha os campos acima para ver a simulação do investimento."
+				}
 			</p>
 		</div>
 	)
@@ -289,15 +290,8 @@ const InvestmentsAdd = ({ setReload }) => {
 		form.setValue(input.name, input.value);
 	};
 
-	const [popbank, setPopbank] = useState([]);
-	//create bank
-	const CreateBank = (e) => {
-		if (e.key === "Enter") {
-			var new_bank = e.target.value;
-			form.setValue("bank", new_bank)
-		}
-
-	}
+	// bank combobox open state
+	const [popbank, setPopbank] = useState(false);
 
 	const [liquidez_diaria, setLiquidezDiaria] = useState(false);
 
@@ -409,67 +403,92 @@ const InvestmentsAdd = ({ setReload }) => {
 							<FormField
 								control={form.control}
 								name="bank"
-								render={({ field }) => (
-									<FormItem className="flex flex-col">
-										<FormLabel>Banco</FormLabel>
-										<Popover open={popbank} onOpenChange={(open) => setPopbank(open)}>
-											<PopoverTrigger asChild>
-												<FormControl>
+								render={({ field }) => {
+									const [search, setSearch] = React.useState("")
+									const ref = React.useRef(null)
+
+									React.useEffect(() => {
+										if (!popbank) return
+										const handler = (e) => {
+											if (ref.current && !ref.current.contains(e.target)) {
+												setPopbank(false)
+											}
+										}
+										document.addEventListener("mousedown", handler)
+										return () => document.removeEventListener("mousedown", handler)
+									}, [popbank])
+
+									const filtered = bankList.filter((b) =>
+										b.name.toLowerCase().includes(search.toLowerCase())
+									)
+
+									return (
+										<FormItem className="flex flex-col">
+											<FormLabel>Banco</FormLabel>
+											<FormControl>
+												<div ref={ref} className="relative w-[200px]">
 													<Button
+														type="button"
 														variant="outline"
 														role="combobox"
 														className={cn(
-															"w-[200px] justify-between",
+															"w-full justify-between",
 															!field.value && "text-muted-foreground"
 														)}
+														onClick={() => setPopbank((v) => !v)}
 													>
-														{field.value
-															? field.value
-															: "Selecione seu banco"}
+														{field.value || "Selecione seu banco"}
 														<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 													</Button>
-												</FormControl>
-											</PopoverTrigger>
-											<PopoverContent className="w-[200px] p-0">
-												<Command>
-													<CommandInput placeholder="Buscar ou criar" onKeyDown={(event) => {
-														if (event.key === "Enter") {
-															event.preventDefault()
-															event.stopPropagation()
-															setPopbank(false)
-															CreateBank(event)
-														}
-													}} />
-													<CommandList>
-														<CommandEmpty>ENTER para criar novo banco</CommandEmpty>
-														<CommandGroup>
-															{bankList.map((bank) => (
-																<CommandItem
-																	value={bank}
-																	key={bank}
-																	onSelect={() => {
-																		form.setValue("bank", bank)
-																	}}
-																>
-																	{bank}
-																	<Check
+													{popbank && (
+														<div className="absolute z-50 top-full mt-1 w-full rounded-md border bg-popover shadow-md">
+															<div className="p-1 border-b">
+																<input
+																	autoFocus
+																	className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground px-2 py-1"
+																	placeholder="Buscar banco..."
+																	value={search}
+																	onChange={(e) => setSearch(e.target.value)}
+																/>
+															</div>
+															<div className="max-h-[180px] overflow-y-auto p-1">
+																{filtered.length === 0 && (
+																	<p className="text-sm text-muted-foreground text-center py-2">
+																		Nenhum banco encontrado.
+																	</p>
+																)}
+																{filtered.map((bank) => (
+																	<div
+																		key={bank.id}
 																		className={cn(
-																			"ml-auto",
-																			bank === field.value
-																				? "opacity-100"
-																				: "opacity-0"
+																			"flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
+																			field.value === bank.name && "bg-accent"
 																		)}
-																	/>
-																</CommandItem>
-															))}
-														</CommandGroup>
-													</CommandList>
-												</Command>
-											</PopoverContent>
-										</Popover>
-										<FormMessage />
-									</FormItem>
-								)}
+																		onMouseDown={(e) => {
+																			e.preventDefault()
+																			field.onChange(bank.name)
+																			setSearch("")
+																			setPopbank(false)
+																		}}
+																	>
+																		<Check
+																			className={cn(
+																				"h-4 w-4 shrink-0",
+																				field.value === bank.name ? "opacity-100" : "opacity-0"
+																			)}
+																		/>
+																		{bank.name}
+																	</div>
+																))}
+															</div>
+														</div>
+													)}
+												</div>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)
+								}}
 							/>
 
 							<FormField

@@ -297,5 +297,41 @@ void MigrateDatabase(){
             }
             dbContext.SaveChanges();
         }
+
+        if (!dbContext.Set<Bank>().Any())
+        {
+            List<Bank> banks = new List<Bank>();
+            banks.AddRange(
+                new Bank
+                {
+                    Id = SnowflakeGuid.NewGuid(),
+                    Name = "Sofisa",
+                    CompanyName = "Banco Sofisa S.A.",
+                    Cnpj = "977878978678",
+                    Code = 876
+                },
+                new Bank
+                {
+                    Id = SnowflakeGuid.NewGuid(),
+                    Name = "Banco Inter",
+                    CompanyName = "Banco Inter S.A.",
+                    Cnpj = "977878978678",
+                    Code = 876
+                },
+                new Bank
+                {
+                    Id = SnowflakeGuid.NewGuid(),
+                    Name = "C6 Bank",
+                    CompanyName = "C6 Bank S.A.",
+                    Cnpj = "977878978678",
+                    Code = 876
+                }
+            );
+            foreach (var item in banks)
+            {
+                dbContext.Set<Bank>().Add(item);
+            }
+            dbContext.SaveChanges();
+        }
     }
 }
