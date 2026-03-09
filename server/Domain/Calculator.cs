@@ -45,16 +45,18 @@ public class Calculator
     /// <returns></returns>
     public List<Calculated> Calculate(InvestmentRequest request)
     {
+        var now = DateTime.UtcNow;
+
         ///se não possuir data estimada de venda, usa a data atual
         if (request.date_expected_sell is null)
         {
             return new List<Calculated>(){
-                Generate(request, DateTime.Now)
+                Generate(request, now)
             };
         }
 
         return new List<Calculated>(){
-            Generate(request, DateTime.Now),
+            Generate(request, now),
             Generate(request, (DateTime) request.date_expected_sell)
         };
     }
@@ -64,4 +66,3 @@ public class Calculator
         return ((ICalculator)this).Generate(request, sell);
     }
 }
-

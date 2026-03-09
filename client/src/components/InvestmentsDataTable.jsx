@@ -81,86 +81,69 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
 
     const calc = investment.calculated?.[0]
     const calcDue = investment.calculated?.[1]
+    const hasDueEstimate = Boolean(investment.due_date && calcDue)
     const redemptions = [...(investment.redemptions ?? [])].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     )
 
-    const items = [
-        {
-            label: `IR (${calc.IR.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}%)`,
-            value: `R$ ${formatCurrency(calc.IR_value)}`,
-            variant: calc.IR > 15 ? "destructive" : "secondary",
-        },
-        {
-            label: `IOF (${calc.IOF.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%)`,
-            value: `R$ ${formatCurrency(calc.IOF_value)}`,
-            variant: calc.IOF > 0 ? "destructive" : "secondary",
-        },
-        {
-            label: "Valor bruto",
-            value: `R$ ${formatCurrency(calc.value_brute)}`,
-            variant: "default",
-        },
-        {
-            label: "Valor líquido atual",
-            value: `R$ ${formatCurrency(calc.value_liq)}`,
-            variant: "default",
-            showTrend: true,
-            pct: investment.value > 0 ? ((calc.value_liq - investment.value) / investment.value * 100) : 0,
-        },
-        {
-            label: "Rend. líq. estimado no venc.",
-            value: `R$ ${investment.due_date
-                ? formatCurrency(calcDue.profit_liq)
-                : formatCurrency(calc.profit_liq) + " *"}`,
-            variant: "default",
-            showTrend: true,
-            pct: investment.value > 0
-                ? ((investment.due_date ? calcDue.profit_liq : calc.profit_liq) / investment.value * 100)
-                : 0,
-        },
-        {
-            label: "Valor líq. estimado no venc.",
-            value: `R$ ${investment.due_date
-                ? formatCurrency(calcDue.value_liq)
-                : formatCurrency(calc.value_liq) + " *"}`,
-            variant: "default",
-        },
-    ]
-
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-xl">
+            <DialogContent className="w-[98vw] max-w-[98vw] sm:max-w-6xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{investment.title}</DialogTitle>
                     <DialogDescription>
                         {investment.bank?.name || "Banco Desconhecido"} · {getIndexLabel(investment)}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {items.map((item, i) => (
-                        <div key={i} className="flex flex-col gap-1">
-                            <span className="text-xs text-muted-foreground">{item.label}</span>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                                <Badge variant={item.variant} className="w-fit text-xs">
-                                    {item.value}
+                <div className="space-y-3 rounded-md border p-3 min-w-0">
+                    <h4 className="text-sm font-semibold">Valor atual do investimento</h4>
+
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 overflow-x-auto">
+                            <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap min-w-40">Valores atuais:</span>
+                            <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                                <Badge variant={calc.IOF > 0 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
+                                    IOF: R$ {formatCurrency(calc.IOF_value)}
                                 </Badge>
-                                {item.showTrend && item.pct !== 0 && (
-                                    <Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
-                                        <TrendingUp className="h-3 w-3 mr-0.5" />
-                                        +{item.pct.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
-                                    </Badge>
-                                )}
+                                <Badge variant={calc.IR > 15 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
+                                    IR: R$ {formatCurrency(calc.IR_value)}
+                                </Badge>
+                                <Badge variant="default" className="text-xs whitespace-nowrap">
+                                    Valor líquido: R$ {formatCurrency(calc.value_liq)}
+                                </Badge>
                             </div>
                         </div>
-                    ))}
+
+                        <div className="flex items-center gap-2 overflow-x-auto">
+                            <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap min-w-40">
+                                Estimado na data de venc.:
+                            </span>
+                            {hasDueEstimate ? (
+                                <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                                    <Badge variant={calcDue.IOF > 0 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
+                                        IOF: R$ {formatCurrency(calcDue.IOF_value)}
+                                    </Badge>
+                                    <Badge variant={calcDue.IR > 15 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
+                                        IR: R$ {formatCurrency(calcDue.IR_value)}
+                                    </Badge>
+                                    <Badge variant="default" className="text-xs whitespace-nowrap">
+                                        Valor líquido: R$ {formatCurrency(calcDue.value_liq)}
+                                    </Badge>
+                                </div>
+                            ) : (
+                                <Badge variant="outline" className="text-xs whitespace-nowrap shrink-0">
+                                    Sem data de vencimento definida
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                     <h4 className="text-sm font-semibold">Resgates</h4>
                     {redemptions.length === 0 ? (
                         <p className="text-xs text-muted-foreground">Nenhum resgate registrado.</p>
                     ) : (
-                        <div className="rounded-md border overflow-hidden">
+                        <div className="rounded-md border overflow-hidden max-w-full">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -173,7 +156,9 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
                                 <TableBody>
                                     {redemptions.map((redemption) => (
                                         <TableRow key={redemption.id}>
-                                            <TableCell className="font-medium">{redemption.title}</TableCell>
+                                            <TableCell className="font-medium whitespace-normal break-words max-w-[340px]">
+                                                {redemption.title}
+                                            </TableCell>
                                             <TableCell>{formatDate(redemption.date)}</TableCell>
                                             <TableCell className="text-right">
                                                 R$ {formatCurrency(redemption.value)}
