@@ -4,48 +4,60 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, TrendingUp, Eye, EyeOff } from "lucide-react"
+import { AlertCircle, TrendingUp, Eye, EyeOff, UserPlus } from "lucide-react"
 import axiosInstance from "@/utils/axiosConfig";
 
-const Login = () => {
+const Signup = () => {
 
     const [erro, setErro] = useState(false);
+    const [erroMessage, setErroMessage] = useState("");
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
-        // If a valid session cookie already exists, skip login page
         axiosInstance.get('/Authenticated')
             .then(() => { window.location.href = '/home'; })
-            .catch(() => { /* not logged in, stay on login page */ });
+            .catch(() => { });
     }, []);
 
-    const handleLogin = async (event) => {
+    const handleSignup = async (event) => {
         event.preventDefault();
         setErro(false);
+        setErroMessage("");
         setLoading(true);
+
         const formData = new FormData(event.target);
+        const name = formData.get('name');
         const email = formData.get('email');
         const password = formData.get('password');
+        const confirmPassword = formData.get('confirmPassword');
+
+        if (password !== confirmPassword) {
+            setErro(true);
+            setErroMessage("As senhas não conferem.");
+            setLoading(false);
+            return;
+        }
 
         axiosInstance
-            .post("/login", { email, password })
+            .post("/signup", { name, email, password })
             .then((response) => {
-                // Server sets the HttpOnly cookie — we only store display info
-                const { name, email: userEmail } = response.data;
-                sessionStorage.setItem('name', name);
+                const { name: userName, email: userEmail } = response.data;
+                sessionStorage.setItem('name', userName);
                 sessionStorage.setItem('email', userEmail);
                 window.location.href = '/home';
             })
             .catch((error) => {
                 setErro(true);
+                setErroMessage(typeof error?.response?.data === "string"
+                    ? error.response.data
+                    : "Não foi possível criar sua conta.");
                 setLoading(false);
             });
     };
 
     return (
         <div className="min-h-screen flex">
-            {/* Left panel — gradient branding */}
             <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-primary/80 to-primary/60 items-center justify-center">
                 <div className="absolute inset-0 opacity-10">
                     <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl" />
@@ -55,38 +67,20 @@ const Login = () => {
                 <div className="relative z-10 text-center space-y-6 px-12">
                     <div className="flex items-center justify-center gap-3 mb-8">
                         <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                            <TrendingUp className="h-8 w-8 text-primary-foreground" />
+                            <UserPlus className="h-8 w-8 text-primary-foreground" />
                         </div>
                     </div>
                     <h1 className="text-4xl font-bold text-primary-foreground tracking-tight">
                         RendaTop
                     </h1>
                     <p className="text-lg text-primary-foreground/80 max-w-md mx-auto leading-relaxed">
-                        Gerencie seus investimentos de renda fixa com facilidade. Acompanhe rendimentos, impostos e vencimentos em um só lugar.
+                        Crie sua conta para acompanhar investimentos, projeções e vencimentos em um único painel.
                     </p>
-                    <div className="flex items-center justify-center gap-8 pt-4">
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-primary-foreground">CDI</p>
-                            <p className="text-sm text-primary-foreground/60">Indexadores</p>
-                        </div>
-                        <div className="w-px h-10 bg-primary-foreground/20"></div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-primary-foreground">IPCA+</p>
-                            <p className="text-sm text-primary-foreground/60">Pré-fixado</p>
-                        </div>
-                        <div className="w-px h-10 bg-primary-foreground/20"></div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-primary-foreground">%a.a.</p>
-                            <p className="text-sm text-primary-foreground/60">Rendimento</p>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            {/* Right panel — login form */}
             <div className="flex-1 flex items-center justify-center p-6 bg-background">
                 <div className="w-full max-w-md space-y-8">
-                    {/* Mobile logo */}
                     <div className="lg:hidden flex items-center justify-center gap-3 mb-4">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
                             <TrendingUp className="h-5 w-5 text-primary-foreground" />
@@ -94,16 +88,28 @@ const Login = () => {
                         <span className="text-xl font-bold">RendaTop</span>
                     </div>
 
-                    <form onSubmit={handleLogin}>
+                    <form onSubmit={handleSignup}>
                         <Card className="border-0 shadow-xl bg-card">
                             <CardHeader className="space-y-2 pb-6">
-                                <CardTitle className="text-2xl font-bold tracking-tight">Bem-vindo de volta</CardTitle>
+                                <CardTitle className="text-2xl font-bold tracking-tight">Criar conta</CardTitle>
                                 <CardDescription className="text-muted-foreground">
-                                    Informe seus dados para acessar sua conta
+                                    Preencha seus dados para começar
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-5">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name" className="text-sm font-medium">Nome</Label>
+                                        <Input
+                                            id="name"
+                                            type="text"
+                                            name="name"
+                                            placeholder="Seu nome completo"
+                                            required
+                                            className="h-11"
+                                        />
+                                    </div>
+
                                     <div className="space-y-2">
                                         <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                                         <Input
@@ -115,6 +121,7 @@ const Login = () => {
                                             className="h-11"
                                         />
                                     </div>
+
                                     <div className="space-y-2">
                                         <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
                                         <div className="relative">
@@ -123,6 +130,7 @@ const Login = () => {
                                                 type={showPassword ? "text" : "password"}
                                                 name="password"
                                                 required
+                                                minLength={6}
                                                 className="h-11 pr-10"
                                             />
                                             <button
@@ -130,13 +138,21 @@ const Login = () => {
                                                 onClick={() => setShowPassword(!showPassword)}
                                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                                             >
-                                                {showPassword ? (
-                                                    <EyeOff className="h-4 w-4" />
-                                                ) : (
-                                                    <Eye className="h-4 w-4" />
-                                                )}
+                                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                             </button>
                                         </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar senha</Label>
+                                        <Input
+                                            id="confirmPassword"
+                                            type={showPassword ? "text" : "password"}
+                                            name="confirmPassword"
+                                            required
+                                            minLength={6}
+                                            className="h-11"
+                                        />
                                     </div>
 
                                     <Button
@@ -147,10 +163,10 @@ const Login = () => {
                                         {loading ? (
                                             <span className="flex items-center gap-2">
                                                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                Entrando...
+                                                Criando conta...
                                             </span>
                                         ) : (
-                                            "Entrar"
+                                            "Criar conta"
                                         )}
                                     </Button>
 
@@ -159,22 +175,17 @@ const Login = () => {
                                             <AlertCircle className="h-4 w-4" />
                                             <AlertTitle><b>Erro</b></AlertTitle>
                                             <AlertDescription>
-                                                Email ou senha inválidos. Tente novamente.
+                                                {erroMessage}
                                             </AlertDescription>
                                         </Alert>
                                     )}
 
-                                    <div className="pt-2 space-y-2 text-center">
-                                        <a href="#" className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors">
-                                            Esqueci minha senha
-                                        </a>
-                                    <p className="text-sm text-muted-foreground">
-                                        Não tem uma conta?{" "}
-                                        <a href="/signup" className="text-foreground hover:underline underline-offset-4 font-medium">
-                                            Criar conta
+                                    <p className="text-sm text-muted-foreground text-center">
+                                        Já tem uma conta?{" "}
+                                        <a href="/login" className="text-foreground hover:underline underline-offset-4 font-medium">
+                                            Entrar
                                         </a>
                                     </p>
-                                </div>
                                 </div>
                             </CardContent>
                         </Card>
@@ -185,4 +196,4 @@ const Login = () => {
     );
 };
 
-export default Login;
+export default Signup;

@@ -56,7 +56,7 @@ const Home = () => {
             <Logged />
             <BaseLayout title="Investimentos" description="Acompanhe e gerencie seus investimentos de renda fixa">
                 <div className="px-4 lg:px-6 space-y-6">
-                    <BanksPieChart investments={investments.length > 0 ? investments : null} />
+                    <BanksPieChart investments={investments} />
                     <InvestmentsResume investments={investments} />
 
                     <div className="flex items-center justify-between">
@@ -89,4 +89,3 @@ const Home = () => {
 };
 
 export default Home;
-

@@ -102,7 +102,7 @@ export default function BanksPieChart({ investments }) {
                 </CardHeader>
                 <CardContent>
                     <p className="text-sm text-muted-foreground">
-                        Nenhum investimento encontrado. Cadastre um investimento para visualizar o gráfico.
+                        Não há invesimentos. Crie o seu primeiro investimento usando o botão 'Adicionar investimento'
                     </p>
                 </CardContent>
             </Card>
