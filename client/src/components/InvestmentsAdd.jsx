@@ -248,8 +248,15 @@ const InvestmentsAdd = ({ setReload }) => {
 	const form = useForm({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
-			username: "",
+			title: "",
+			date_buy: undefined,
+			due_date: undefined,
+			liquidez_diaria: false,
 			taxes: true,
+			bank_code: undefined,
+			value: "",
+			index: "",
+			index_percent: "",
 		},
 	})
 
@@ -579,4 +586,3 @@ const InvestmentsAdd = ({ setReload }) => {
 	);
 };
 export default InvestmentsAdd;
-
