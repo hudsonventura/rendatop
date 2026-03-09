@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using server.RequestObjects;
 
 
@@ -18,6 +19,7 @@ public class Redemption
     /// <summary>
     /// O investimento a ser resgatado
     /// </summary>
+    [JsonIgnore]
     public Investment investment { get; set; }
 
 

@@ -69,6 +69,10 @@ public class Investment
     /// </summary>
     public bool taxes { get; set; }
 
+    /// <summary>
+    /// Lista de resgates realizados neste investimento
+    /// </summary>
+    public List<Redemption> redemptions { get; set; } = new();
 
     
     [NotMapped] //impede que vá para o entity

@@ -11,6 +11,7 @@ import {
     EllipsisVertical,
     Eye,
     Pencil,
+    HandCoins,
     Trash2,
     ArrowUpDown,
     ChevronLeft,
@@ -48,6 +49,8 @@ import {
 } from "@/components/ui/table"
 
 import InvestmentsEdit from "@/components/InvestmentsEdit"
+import InvestmentsRedeem from "@/components/InvestmentsRedeem"
+import RedemptionEdit from "@/components/RedemptionEdit"
 import axiosInstance from "@/utils/axiosConfig"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -73,11 +76,14 @@ function getIndexLabel(investment) {
 
 // ── View Dialog (investment details) ──────────────────────────────────────────
 
-function ViewDialog({ investment, open, onOpenChange, onEdit, onDelete }) {
+function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRedemption, onDelete }) {
     if (!investment) return null
 
     const calc = investment.calculated?.[0]
     const calcDue = investment.calculated?.[1]
+    const redemptions = [...(investment.redemptions ?? [])].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
 
     const items = [
         {
@@ -149,6 +155,47 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onDelete }) {
                         </div>
                     ))}
                 </div>
+                <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">Resgates</h4>
+                    {redemptions.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Nenhum resgate registrado.</p>
+                    ) : (
+                        <div className="rounded-md border overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Título</TableHead>
+                                        <TableHead>Data</TableHead>
+                                        <TableHead className="text-right">Valor</TableHead>
+                                        <TableHead className="text-right">Ações</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {redemptions.map((redemption) => (
+                                        <TableRow key={redemption.id}>
+                                            <TableCell className="font-medium">{redemption.title}</TableCell>
+                                            <TableCell>{formatDate(redemption.date)}</TableCell>
+                                            <TableCell className="text-right">
+                                                R$ {formatCurrency(redemption.value)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-8 cursor-pointer"
+                                                    onClick={() => { onOpenChange(false); onEditRedemption(redemption) }}
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                    <span className="sr-only">Editar resgate</span>
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </div>
                 {!investment.due_date && (
                     <p className="text-xs text-muted-foreground">
                         * Valores estimados baseados na data atual (liquidez diária)
@@ -162,6 +209,14 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onDelete }) {
                     >
                         <Pencil className="h-4 w-4 mr-1" />
                         Editar
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        className="cursor-pointer"
+                        onClick={() => { onOpenChange(false); onRedeem() }}
+                    >
+                        <HandCoins className="h-4 w-4 mr-1" />
+                        Restar
                     </Button>
                     <Button
                         variant="destructive"
@@ -211,7 +266,7 @@ function DeleteDialog({ investment, open, onOpenChange, onConfirm }) {
 
 // ── Actions Cell ──────────────────────────────────────────────────────────────
 
-function ActionsCell({ investment, onView, onEdit, onDelete }) {
+function ActionsCell({ investment, onView, onEdit, onRedeem, onDelete }) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
     const btnRef = React.useRef(null)
@@ -282,6 +337,13 @@ function ActionsCell({ investment, onView, onEdit, onDelete }) {
                         <Pencil className="h-4 w-4" />
                         Editar
                     </button>
+                    <button
+                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
+                        onClick={() => { setMenuOpen(false); onRedeem(investment) }}
+                    >
+                        <HandCoins className="h-4 w-4" />
+                        Restar
+                    </button>
                     <div className="my-1 h-px bg-border" />
                     <button
                         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 cursor-pointer"
@@ -299,7 +361,7 @@ function ActionsCell({ investment, onView, onEdit, onDelete }) {
 
 // ── Column definitions ────────────────────────────────────────────────────────
 
-function getColumns(setReload, onView, onEdit, onDelete) {
+function getColumns(setReload, onView, onEdit, onRedeem, onDelete) {
     return [
         {
             accessorKey: "title",
@@ -433,6 +495,7 @@ function getColumns(setReload, onView, onEdit, onDelete) {
                     investment={row.original}
                     onView={onView}
                     onEdit={onEdit}
+                    onRedeem={onRedeem}
                     onDelete={onDelete}
                 />
             ),
@@ -451,10 +514,15 @@ export default function InvestmentsDataTable({ investments, setReload }) {
     const [selectedInvestment, setSelectedInvestment] = useState(null)
     const [viewOpen, setViewOpen] = useState(false)
     const [editOpen, setEditOpen] = useState(false)
+    const [redeemOpen, setRedeemOpen] = useState(false)
+    const [selectedRedemption, setSelectedRedemption] = useState(null)
+    const [editRedemptionOpen, setEditRedemptionOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
 
     const openView = (inv) => { setSelectedInvestment(inv); setViewOpen(true) }
     const openEdit = (inv) => { setSelectedInvestment(inv); setEditOpen(true) }
+    const openRedeem = (inv) => { setSelectedInvestment(inv); setRedeemOpen(true) }
+    const openEditRedemption = (redemption) => { setSelectedRedemption(redemption); setEditRedemptionOpen(true) }
     const openDelete = (inv) => { setSelectedInvestment(inv); setDeleteOpen(true) }
 
     const handleDelete = () => {
@@ -469,7 +537,10 @@ export default function InvestmentsDataTable({ investments, setReload }) {
             .catch((err) => console.error("Erro ao excluir:", err))
     }
 
-    const columns = React.useMemo(() => getColumns(setReload, openView, openEdit, openDelete), [setReload])
+    const columns = React.useMemo(
+        () => getColumns(setReload, openView, openEdit, openRedeem, openDelete),
+        [setReload]
+    )
 
     const table = useReactTable({
         data: investments,
@@ -602,6 +673,8 @@ export default function InvestmentsDataTable({ investments, setReload }) {
                 open={viewOpen}
                 onOpenChange={setViewOpen}
                 onEdit={() => openEdit(selectedInvestment)}
+                onRedeem={() => openRedeem(selectedInvestment)}
+                onEditRedemption={openEditRedemption}
                 onDelete={() => openDelete(selectedInvestment)}
             />
 
@@ -612,6 +685,26 @@ export default function InvestmentsDataTable({ investments, setReload }) {
                     setReload={setReload}
                     externalOpen={editOpen}
                     onExternalClose={() => { setEditOpen(false); setSelectedInvestment(null) }}
+                />
+            )}
+
+            {/* Shared Redeem Dialog */}
+            {redeemOpen && selectedInvestment && (
+                <InvestmentsRedeem
+                    investment={selectedInvestment}
+                    setReload={setReload}
+                    externalOpen={redeemOpen}
+                    onExternalClose={() => { setRedeemOpen(false); setSelectedInvestment(null) }}
+                />
+            )}
+
+            {/* Shared Redemption Edit Dialog */}
+            {editRedemptionOpen && selectedRedemption && (
+                <RedemptionEdit
+                    redemption={selectedRedemption}
+                    setReload={setReload}
+                    externalOpen={editRedemptionOpen}
+                    onExternalClose={() => { setEditRedemptionOpen(false); setSelectedRedemption(null) }}
                 />
             )}
 

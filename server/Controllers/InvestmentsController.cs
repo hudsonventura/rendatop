@@ -48,6 +48,7 @@ public class InvestmentsController : AuthenticatedController
                                                 .AsNoTracking()
                                                 .Include(x => x.owner)
                                                 .Include(x => x.bank)
+                                                .Include(x => x.redemptions)
                                                 .Where(x => x.owner.id == _user.id)
                                                 .ToList();
         foreach (var invest in investments)
@@ -177,6 +178,34 @@ public class InvestmentsController : AuthenticatedController
         _context.SaveChanges();
 
         return invest;
+    }
+
+    /// <summary>
+    /// Edita um resgate já registrado
+    /// </summary>
+    /// <returns>Retorno vazio</returns>
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [HttpPatch("Redemptions/{id}")]
+    public IActionResult UpdateRedemption(Guid id, [FromBody] RedemptionRequest request)
+    {
+        var redemption = _context.redemptions
+            .Include(r => r.investment)
+            .ThenInclude(i => i.owner)
+            .FirstOrDefault(r => r.id == id && r.investment.owner.id == _user.id);
+
+        if (redemption == null)
+            throw new ExpectedException("Resgate não encontrado.");
+
+        redemption.title = request.title;
+        redemption.value = request.value;
+        redemption.date = DateTime.SpecifyKind(request.date, DateTimeKind.Utc);
+
+        _context.redemptions.Update(redemption);
+        _context.SaveChanges();
+
+        return NoContent();
     }
 
 }

@@ -1,7 +1,7 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import InvestmentsEdit from "@/components/InvestmentsEdit"
+import InvestmentsRedeem from "@/components/InvestmentsRedeem"
 
 export default function InvestmentsContent({ investment, setReload }) {
 
@@ -59,7 +59,8 @@ export default function InvestmentsContent({ investment, setReload }) {
             {!investment.due_date && (
                 <p className="text-xs text-muted-foreground">* Valores estimados baseados na data atual (liquidez diária)</p>
             )}
-            <div className="flex justify-end pt-1">
+            <div className="flex justify-end gap-2 pt-1">
+                <InvestmentsRedeem investment={investment} setReload={setReload} />
                 <InvestmentsEdit investment={investment} setReload={setReload} />
             </div>
         </div>
