@@ -98,10 +98,10 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
                 <div className="space-y-3 rounded-md border p-3 min-w-0">
                     <h4 className="text-sm font-semibold">Valor atual do investimento</h4>
 
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2 overflow-x-auto">
-                            <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap min-w-40">Valores atuais:</span>
-                            <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                    <div className="grid grid-cols-[max-content_1fr] items-center gap-x-2 gap-y-2">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">Valores atuais:</span>
+                        <div className="min-w-0 overflow-x-auto">
+                            <div className="flex items-center gap-1.5 w-max whitespace-nowrap">
                                 <Badge variant={calc.IOF > 0 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
                                     IOF: R$ {formatCurrency(calc.IOF_value)}
                                 </Badge>
@@ -114,12 +114,14 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 overflow-x-auto">
-                            <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap min-w-40">
-                                Estimado na data de venc.:
-                            </span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {investment.due_date
+                                ? `Estimado na data de venc. (${formatDate(investment.due_date)}):`
+                                : "Estimado na data de venc.:"}
+                        </span>
+                        <div className="min-w-0 overflow-x-auto">
                             {hasDueEstimate ? (
-                                <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5 w-max whitespace-nowrap">
                                     <Badge variant={calcDue.IOF > 0 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
                                         IOF: R$ {formatCurrency(calcDue.IOF_value)}
                                     </Badge>
@@ -131,7 +133,7 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
                                     </Badge>
                                 </div>
                             ) : (
-                                <Badge variant="outline" className="text-xs whitespace-nowrap shrink-0">
+                                <Badge variant="outline" className="text-xs whitespace-nowrap">
                                     Sem data de vencimento definida
                                 </Badge>
                             )}
