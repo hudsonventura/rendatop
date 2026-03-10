@@ -12,11 +12,13 @@ public class UserController : AuthenticatedController
 {
     private readonly Context _context;
     private readonly INotification _notify;
+    private readonly IWhatsAppNotification _whatsApp;
 
-    public UserController(IHttpContextAccessor httpContextAccessor, Context context, INotification notify) : base(httpContextAccessor)
+    public UserController(IHttpContextAccessor httpContextAccessor, Context context, INotification notify, IWhatsAppNotification whatsApp) : base(httpContextAccessor)
     {
         _context = context;
         _notify = notify;
+        _whatsApp = whatsApp;
     }
 
     /// <summary>
@@ -108,6 +110,41 @@ public class UserController : AuthenticatedController
         }
 
         return Ok(new GenericMessageResponse("Mensagem de teste enviada no Telegram."));
+    }
+
+    /// <summary>
+    /// Envia uma mensagem de teste para o WhatsApp informado no cadastro do usuário
+    /// </summary>
+    [HttpPost("User/Settings/TestWhatsApp")]
+    [ProducesResponseType(typeof(GenericMessageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> TestWhatsApp()
+    {
+        var user = _context.users.AsNoTracking().FirstOrDefault(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        if (!user.notify_whatsapp)
+            throw new ExpectedException("Ative as notificações por WhatsApp nas configurações para testar o envio.");
+
+        var phone = SanitizePhone(user.phone);
+        if (string.IsNullOrWhiteSpace(phone))
+            throw new ExpectedException("Informe um telefone válido para testar o WhatsApp.");
+
+        var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+        var message = $"Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
+
+        try
+        {
+            await _whatsApp.Notify(phone, "Teste WhatsApp", message);
+        }
+        catch (Exception ex)
+        {
+            throw new ExpectedException($"Falha ao enviar mensagem no WhatsApp: {ex.Message}", HttpStatusCode.BadGateway);
+        }
+
+        return Ok(new GenericMessageResponse("Mensagem de teste enviada no WhatsApp."));
     }
 
     private static void ValidateEmail(string email)

@@ -13,7 +13,7 @@ namespace server.Migrations
 {
     [DbContext(typeof(Context))]
     [Migration("20260310005712_bankColor")]
-    partial class bankColor
+    partial class bankColor_compat
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

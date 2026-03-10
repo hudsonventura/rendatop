@@ -14,6 +14,7 @@ const UserSettings = () => {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [testingTelegram, setTestingTelegram] = useState(false)
+    const [testingWhatsApp, setTestingWhatsApp] = useState(false)
     const [success, setSuccess] = useState("")
     const [error, setError] = useState("")
 
@@ -117,6 +118,28 @@ const UserSettings = () => {
             })
     }
 
+    const handleTestWhatsApp = () => {
+        setError("")
+        setSuccess("")
+        setTestingWhatsApp(true)
+
+        axiosInstance
+            .post("/User/Settings/TestWhatsApp")
+            .then((response) => {
+                const message = response?.data?.message || "Mensagem de teste enviada no WhatsApp."
+                setSuccess(message)
+            })
+            .catch((err) => {
+                const message = typeof err?.response?.data === "string"
+                    ? err.response.data
+                    : "Não foi possível enviar a mensagem de teste no WhatsApp."
+                setError(message)
+            })
+            .finally(() => {
+                setTestingWhatsApp(false)
+            })
+    }
+
     return (
         <>
             <Logged />
@@ -208,6 +231,16 @@ const UserSettings = () => {
                                             />
                                         </div>
                                         <div className="pt-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={handleTestWhatsApp}
+                                                disabled={testingWhatsApp}
+                                            >
+                                                {testingWhatsApp ? "Enviando teste..." : "Testar WhatsApp"}
+                                            </Button>
+                                        </div>
+                                        <div className="pt-1">
                                             <Button
                                                 type="button"
                                                 variant="outline"

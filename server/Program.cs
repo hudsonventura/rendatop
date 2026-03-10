@@ -26,6 +26,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 INotification telegram = new Telegram(Environment.GetEnvironmentVariable("TELEGRAM_TOKEN"), Environment.GetEnvironmentVariable("TELEGRAM_CHATID"));
 builder.Services.AddSingleton<INotification>(telegram);
+IWhatsAppNotification whatsapp = new WhatsApp(
+    Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_URL"),
+    Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_INSTANCE"),
+    Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_API_KEY")
+);
+builder.Services.AddSingleton<IWhatsAppNotification>(whatsapp);
 //_notify.Notify("Vencimento", $"Tem investimento vencendo hj carai, que tal resgata-lo? {Environment.NewLine} {investments[0].bank} {Environment.NewLine} {investments[0].title}");
 
 

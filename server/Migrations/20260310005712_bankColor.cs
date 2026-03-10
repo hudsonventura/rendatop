@@ -5,7 +5,7 @@
 namespace server.Migrations
 {
     /// <inheritdoc />
-    public partial class bankColor : Migration
+    public partial class bankColor_compat : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
