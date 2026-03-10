@@ -29,6 +29,21 @@ public class User
     public string email { get; set; }
 
     /// <summary>
+    /// Telefone do usuário no formato 99999999999
+    /// </summary>
+    public string phone { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Preferência para receber notificações via WhatsApp
+    /// </summary>
+    public bool notify_whatsapp { get; set; } = false;
+
+    /// <summary>
+    /// Preferência para receber notificações via Telegram
+    /// </summary>
+    public bool notify_telegram { get; set; } = true;
+
+    /// <summary>
     /// Salt para encriptação da senha
     /// </summary>
     public string salt { get; private set; } = Guid.NewGuid().ToString();

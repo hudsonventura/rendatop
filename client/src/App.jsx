@@ -8,6 +8,7 @@ import Signup from "@/pages/Signup"
 import Home from "@/pages/Home"
 import Logout from "@/pages/Logout"
 import CalendarPage from "@/pages/CalendarPage"
+import UserSettings from "@/pages/UserSettings"
 
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
                             <Route path="/logout" element={<Logout />} />
                             <Route path="/home" element={<Home />} />
                             <Route path="/calendar" element={<CalendarPage />} />
+                            <Route path="/settings" element={<UserSettings />} />
                         </Routes>
                     </Router>
                 </SidebarConfigProvider>
