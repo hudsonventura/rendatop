@@ -21,6 +21,21 @@ services:
       - ./.data/redis:/data
 
 
+  evolution:
+    container_name: evolution_api
+    image: atendai/evolution-api:v2.2.3
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./.data/evolution:/evolution/instances
+
+
   server:
     build:
       context: ./server
