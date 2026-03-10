@@ -7,7 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { Loader2 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // ── Chart colours ─────────────────────────────────────────────────────────────
 
@@ -86,10 +86,34 @@ export default function BanksPieChart({ investments }) {
     // Loading state
     if (!investments) {
         return (
-            <Card>
-                <CardContent className="flex items-center justify-center py-12">
-                    <Loader2 className="size-6 animate-spin text-muted-foreground" />
-                    <span className="ml-2 text-sm text-muted-foreground">Carregando investimentos…</span>
+            <Card className="flex flex-col">
+                <CardHeader className="pb-2">
+                    <CardTitle>Distribuição por Banco</CardTitle>
+                    <CardDescription>Resumo dos seus investimentos por instituição</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-1 justify-center">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+                        <div className="flex justify-center items-center">
+                            <div className="relative h-[220px] w-[220px]">
+                                <Skeleton className="h-full w-full rounded-full" />
+                                <div className="absolute inset-[52px] rounded-full border bg-background" />
+                            </div>
+                        </div>
+                        <div className="flex flex-col justify-center space-y-3">
+                            {Array.from({ length: 4 }).map((_, index) => (
+                                <div key={index} className="flex items-center justify-between rounded-lg border p-3">
+                                    <div className="flex items-center gap-3">
+                                        <Skeleton className="h-3 w-3 rounded-full" />
+                                        <Skeleton className="h-4 w-28" />
+                                    </div>
+                                    <div className="space-y-1 text-right">
+                                        <Skeleton className="h-4 w-20 ml-auto" />
+                                        <Skeleton className="h-3 w-10 ml-auto" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
         )
