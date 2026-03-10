@@ -175,7 +175,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
 
 
     return (
-        <Dialog open={isOpen}>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
             {externalOpen === undefined && (
                 <DialogTrigger asChild>
                     <Button
@@ -190,7 +190,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                 </DialogTrigger>
             )}
 
-            <DialogContent className="max-w-md w-[10vw] md:w-[10vw] max-h-[10vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] sm:max-w-5xl md:w-[85vw] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Edição de investimento</DialogTitle>
                     <DialogDescription>Altere os dados do investimento abaixo.</DialogDescription>
