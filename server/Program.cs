@@ -244,7 +244,8 @@ void MigrateDatabase(){
                     Name = "Sofisa",
                     CompanyName = "Banco Sofisa S.A.",
                     Cnpj = "977878978678",
-                    Code = 876
+                    Code = 876,
+                    Color = "#22c55e"
                 },
                 new Bank
                 {
@@ -252,7 +253,8 @@ void MigrateDatabase(){
                     Name = "Banco Inter",
                     CompanyName = "Banco Inter S.A.",
                     Cnpj = "977878978678",
-                    Code = 77
+                    Code = 77,
+                    Color = "#f97316"
                 },
                 new Bank
                 {
@@ -260,7 +262,8 @@ void MigrateDatabase(){
                     Name = "C6 Bank",
                     CompanyName = "C6 Bank S.A.",
                     Cnpj = "977878978678",
-                    Code = 336
+                    Code = 336,
+                    Color = "#3b82f6"
                 }
             );
             foreach (var item in banks)

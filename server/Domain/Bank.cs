@@ -51,4 +51,10 @@ public class Bank
     [Column("company_name")]
     public string CompanyName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Cor usada para representar o banco em gráficos
+    /// </summary>
+    [Column("color")]
+    public string Color { get; set; } = "#94a3b8";
+
 }

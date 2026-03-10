@@ -31,18 +31,21 @@ function formatCurrency(value) {
 
 function buildChartData(investments) {
     const map = new Map()
+    const colorMap = new Map()
 
     for (const inv of investments) {
         const firstCalc = inv.calculated?.[0]
         const liquidValue = firstCalc?.value_liq ?? inv.value
         const bankName = inv.bank?.name || "Banco Desconhecido"
+        const bankColor = inv.bank?.color
         map.set(bankName, (map.get(bankName) ?? 0) + liquidValue)
+        if (bankColor) colorMap.set(bankName, bankColor)
     }
 
     return Array.from(map.entries()).map(([bank, value], index) => ({
         bank,
         value,
-        fill: CHART_COLORS[index % CHART_COLORS.length],
+        fill: colorMap.get(bank) ?? CHART_COLORS[index % CHART_COLORS.length],
     }))
 }
 
