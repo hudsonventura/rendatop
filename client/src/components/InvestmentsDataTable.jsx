@@ -98,10 +98,10 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
                 <div className="space-y-3 rounded-md border p-3 min-w-0">
                     <h4 className="text-sm font-semibold">Valor atual do investimento</h4>
 
-                    <div className="grid grid-cols-[max-content_1fr] items-center gap-x-2 gap-y-2">
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">Valores atuais:</span>
-                        <div className="min-w-0 overflow-x-auto">
-                            <div className="flex items-center gap-1.5 w-max whitespace-nowrap">
+                    <div className="grid grid-cols-1 md:grid-cols-[max-content_1fr] items-start md:items-center gap-x-2 gap-y-2">
+                        <span className="text-xs text-muted-foreground md:whitespace-nowrap">Valores atuais:</span>
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
                                 <Badge variant={calc.IOF > 0 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
                                     IOF: R$ {formatCurrency(calc.IOF_value)}
                                 </Badge>
@@ -114,14 +114,14 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
                             </div>
                         </div>
 
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        <span className="text-xs text-muted-foreground md:whitespace-nowrap">
                             {investment.due_date
                                 ? `Estimado na data de venc. (${formatDate(investment.due_date)}):`
                                 : "Estimado na data de venc.:"}
                         </span>
-                        <div className="min-w-0 overflow-x-auto">
+                        <div className="min-w-0">
                             {hasDueEstimate ? (
-                                <div className="flex items-center gap-1.5 w-max whitespace-nowrap">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                     <Badge variant={calcDue.IOF > 0 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
                                         IOF: R$ {formatCurrency(calcDue.IOF_value)}
                                     </Badge>
