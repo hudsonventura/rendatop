@@ -9,18 +9,16 @@ public class Calculator_IPCA_MAIS : Calculator, ICalculator
 
     Calculated ICalculator.Generate(InvestmentRequest request, DateTime sell)
     {
-
-
-        //######################################################FAKE! Precisa ser calculado corretamente
         decimal IR = GetIR(request.taxes, request.date_buy, sell);
         decimal IOF = GetIOF(request.date_buy, sell);
-        
+        decimal ipca_avg = GetIpca(request.date_buy, sell);
 
         //quantidade de dias a considerar nos calculos
         int days = (sell - request.date_buy).Days;
 
-        //percentual de rendimento bruto
-        decimal effective_index_percent = request.index_percent / 366 * (days-3) / 100;
+        //percentual de rendimento bruto: IPCA anualizado + spread (% a.a.)
+        decimal annual_rate = ipca_avg + (request.index_percent / 100m);
+        decimal effective_index_percent = annual_rate / 366 * (days-3);
 
         //rendimento bruto (sem impostos)
         decimal profit_brute = request.value * effective_index_percent;

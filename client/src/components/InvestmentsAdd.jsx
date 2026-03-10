@@ -93,6 +93,9 @@ function InvestmentPreview({ form }) {
 	const watchTaxes = form.watch("taxes")
 	const watchLiquidez = form.watch("liquidez_diaria")
 
+	const SELIC_ANNUAL_ESTIMATE = 0.1315
+	const IPCA_ANNUAL_ESTIMATE = 0.045
+
 	const preview = useMemo(() => {
 		// Parse value (remove dots, replace comma with dot)
 		const rawValue = typeof watchValue === "string"
@@ -107,7 +110,7 @@ function InvestmentPreview({ form }) {
 		const rawPercent = typeof watchIndexPercent === "string"
 			? parseFloat(watchIndexPercent.replace(/\./g, "").replace(",", "."))
 			: Number(watchIndexPercent)
-		if (!rawPercent || rawPercent <= 0) return null
+		if (Number.isNaN(rawPercent) || rawPercent < 0) return null
 
 		if (!watchDateBuy) return null
 
@@ -124,15 +127,23 @@ function InvestmentPreview({ form }) {
 		const IOF = getIOFPercent(days) / 100
 
 		let effectivePercent = 0
+		let estimateLabel = null
 
-		// CDI (index=0): approximate using ~13% Selic annual (reasonable current estimate)
+		// CDI (index=0): uses an estimated annual Selic base
 		if (indexType === 0) {
-			const selicApprox = 0.1315 // approximate annual Selic
-			effectivePercent = selicApprox / 365 * days * rawPercent / 100
+			const annualRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100)
+			effectivePercent = annualRate / 365 * days
+			estimateLabel = "Selic"
 		}
-		// %a.a. (index=2) or IPCA+ (index=1)
+		// IPCA+ (index=1): estimated annual IPCA + spread
+		else if (indexType === 1) {
+			const annualRate = IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)
+			effectivePercent = annualRate / 366 * (days - 3)
+			estimateLabel = "IPCA"
+		}
+		// %a.a. (index=2)
 		else {
-			effectivePercent = rawPercent / 366 * (days - 3) / 100
+			effectivePercent = (rawPercent / 100) / 366 * (days - 3)
 		}
 
 		const profitBrute = rawValue * effectivePercent
@@ -146,7 +157,8 @@ function InvestmentPreview({ form }) {
 			irValue,
 			profitLiq,
 			days,
-			isEstimate: indexType === 0,
+			isEstimate: indexType === 0 || indexType === 1,
+			estimateLabel,
 		}
 	}, [watchValue, watchIndex, watchIndexPercent, watchDateBuy, watchDueDate, watchTaxes, watchLiquidez])
 
@@ -157,7 +169,7 @@ function InvestmentPreview({ form }) {
 				<span className="text-sm font-medium">Simulação do investimento</span>
 				{preview?.isEstimate && (
 					<Badge variant="outline" className="text-xs text-muted-foreground">
-						Selic estimada
+						{preview.estimateLabel} estimado
 					</Badge>
 				)}
 			</div>

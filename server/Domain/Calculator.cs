@@ -36,6 +36,29 @@ public class Calculator
         return (latest ?? 0m) / 100;
     }
 
+    protected decimal GetIpca(DateTime start, DateTime? finish)
+    {
+        // IPCA records are monthly percentages. Convert average monthly IPCA to an annualized rate.
+        decimal? avgMonthly = _context.ipcas
+            .Where(x => x.date > DateOnly.FromDateTime(start.AddDays(1)) && x.date < DateOnly.FromDateTime((DateTime)finish))
+            .Average(x => (decimal?)x.value);
+
+        if (avgMonthly is null)
+        {
+            avgMonthly = _context.ipcas
+                .OrderByDescending(x => x.date)
+                .Select(x => (decimal?)x.value)
+                .FirstOrDefault();
+        }
+
+
+        if (avgMonthly is null)
+            return 0m;
+
+        decimal monthlyRate = avgMonthly.Value / 100m;
+        return (decimal)Math.Pow((double)(1m + monthlyRate), 12) - 1m;
+    }
+
     protected int GetDays(DateTime start, DateTime finish) => (finish - start).Days;
 
     /// <summary>
