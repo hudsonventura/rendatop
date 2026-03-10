@@ -97,7 +97,7 @@ const Login = () => {
                     <form onSubmit={handleLogin}>
                         <Card className="border-0 shadow-xl bg-card">
                             <CardHeader className="space-y-2 pb-6">
-                                <CardTitle className="text-2xl font-bold tracking-tight">Bem-vindo de volta</CardTitle>
+                                <CardTitle className="text-2xl font-bold tracking-tight">Bem-vindo</CardTitle>
                                 <CardDescription className="text-muted-foreground">
                                     Informe seus dados para acessar sua conta
                                 </CardDescription>

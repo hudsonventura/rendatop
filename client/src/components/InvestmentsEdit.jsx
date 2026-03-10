@@ -291,87 +291,56 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                 control={form.control}
                                 name="bank_code"
                                 render={({ field }) => {
-                                    const [search, setSearch] = React.useState("")
-                                    const ref = React.useRef(null)
-
-                                    React.useEffect(() => {
-                                        if (!popbank) return
-                                        const handler = (e) => {
-                                            if (ref.current && !ref.current.contains(e.target)) {
-                                                setPopbank(false)
-                                            }
-                                        }
-                                        document.addEventListener("mousedown", handler)
-                                        return () => document.removeEventListener("mousedown", handler)
-                                    }, [popbank])
-
                                     const displayName = bankList.find((b) => b.code === field.value)?.name
-                                    const filtered = bankList.filter((b) =>
-                                        b.name.toLowerCase().includes(search.toLowerCase())
-                                    )
 
                                     return (
                                         <FormItem className="flex flex-col">
                                             <FormLabel>Banco</FormLabel>
                                             <FormControl>
-                                                <div ref={ref} className="relative w-[200px]">
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        className={cn(
-                                                            "w-full justify-between",
-                                                            !field.value && "text-muted-foreground"
-                                                        )}
-                                                        onClick={() => setPopbank((v) => !v)}
-                                                    >
-                                                        {displayName || "Selecione seu banco"}
-                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                    </Button>
-                                                    {popbank && (
-                                                        <div className="absolute z-50 top-full mt-1 w-full rounded-md border bg-popover shadow-md">
-                                                            <div className="p-1 border-b">
-                                                                <input
-                                                                    autoFocus
-                                                                    className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground px-2 py-1"
-                                                                    placeholder="Buscar banco..."
-                                                                    value={search}
-                                                                    onChange={(e) => setSearch(e.target.value)}
-                                                                />
-                                                            </div>
-                                                            <div className="max-h-[180px] overflow-y-auto p-1">
-                                                                {filtered.length === 0 && (
-                                                                    <p className="text-sm text-muted-foreground text-center py-2">
-                                                                        Nenhum banco encontrado.
-                                                                    </p>
-                                                                )}
-                                                                {filtered.map((bank) => (
-                                                                    <div
-                                                                        key={bank.id}
-                                                                        className={cn(
-                                                                            "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
-                                                                            field.value === bank.code && "bg-accent"
-                                                                        )}
-                                                                        onMouseDown={(e) => {
-                                                                            e.preventDefault()
-                                                                            field.onChange(bank.code)
-                                                                            setSearch("")
-                                                                            setPopbank(false)
-                                                                        }}
-                                                                    >
-                                                                        <Check
-                                                                            className={cn(
-                                                                                "h-4 w-4 shrink-0",
-                                                                                field.value === bank.code ? "opacity-100" : "opacity-0"
-                                                                            )}
-                                                                        />
-                                                                        {bank.name}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <Popover modal={true} open={popbank} onOpenChange={setPopbank}>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className={cn(
+                                                                "w-[200px] justify-between",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {displayName || "Selecione seu banco"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent align="start" className="w-[200px] p-0 z-[70]">
+                                                        <Command>
+                                                            <CommandInput placeholder="Buscar banco..." />
+                                                            <CommandList>
+                                                                <CommandEmpty>Nenhum banco encontrado.</CommandEmpty>
+                                                                <CommandGroup>
+                                                                    {bankList.map((bank) => (
+                                                                        <CommandItem
+                                                                            key={bank.id}
+                                                                            value={bank.name}
+                                                                            onSelect={() => {
+                                                                                field.onChange(bank.code)
+                                                                                setPopbank(false)
+                                                                            }}
+                                                                        >
+                                                                            <Check
+                                                                                className={cn(
+                                                                                    "h-4 w-4",
+                                                                                    field.value === bank.code ? "opacity-100" : "opacity-0"
+                                                                                )}
+                                                                            />
+                                                                            {bank.name}
+                                                                        </CommandItem>
+                                                                    ))}
+                                                                </CommandGroup>
+                                                            </CommandList>
+                                                        </Command>
+                                                    </PopoverContent>
+                                                </Popover>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -428,7 +397,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                 name="index_percent"
                                 render={({ field }) => (
                                     <FormItem className="w-32">
-                                        <FormLabel>Valor do indexado</FormLabel>
+                                        <FormLabel>Valor do indexador</FormLabel>
                                         <FormControl>
                                             <Input
                                                 placeholder="Ex.: 108% ou 13,11%"
