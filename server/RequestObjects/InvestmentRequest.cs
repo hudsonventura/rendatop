@@ -1,6 +1,7 @@
 
 
 using server.Domain;
+using System.Text.Json.Serialization;
 
 namespace server.RequestObjects;
 
@@ -30,6 +31,16 @@ public class InvestmentRequest
     /// Data esperada da venda/liquidação em conta. Pode ser vazia
     /// </summary>
     public DateTime? date_expected_sell { get; set; }
+
+    /// <summary>
+    /// Alias usado pelo frontend para data de vencimento
+    /// </summary>
+    [JsonPropertyName("due_date")]
+    public DateTime? due_date
+    {
+        get => date_expected_sell;
+        set => date_expected_sell = value;
+    }
 
     /// <summary>
     /// Valor do investido

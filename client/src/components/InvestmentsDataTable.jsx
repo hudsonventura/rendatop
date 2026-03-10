@@ -88,7 +88,7 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[98vw] max-w-[98vw] sm:max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[70vw] max-w-[70vw] sm:max-w-6xl max-h-[60vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{investment.title}</DialogTitle>
                     <DialogDescription>
@@ -203,7 +203,7 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
                         onClick={() => { onOpenChange(false); onRedeem() }}
                     >
                         <HandCoins className="h-4 w-4 mr-1" />
-                        Restar
+                        Resgatar
                     </Button>
                     <Button
                         variant="destructive"
@@ -329,7 +329,7 @@ function ActionsCell({ investment, onView, onEdit, onRedeem, onDelete }) {
                         onClick={() => { setMenuOpen(false); onRedeem(investment) }}
                     >
                         <HandCoins className="h-4 w-4" />
-                        Restar
+                        Resgatar
                     </button>
                     <div className="my-1 h-px bg-border" />
                     <button

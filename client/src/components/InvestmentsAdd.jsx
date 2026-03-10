@@ -221,6 +221,14 @@ const formSchema = z.object({
 		.min(1, { required_error: "Este campo é obrigatório." })
 		.transform((value) => value.replace(/\./g, ""))
 		.transform((value) => value.replace(/\,/g, ".")),
+}).superRefine((values, ctx) => {
+	if (!values.liquidez_diaria && !values.due_date) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["due_date"],
+			message: "Data de vencimento é obrigatória quando não há liquidez diária.",
+		})
+	}
 });
 
 
@@ -261,13 +269,19 @@ const InvestmentsAdd = ({ setReload }) => {
 	})
 
 	function onSubmit(values) {
-		// Do something with the form values.
-		// ✅ This will be type-safe and validated.
-		console.log(values)
-
+		const payload = {
+			title: values.title,
+			date_buy: values.date_buy,
+			date_expected_sell: values.liquidez_diaria ? null : (values.due_date ?? null),
+			taxes: values.taxes ?? true,
+			bank_code: values.bank_code,
+			value: Number(values.value),
+			index: Number(values.index),
+			index_percent: Number(values.index_percent),
+		}
 
 		axiosInstance
-			.post("/Investments", JSON.stringify(values))
+			.post("/Investments", payload)
 			.then((response) => {
 				setIsOpen(false);
 				setReload(Math.floor(Math.random() * 10000) + 1);

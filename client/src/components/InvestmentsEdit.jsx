@@ -78,6 +78,14 @@ const formSchema = z.object({
         .min(1, { required_error: "Este campo é obrigatório." })
         .transform((value) => value.replace(/\./g, ""))
         .transform((value) => value.replace(/\,/g, ".")),
+}).superRefine((values, ctx) => {
+    if (!values.liquidez_diaria && !values.due_date) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["due_date"],
+            message: "Data de vencimento é obrigatória quando não há liquidez diária.",
+        })
+    }
 })
 
 // ── Index enum mapping (backend string → select number) ──────────────────────
@@ -134,8 +142,19 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
     })
 
     function onSubmit(values) {
+        const payload = {
+            title: values.title,
+            date_buy: values.date_buy,
+            date_expected_sell: values.liquidez_diaria ? null : (values.due_date ?? null),
+            taxes: values.taxes ?? true,
+            bank_code: values.bank_code,
+            value: Number(values.value),
+            index: Number(values.index),
+            index_percent: Number(values.index_percent),
+        }
+
         axiosInstance
-            .patch(`/Investments/${investment.id}`, JSON.stringify(values))
+            .patch(`/Investments/${investment.id}`, payload)
             .then(() => {
                 setIsOpen(false)
                 setReload(Math.floor(Math.random() * 10000) + 1)
@@ -171,9 +190,9 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                 </DialogTrigger>
             )}
 
-            <DialogContent className="max-w-4xl w-[90vw] md:w-[60vw] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-md w-[10vw] md:w-[10vw] max-h-[10vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Editando investimento</DialogTitle>
+                    <DialogTitle>Edição de investimento</DialogTitle>
                     <DialogDescription>Altere os dados do investimento abaixo.</DialogDescription>
                 </DialogHeader>
 

@@ -103,7 +103,7 @@ export default function InvestmentsRedeem({ investment, setReload, externalOpen,
                 <DialogTrigger asChild>
                     <Button type="button" variant="secondary" size="sm" onClick={() => setIsOpen(true)}>
                         <HandCoins className="h-4 w-4 mr-1" />
-                        Restar
+                        Resgatar
                     </Button>
                 </DialogTrigger>
             )}
