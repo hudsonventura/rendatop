@@ -54,6 +54,12 @@ function getIndexLabel(investment) {
     }
 }
 
+function getBankName(investment) {
+    if (!investment?.bank) return "Banco Desconhecido"
+    if (typeof investment.bank === "string") return investment.bank
+    return investment.bank.name || "Banco Desconhecido"
+}
+
 /**
  * Convert an array of investments into calendar events.
  * Each investment produces 1 or 2 events:
@@ -261,7 +267,7 @@ export default function InvestmentsCalendar({ investments }) {
 
                             <div className="flex items-center gap-2 text-sm">
                                 <Clock className="w-4 h-4 text-muted-foreground" />
-                                <span>Banco: {selectedEvent.investment.bank}</span>
+                                <span>Banco: {getBankName(selectedEvent.investment)}</span>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3 pt-2 border-t">
