@@ -69,6 +69,7 @@ const Login = () => {
         window.location.href = `${apiUrl}/auth/google/login`;
     };
 
+
     const handleMicrosoftLogin = () => {
         const apiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
         window.location.href = `${apiUrl}/auth/microsoft/login`;
