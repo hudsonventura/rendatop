@@ -23,7 +23,7 @@ export default function InvestmentsDueSoon({ investments }) {
     if (!investments?.length) {
         return (
             <div className="rounded-lg border p-4 text-sm text-muted-foreground">
-                Nenhum vencimento nos próximos 30 dias.
+                Aqui aparecerão os seus invesmentos cujo vencimento está dentro dos próximos 30 dias
             </div>
         )
     }
