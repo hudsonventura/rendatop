@@ -51,6 +51,26 @@ const UserSettings = () => {
         setPhone(digits)
     }
 
+    const handleToggleWhatsApp = (checked) => {
+        if (checked && !phone) {
+            setError("Informe o telefone antes de habilitar WhatsApp e Telegram.")
+            setSuccess("")
+            return
+        }
+        setError("")
+        setNotifyWhatsapp(checked)
+    }
+
+    const handleToggleTelegram = (checked) => {
+        if (checked && !phone) {
+            setError("Informe o telefone antes de habilitar WhatsApp e Telegram.")
+            setSuccess("")
+            return
+        }
+        setError("")
+        setNotifyTelegram(checked)
+    }
+
     const handleSubmit = (event) => {
         event.preventDefault()
         setError("")
@@ -68,6 +88,11 @@ const UserSettings = () => {
 
         if (phone && phone.length !== 11) {
             setError("Telefone deve ter 11 dígitos no formato 99999999999.")
+            return
+        }
+
+        if ((notifyWhatsapp || notifyTelegram) && !phone) {
+            setError("Informe o telefone antes de habilitar WhatsApp e Telegram.")
             return
         }
 
@@ -106,7 +131,7 @@ const UserSettings = () => {
         setTestingTelegram(true)
 
         axiosInstance
-            .post("/User/Settings/TestTelegram")
+            .post("/User/Settings/TestTelegram", { phone })
             .then((response) => {
                 const message = response?.data?.message || "Mensagem de teste enviada no Telegram."
                 setSuccess(message)
@@ -128,7 +153,7 @@ const UserSettings = () => {
         setTestingWhatsApp(true)
 
         axiosInstance
-            .post("/User/Settings/TestWhatsApp")
+            .post("/User/Settings/TestWhatsApp", { phone })
             .then((response) => {
                 const message = response?.data?.message || "Mensagem de teste enviada no WhatsApp."
                 setSuccess(message)
@@ -251,7 +276,7 @@ const UserSettings = () => {
                                             <div className="md:justify-self-center">
                                                 <Switch
                                                     checked={notifyWhatsapp}
-                                                    onCheckedChange={setNotifyWhatsapp}
+                                                    onCheckedChange={handleToggleWhatsApp}
                                                 />
                                             </div>
                                             <Button
@@ -274,7 +299,7 @@ const UserSettings = () => {
                                             <div className="md:justify-self-center">
                                                 <Switch
                                                     checked={notifyTelegram}
-                                                    onCheckedChange={setNotifyTelegram}
+                                                    onCheckedChange={handleToggleTelegram}
                                                 />
                                             </div>
                                             <Button

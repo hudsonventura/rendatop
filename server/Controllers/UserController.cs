@@ -69,6 +69,8 @@ public class UserController : AuthenticatedController
             throw new ExpectedException("Já existe uma conta com esse email.", HttpStatusCode.Conflict);
 
         var phone = SanitizePhone(request.phone);
+        if ((request.notify_whatsapp || request.notify_telegram) && string.IsNullOrWhiteSpace(phone))
+            throw new ExpectedException("Informe um telefone com 11 dígitos para habilitar notificações por WhatsApp e Telegram.");
 
         user.email = email;
         user.phone = phone;
@@ -96,14 +98,11 @@ public class UserController : AuthenticatedController
     [ProducesResponseType(typeof(GenericMessageResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> TestTelegram()
+    public async Task<IActionResult> TestTelegram([FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] NotificationTestRequest? request = null)
     {
         var user = _context.users.AsNoTracking().FirstOrDefault(x => x.id == _user.id);
         if (user is null)
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
-
-        if (!user.notify_telegram)
-            throw new ExpectedException("Ative as notificações por Telegram nas configurações para testar o envio.");
 
         var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
         var message = $"Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
@@ -127,16 +126,15 @@ public class UserController : AuthenticatedController
     [ProducesResponseType(typeof(GenericMessageResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> TestWhatsApp()
+    public async Task<IActionResult> TestWhatsApp([FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] NotificationTestRequest? request = null)
     {
         var user = _context.users.AsNoTracking().FirstOrDefault(x => x.id == _user.id);
         if (user is null)
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
 
-        if (!user.notify_whatsapp)
-            throw new ExpectedException("Ative as notificações por WhatsApp nas configurações para testar o envio.");
-
-        var phone = SanitizePhone(user.phone);
+        var phone = string.IsNullOrWhiteSpace(request?.phone)
+            ? SanitizePhone(user.phone)
+            : SanitizePhone(request.phone);
         if (string.IsNullOrWhiteSpace(phone))
             throw new ExpectedException("Informe um telefone válido para testar o WhatsApp.");
 
@@ -230,6 +228,10 @@ public record UserSettingsRequest(
     bool notify_whatsapp,
     bool notify_telegram,
     bool notify_email
+);
+
+public record NotificationTestRequest(
+    string? phone
 );
 
 public record UserSettingsResponse(
