@@ -112,9 +112,17 @@ const MyInvestments = () => {
                     ) : (
                         <Tabs defaultValue="available" className="w-full">
                             <TabsList>
-                                <TabsTrigger value="available" className="cursor-pointer">
+                                <TabsTrigger
+                                    value="available"
+                                    className="cursor-pointer text-green-700 dark:text-green-400 data-[state=active]:bg-green-100 data-[state=active]:text-green-800 dark:data-[state=active]:bg-green-900/30 dark:data-[state=active]:text-green-300"
+                                >
                                     Disponíveis para resgate
-                                    <Badge variant="secondary" className="ml-1.5">{available.length}</Badge>
+                                    <Badge
+                                        variant="outline"
+                                        className="ml-1.5 border-green-200 bg-green-100 text-green-800 dark:border-green-800 dark:bg-green-900/40 dark:text-green-300"
+                                    >
+                                        {available.length}
+                                    </Badge>
                                 </TabsTrigger>
                                 <TabsTrigger value="locked" className="cursor-pointer">
                                     Bloqueados até o vencimento
