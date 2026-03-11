@@ -5,7 +5,7 @@ const SidebarContext = React.createContext(null)
 export function SidebarConfigProvider({ children }) {
     const [config, setConfig] = React.useState({
         variant: "inset",
-        collapsible: "offcanvas",
+        collapsible: "icon",
         side: "left"
     })
 
