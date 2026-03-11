@@ -10,10 +10,30 @@ import axiosInstance from "@/utils/axiosConfig";
 const Login = () => {
 
     const [erro, setErro] = useState(false);
+    const [erroMessage, setErroMessage] = useState("Email ou senha inválidos. Tente novamente.");
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const ssoStatus = params.get("sso");
+
+        if (ssoStatus === "google_success") {
+            const name = params.get("name");
+            const email = params.get("email");
+
+            if (name) sessionStorage.setItem("name", name);
+            if (email) sessionStorage.setItem("email", email);
+            window.location.href = "/home";
+            return;
+        }
+
+        if (ssoStatus === "google_error") {
+            setErro(true);
+            setErroMessage(params.get("message") || "Não foi possível autenticar com o Google.");
+            window.history.replaceState({}, "", "/login");
+        }
+
         // If a valid session cookie already exists, skip login page
         axiosInstance.get('/Authenticated')
             .then(() => { window.location.href = '/home'; })
@@ -39,8 +59,14 @@ const Login = () => {
             })
             .catch((error) => {
                 setErro(true);
+                setErroMessage("Email ou senha inválidos. Tente novamente.");
                 setLoading(false);
             });
+    };
+
+    const handleGoogleLogin = () => {
+        const apiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+        window.location.href = `${apiUrl}/auth/google/login`;
     };
 
     return (
@@ -153,7 +179,7 @@ const Login = () => {
                                             "Entrar"
                                         )}
                                     </Button>
-                                    <Button variant="outline" className="w-full cursor-pointer" type="button">
+                                    <Button variant="outline" className="w-full cursor-pointer" type="button" onClick={handleGoogleLogin}>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="52 42 88 66">
                                             <path fill="#4285f4" d="M58 108h14V74L52 59v43c0 3.32 2.69 6 6 6" />
                                             <path fill="#34a853" d="M120 108h14c3.32 0 6-2.69 6-6V59l-20 15" />
@@ -173,7 +199,7 @@ const Login = () => {
                                             <AlertCircle className="h-4 w-4" />
                                             <AlertTitle><b>Erro</b></AlertTitle>
                                             <AlertDescription>
-                                                Email ou senha inválidos. Tente novamente.
+                                                {erroMessage}
                                             </AlertDescription>
                                         </Alert>
                                     )}

@@ -189,8 +189,12 @@ if (app.Environment.IsDevelopment())
     {
         options.Path = "/openapi/{documentName}.json";
     });
-    app.MapScalarApiReference();
-}
+    app.MapScalarApiReference("/scalar", options =>
+    {
+        options.WithTitle("Controle de Investimentos API");
+        options.WithOpenApiRoutePattern("/openapi/{documentName}.json");
+        options.AddDocument("v1");
+    });}
 
 app.UseHttpsRedirection();
 
