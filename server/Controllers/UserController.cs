@@ -105,11 +105,11 @@ public class UserController : AuthenticatedController
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
 
         var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
-        var message = $"Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
+        var message = $"✅ Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
 
         try
         {
-            await _notify.Notify("Teste Telegram", message);
+            await _notify.Notify("📈 RentaTop | Teste Telegram", message);
         }
         catch (Exception ex)
         {
@@ -139,11 +139,11 @@ public class UserController : AuthenticatedController
             throw new ExpectedException("Informe um telefone válido para testar o WhatsApp.");
 
         var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
-        var message = $"Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
+        var message = $"📈 RentaTop{Environment.NewLine}✅ Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
 
         try
         {
-            await _whatsApp.Notify(phone, "Teste WhatsApp", message);
+            await _whatsApp.Notify(phone, "📈 RentaTop | Teste WhatsApp", message);
         }
         catch (Exception ex)
         {
@@ -172,11 +172,11 @@ public class UserController : AuthenticatedController
         ValidateEmail(user.email);
 
         var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
-        var message = $"Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
+        var message = $"📈 RentaTop{Environment.NewLine}✅ Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
 
         try
         {
-            await _email.Notify(user.email, "Teste Email", message);
+            await _email.Notify(user.email, "📈 RentaTop | Teste Email", message);
         }
         catch (Exception ex)
         {
