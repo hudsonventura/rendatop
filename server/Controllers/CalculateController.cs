@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using server.Domain;
 using server.RequestObjects;
 using server.Utils;
@@ -14,9 +15,9 @@ public class CalculateController : ControllerBase
 {
 	Context _context;
 
-    public CalculateController(Context context)
+    public CalculateController(IDbContextFactory<Context> contextFactory)
     {
-		_context = context;
+		_context = contextFactory.CreateDbContext();
     }
 
     /// <summary>

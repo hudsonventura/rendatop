@@ -17,12 +17,12 @@ public class UserController : AuthenticatedController
 
     public UserController(
         IHttpContextAccessor httpContextAccessor,
-        Context context,
+        IDbContextFactory<Context> contextFactory,
         INotification notify,
         IWhatsAppNotification whatsApp,
         IEmailNotification email) : base(httpContextAccessor)
     {
-        _context = context;
+        _context = contextFactory.CreateDbContext();
         _notify = notify;
         _whatsApp = whatsApp;
         _email = email;

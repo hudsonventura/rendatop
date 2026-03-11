@@ -12,18 +12,58 @@ using server.Domain;
 namespace server.Migrations
 {
     [DbContext(typeof(Context))]
-    [Migration("20241222222248_11")]
-    partial class _11
+    [Migration("20260311183042_1")]
+    partial class _1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "10.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("server.Domain.Bank", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<string>("Cnpj")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("cnpj");
+
+                    b.Property<int>("Code")
+                        .HasColumnType("integer")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("color");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("company_name");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("banks");
+                });
 
             modelBuilder.Entity("server.Domain.IPCA", b =>
                 {
@@ -44,14 +84,13 @@ namespace server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("bank")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("bank_id")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("date_buy")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("date_expected_sell")
+                    b.Property<DateTime?>("due_date")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("index")
@@ -77,6 +116,8 @@ namespace server.Migrations
                         .HasColumnType("numeric");
 
                     b.HasKey("id");
+
+                    b.HasIndex("bank_id");
 
                     b.HasIndex("ownerid");
 
@@ -136,7 +177,20 @@ namespace server.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("notify_email")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("notify_telegram")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("notify_whatsapp")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("password")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("phone")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -151,11 +205,19 @@ namespace server.Migrations
 
             modelBuilder.Entity("server.Domain.Investment", b =>
                 {
+                    b.HasOne("server.Domain.Bank", "bank")
+                        .WithMany()
+                        .HasForeignKey("bank_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("server.Domain.User", "owner")
                         .WithMany()
                         .HasForeignKey("ownerid")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("bank");
 
                     b.Navigation("owner");
                 });
@@ -163,12 +225,17 @@ namespace server.Migrations
             modelBuilder.Entity("server.Domain.Redemption", b =>
                 {
                     b.HasOne("server.Domain.Investment", "investment")
-                        .WithMany()
+                        .WithMany("redemptions")
                         .HasForeignKey("investmentid")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("investment");
+                });
+
+            modelBuilder.Entity("server.Domain.Investment", b =>
+                {
+                    b.Navigation("redemptions");
                 });
 #pragma warning restore 612, 618
         }

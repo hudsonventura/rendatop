@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using server.Domain;
 using StackExchange.Redis;
 
@@ -23,12 +24,12 @@ public class HomeController​ : AuthenticatedController
     /// <param name="logger"></param>
     public HomeController(ILogger<HomeController> logger, 
                             IHttpContextAccessor httpContextAccessor, 
-                            Context context, 
+                            IDbContextFactory<Context> contextFactory, 
                             IConnectionMultiplexer muxer_redis) 
         : base(httpContextAccessor)
     {
         _logger = logger;
-        _context = context;
+        _context = contextFactory.CreateDbContext();
         _redis = muxer_redis.GetDatabase();
     }
 

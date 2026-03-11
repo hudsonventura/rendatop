@@ -19,9 +19,9 @@ public class LoginController : ControllerBase
     private readonly IDatabase _redis;
     private readonly IWebHostEnvironment _env;
 
-    public LoginController(Context context, IConnectionMultiplexer muxer_redis, IWebHostEnvironment env)
+    public LoginController(IDbContextFactory<Context> contextFactory, IConnectionMultiplexer muxer_redis, IWebHostEnvironment env)
     {
-        _context = context;
+        _context = contextFactory.CreateDbContext();
         _redis = muxer_redis.GetDatabase();
         _env = env;
     }

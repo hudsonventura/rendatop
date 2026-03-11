@@ -136,39 +136,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddScoped<Context>();
-MigrateDatabase();
+DepenciesInjection();
 
-string redis_host = Environment.GetEnvironmentVariable("REDIS_HOST");
-string redis_pass = Environment.GetEnvironmentVariable("REDIS_PASSWORD");
-builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect($"{redis_host},password={redis_pass},abortConnect=false"));
+AddBackgroundServices();
 
-//Busca os idices do governo
-//builder.Services.AddSingleton<Context>();
 
-//serviço que busca as taxas Selic do Banco Central
-builder.Services.AddHostedService<SelicBackgroundService>(provider =>
-{
-    var context = new Context();
-    var logger = provider.GetService<ILogger<SelicBackgroundService>>()!;
-    return new SelicBackgroundService(logger, context);
-});
-
-//serviço que busca as taxas IPCA do Banco Central
-builder.Services.AddHostedService<IPCABackgroundService>(provider =>
-{
-    var context = new Context();
-    var logger = provider.GetService<ILogger<IPCABackgroundService>>()!;
-    return new IPCABackgroundService(logger, context);
-});
-
-//serviço de envio de notificações de vencimento de investimentos
-builder.Services.AddHostedService<NotificationBackgroudService>(provider =>
-{
-    var context = new Context();
-    var logger = provider.GetService<ILogger<NotificationBackgroudService>>()!;
-    return new NotificationBackgroudService(logger, context, telegram);
-});
 
 var app = builder.Build();
 
@@ -217,25 +189,99 @@ app.MapControllers();
 app.UseAuthenticationMiddleware();
 
 
+MigrateDatabase();
+
+
 
 app.Run();
 
 
 
-void MigrateDatabase(){
-    var host = Host.CreateDefaultBuilder(args)
-            .ConfigureServices((context, services) =>
-            {
-                services.AddDbContext<Context>();
-            })
-    .Build();
-    Log.Information("Applying migrations");
-    using (var scope = host.Services.CreateScope())
+
+
+
+
+
+
+bool DepenciesInjection()
+{
+
+    string host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? string.Empty;
+    string port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? string.Empty;
+    string db = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? string.Empty;
+    string user = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? string.Empty;
+    string password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? string.Empty;
+
+    string connectionString = $"Host={host};Port={port};Database={db};Username={user};Password={password}";
+
+    Console.WriteLine(connectionString);
+    if (string.IsNullOrEmpty(host)) return false; //em caso de não conseguir obter o host do banco, retorna false e impede que o app inicie. //TODO: Melhorar o retorno do erro
+    //    throw new Exception($"Is the .env file in the correct place? I cannot read POSTGRES_HOST. I'm looking at {Environment.CurrentDirectory}");
+
+    builder.Services.AddDbContextFactory<Context>(options =>
     {
-        var dbContext = scope.ServiceProvider.GetRequiredService<Context>();
-        // Aplica a migração
-        dbContext.Database.Migrate();
-        Log.Information("Migrations applied");
+        options.UseNpgsql(connectionString);
+        //options.EnableSensitiveDataLogging();
+        //options.EnableDetailedErrors();
+    });
+
+
+    string redis_host = Environment.GetEnvironmentVariable("REDIS_HOST");
+    string redis_pass = Environment.GetEnvironmentVariable("REDIS_PASSWORD");
+    builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect($"{redis_host},password={redis_pass},abortConnect=false"));
+
+    return true;
+}
+
+
+void AddBackgroundServices()
+{
+    //serviço que busca as taxas Selic do Banco Central
+    builder.Services.AddHostedService<SelicBackgroundService>(provider =>
+    {
+        var contextFactory = provider.GetRequiredService<IDbContextFactory<Context>>();
+        var context = contextFactory.CreateDbContext();
+        var logger = provider.GetRequiredService<ILogger<SelicBackgroundService>>();
+        return new SelicBackgroundService(logger, context);
+    });
+
+    //serviço que busca as taxas IPCA do Banco Central
+    builder.Services.AddHostedService<IPCABackgroundService>(provider =>
+    {
+        var contextFactory = provider.GetRequiredService<IDbContextFactory<Context>>();
+        var context = contextFactory.CreateDbContext();
+        var logger = provider.GetRequiredService<ILogger<IPCABackgroundService>>();
+        return new IPCABackgroundService(logger, context);
+    });
+
+    //serviço de envio de notificações de vencimento de investimentos
+    builder.Services.AddHostedService<NotificationBackgroudService>(provider =>
+    {
+        var contextFactory = provider.GetRequiredService<IDbContextFactory<Context>>();
+        var context = contextFactory.CreateDbContext();
+        var logger = provider.GetRequiredService<ILogger<NotificationBackgroudService>>();
+        return new NotificationBackgroudService(logger, context, telegram);
+    });
+}
+
+
+
+void MigrateDatabase(){
+
+    Log.Information("Applying migrations");
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<Context>>();
+        using var dbContext = dbContextFactory.CreateDbContext();
+        try
+        {
+            dbContext.Database.Migrate();
+        }
+        catch (System.Exception error)
+        {
+                //log.Error($"Não foi possível aplicar as migrations de forma automática. Erro: {error.Message}");
+        }
+
         
 
 

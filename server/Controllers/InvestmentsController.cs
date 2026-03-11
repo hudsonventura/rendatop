@@ -16,9 +16,9 @@ public class InvestmentsController : AuthenticatedController
     ILogger _logger;
     INotification _notify;
 
-    public InvestmentsController(ILogger<InvestmentsController> logger, IHttpContextAccessor httpContextAccessor, Context context, INotification notify) : base(httpContextAccessor)
+    public InvestmentsController(ILogger<InvestmentsController> logger, IHttpContextAccessor httpContextAccessor, IDbContextFactory<Context> contextFactory, INotification notify) : base(httpContextAccessor)
     {
-        _context = context;
+        _context = contextFactory.CreateDbContext();
         _logger = logger;
 
         _logger.LogInformation("Apenas um teste");

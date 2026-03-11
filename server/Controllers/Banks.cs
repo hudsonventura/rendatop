@@ -13,9 +13,9 @@ public class Banks : AuthenticatedController
 {
     Context _context;
 
-    public Banks(IHttpContextAccessor httpContextAccessor, Context context) : base(httpContextAccessor)
+    public Banks(IHttpContextAccessor httpContextAccessor, IDbContextFactory<Context> contextFactory) : base(httpContextAccessor)
     {
-        _context = context;
+        _context = contextFactory.CreateDbContext();
     }
 
     /// <summary>

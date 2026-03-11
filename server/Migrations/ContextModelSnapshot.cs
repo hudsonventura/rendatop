@@ -174,10 +174,10 @@ namespace server.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<bool>("notify_telegram")
+                    b.Property<bool>("notify_email")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("notify_email")
+                    b.Property<bool>("notify_telegram")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("notify_whatsapp")

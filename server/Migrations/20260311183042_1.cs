@@ -6,11 +6,28 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace server.Migrations
 {
     /// <inheritdoc />
-    public partial class _01 : Migration
+    public partial class _1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "banks",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    code = table.Column<int>(type: "integer", nullable: false),
+                    cnpj = table.Column<string>(type: "text", nullable: false),
+                    active = table.Column<bool>(type: "boolean", nullable: false),
+                    name = table.Column<string>(type: "text", nullable: false),
+                    company_name = table.Column<string>(type: "text", nullable: false),
+                    color = table.Column<string>(type: "text", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_banks", x => x.id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "ipcas",
                 columns: table => new
@@ -40,7 +57,12 @@ namespace server.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "text", nullable: false),
                     email = table.Column<string>(type: "text", nullable: false),
+                    phone = table.Column<string>(type: "text", nullable: false),
+                    notify_whatsapp = table.Column<bool>(type: "boolean", nullable: false),
+                    notify_telegram = table.Column<bool>(type: "boolean", nullable: false),
+                    notify_email = table.Column<bool>(type: "boolean", nullable: false),
                     salt = table.Column<string>(type: "text", nullable: false),
                     password = table.Column<string>(type: "text", nullable: false)
                 },
@@ -56,9 +78,9 @@ namespace server.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     ownerid = table.Column<Guid>(type: "uuid", nullable: false),
                     title = table.Column<string>(type: "text", nullable: false),
-                    bank = table.Column<string>(type: "text", nullable: false),
+                    bank_id = table.Column<Guid>(type: "uuid", nullable: false),
                     date_buy = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    date_expected_sell = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    due_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     value = table.Column<decimal>(type: "numeric", nullable: false),
                     index = table.Column<int>(type: "integer", nullable: false),
                     index_percent = table.Column<decimal>(type: "numeric", nullable: false),
@@ -68,6 +90,12 @@ namespace server.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_investments", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_investments_banks_bank_id",
+                        column: x => x.bank_id,
+                        principalTable: "banks",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_investments_users_ownerid",
                         column: x => x.ownerid,
@@ -98,6 +126,11 @@ namespace server.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_investments_bank_id",
+                table: "investments",
+                column: "bank_id");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_investments_ownerid",
                 table: "investments",
                 column: "ownerid");
@@ -122,6 +155,9 @@ namespace server.Migrations
 
             migrationBuilder.DropTable(
                 name: "investments");
+
+            migrationBuilder.DropTable(
+                name: "banks");
 
             migrationBuilder.DropTable(
                 name: "users");
