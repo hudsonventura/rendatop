@@ -46,6 +46,8 @@ services:
       - .env
     environment:
       - POSTGRES_HOST=db
+      - WHATSAPP_EVOLUTION_URL=http://evolution:8080
+      - REDIS_HOST=redis:6379
     depends_on: 
       - db
     ports:
