@@ -177,6 +177,9 @@ namespace server.Migrations
                     b.Property<bool>("notify_telegram")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("notify_email")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("notify_whatsapp")
                         .HasColumnType("boolean");
 

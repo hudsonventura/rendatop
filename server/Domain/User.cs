@@ -44,6 +44,11 @@ public class User
     public bool notify_telegram { get; set; } = true;
 
     /// <summary>
+    /// Preferência para receber notificações via Email
+    /// </summary>
+    public bool notify_email { get; set; } = true;
+
+    /// <summary>
     /// Salt para encriptação da senha
     /// </summary>
     public string salt { get; private set; } = Guid.NewGuid().ToString();

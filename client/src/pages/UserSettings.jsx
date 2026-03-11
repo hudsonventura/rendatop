@@ -15,6 +15,7 @@ const UserSettings = () => {
     const [saving, setSaving] = useState(false)
     const [testingTelegram, setTestingTelegram] = useState(false)
     const [testingWhatsApp, setTestingWhatsApp] = useState(false)
+    const [testingEmail, setTestingEmail] = useState(false)
     const [success, setSuccess] = useState("")
     const [error, setError] = useState("")
 
@@ -24,6 +25,7 @@ const UserSettings = () => {
     const [confirmPassword, setConfirmPassword] = useState("")
     const [notifyWhatsapp, setNotifyWhatsapp] = useState(false)
     const [notifyTelegram, setNotifyTelegram] = useState(true)
+    const [notifyEmail, setNotifyEmail] = useState(true)
 
     useEffect(() => {
         axiosInstance
@@ -34,6 +36,7 @@ const UserSettings = () => {
                 setPhone(data.phone || "")
                 setNotifyWhatsapp(Boolean(data.notify_whatsapp))
                 setNotifyTelegram(Boolean(data.notify_telegram))
+                setNotifyEmail(Boolean(data.notify_email))
             })
             .catch(() => {
                 setError("Não foi possível carregar suas configurações.")
@@ -76,6 +79,7 @@ const UserSettings = () => {
                 phone,
                 notify_whatsapp: notifyWhatsapp,
                 notify_telegram: notifyTelegram,
+                notify_email: notifyEmail,
             })
             .then((response) => {
                 const data = response.data
@@ -137,6 +141,28 @@ const UserSettings = () => {
             })
             .finally(() => {
                 setTestingWhatsApp(false)
+            })
+    }
+
+    const handleTestEmail = () => {
+        setError("")
+        setSuccess("")
+        setTestingEmail(true)
+
+        axiosInstance
+            .post("/User/Settings/TestEmail")
+            .then((response) => {
+                const message = response?.data?.message || "Mensagem de teste enviada por Email."
+                setSuccess(message)
+            })
+            .catch((err) => {
+                const message = typeof err?.response?.data === "string"
+                    ? err.response.data
+                    : "Não foi possível enviar o email de teste."
+                setError(message)
+            })
+            .finally(() => {
+                setTestingEmail(false)
             })
     }
 
@@ -210,44 +236,79 @@ const UserSettings = () => {
 
                                     <div className="space-y-3 rounded-md border p-4">
                                         <h4 className="text-sm font-medium">Notificações</h4>
-                                        <div className="flex items-center justify-between">
+
+                                        <div className="hidden md:grid md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center md:gap-3 px-3 text-xs font-medium text-muted-foreground">
+                                            <span></span>
+                                            <span className="justify-self-center"></span>
+                                            <span className="justify-self-end"></span>
+                                        </div>
+
+                                        <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
                                             <div>
                                                 <p className="text-sm font-medium">WhatsApp</p>
                                                 <p className="text-xs text-muted-foreground">Receber notificações por WhatsApp</p>
                                             </div>
-                                            <Switch
-                                                checked={notifyWhatsapp}
-                                                onCheckedChange={setNotifyWhatsapp}
-                                            />
+                                            <div className="md:justify-self-center">
+                                                <Switch
+                                                    checked={notifyWhatsapp}
+                                                    onCheckedChange={setNotifyWhatsapp}
+                                                />
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="md:w-36 md:justify-self-end"
+                                                onClick={handleTestWhatsApp}
+                                                disabled={testingWhatsApp}
+                                            >
+                                                {testingWhatsApp ? "Enviando..." : "Test WhatsApp"}
+                                            </Button>
                                         </div>
-                                        <div className="flex items-center justify-between">
+
+                                        <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
                                             <div>
                                                 <p className="text-sm font-medium">Telegram</p>
                                                 <p className="text-xs text-muted-foreground">Receber notificações por Telegram</p>
                                             </div>
-                                            <Switch
-                                                checked={notifyTelegram}
-                                                onCheckedChange={setNotifyTelegram}
-                                            />
-                                        </div>
-                                        <div className="pt-2">
+                                            <div className="md:justify-self-center">
+                                                <Switch
+                                                    checked={notifyTelegram}
+                                                    onCheckedChange={setNotifyTelegram}
+                                                />
+                                            </div>
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                onClick={handleTestWhatsApp}
-                                                disabled={testingWhatsApp}
-                                            >
-                                                {testingWhatsApp ? "Enviando teste..." : "Testar WhatsApp"}
-                                            </Button>
-                                        </div>
-                                        <div className="pt-1">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
+                                                size="sm"
+                                                className="md:w-36 md:justify-self-end"
                                                 onClick={handleTestTelegram}
                                                 disabled={testingTelegram}
                                             >
-                                                {testingTelegram ? "Enviando teste..." : "Testar Telegram"}
+                                                {testingTelegram ? "Enviando..." : "Test Telegram"}
+                                            </Button>
+                                        </div>
+
+                                        <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+                                            <div>
+                                                <p className="text-sm font-medium">Email</p>
+                                                <p className="text-xs text-muted-foreground">Receber notificações por Email</p>
+                                            </div>
+                                            <div className="md:justify-self-center">
+                                                <Switch
+                                                    checked={notifyEmail}
+                                                    onCheckedChange={setNotifyEmail}
+                                                />
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="md:w-36 md:justify-self-end"
+                                                onClick={handleTestEmail}
+                                                disabled={testingEmail}
+                                            >
+                                                {testingEmail ? "Enviando..." : "Test Email"}
                                             </Button>
                                         </div>
                                     </div>

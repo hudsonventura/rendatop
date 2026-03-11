@@ -32,6 +32,16 @@ IWhatsAppNotification whatsapp = new WhatsApp(
     Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_API_KEY")
 );
 builder.Services.AddSingleton<IWhatsAppNotification>(whatsapp);
+IEmailNotification email = new EmailSmtp(
+    Environment.GetEnvironmentVariable("SMTP_HOST"),
+    Environment.GetEnvironmentVariable("SMTP_PORT"),
+    Environment.GetEnvironmentVariable("SMTP_USERNAME"),
+    Environment.GetEnvironmentVariable("SMTP_PASSWORD"),
+    Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL"),
+    Environment.GetEnvironmentVariable("SMTP_FROM_NAME"),
+    Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL")
+);
+builder.Services.AddSingleton<IEmailNotification>(email);
 //_notify.Notify("Vencimento", $"Tem investimento vencendo hj carai, que tal resgata-lo? {Environment.NewLine} {investments[0].bank} {Environment.NewLine} {investments[0].title}");
 
 

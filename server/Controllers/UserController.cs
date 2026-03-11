@@ -13,12 +13,19 @@ public class UserController : AuthenticatedController
     private readonly Context _context;
     private readonly INotification _notify;
     private readonly IWhatsAppNotification _whatsApp;
+    private readonly IEmailNotification _email;
 
-    public UserController(IHttpContextAccessor httpContextAccessor, Context context, INotification notify, IWhatsAppNotification whatsApp) : base(httpContextAccessor)
+    public UserController(
+        IHttpContextAccessor httpContextAccessor,
+        Context context,
+        INotification notify,
+        IWhatsAppNotification whatsApp,
+        IEmailNotification email) : base(httpContextAccessor)
     {
         _context = context;
         _notify = notify;
         _whatsApp = whatsApp;
+        _email = email;
     }
 
     /// <summary>
@@ -67,6 +74,7 @@ public class UserController : AuthenticatedController
         user.phone = phone;
         user.notify_whatsapp = request.notify_whatsapp;
         user.notify_telegram = request.notify_telegram;
+        user.notify_email = request.notify_email;
 
         if (!string.IsNullOrWhiteSpace(request.password))
         {
@@ -147,6 +155,39 @@ public class UserController : AuthenticatedController
         return Ok(new GenericMessageResponse("Mensagem de teste enviada no WhatsApp."));
     }
 
+    /// <summary>
+    /// Envia uma mensagem de teste para o email informado no cadastro do usuário
+    /// </summary>
+    [HttpPost("User/Settings/TestEmail")]
+    [ProducesResponseType(typeof(GenericMessageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> TestEmail()
+    {
+        var user = _context.users.AsNoTracking().FirstOrDefault(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        if (!user.notify_email)
+            throw new ExpectedException("Ative as notificações por Email nas configurações para testar o envio.");
+
+        ValidateEmail(user.email);
+
+        var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+        var message = $"Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
+
+        try
+        {
+            await _email.Notify(user.email, "Teste Email", message);
+        }
+        catch (Exception ex)
+        {
+            throw new ExpectedException($"Falha ao enviar email de teste: {ex.Message}", HttpStatusCode.BadGateway);
+        }
+
+        return Ok(new GenericMessageResponse("Mensagem de teste enviada por Email."));
+    }
+
     private static void ValidateEmail(string email)
     {
         try
@@ -177,7 +218,8 @@ public class UserController : AuthenticatedController
             user.email,
             user.phone ?? string.Empty,
             user.notify_whatsapp,
-            user.notify_telegram
+            user.notify_telegram,
+            user.notify_email
         );
 }
 
@@ -186,7 +228,8 @@ public record UserSettingsRequest(
     string? password,
     string? phone,
     bool notify_whatsapp,
-    bool notify_telegram
+    bool notify_telegram,
+    bool notify_email
 );
 
 public record UserSettingsResponse(
@@ -194,7 +237,8 @@ public record UserSettingsResponse(
     string email,
     string phone,
     bool notify_whatsapp,
-    bool notify_telegram
+    bool notify_telegram,
+    bool notify_email
 );
 
 public record GenericMessageResponse(
