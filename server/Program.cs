@@ -1,9 +1,11 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
@@ -136,6 +138,51 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status500InternalServerError;
+    options.OnRejected = async (context, _) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync("Muitas requisições em pouco tempo. Tente novamente em instantes.");
+    };
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        if (IsAuthenticatedForRateLimit(httpContext))
+        {
+            string partitionKey = $"auth:{GetAuthenticatedPartitionKey(httpContext)}";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 200,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    AutoReplenishment = true
+                });
+        }
+
+        if (IsLoginOrSignupEndpoint(httpContext.Request.Path))
+        {
+            string partitionKey = $"anon-auth:{GetIpAddress(httpContext)}";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 30,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    AutoReplenishment = true
+                });
+        }
+
+        return RateLimitPartition.GetNoLimiter("no-limit");
+    });
+});
+
 DepenciesInjection();
 
 AddBackgroundServices();
@@ -187,6 +234,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.UseAuthenticationMiddleware();
+app.UseRateLimiter();
 
 
 MigrateDatabase();
@@ -408,4 +456,46 @@ void MigrateDatabase(){
             dbContext.SaveChanges();
         }
     }
+}
+static bool IsLoginOrSignupEndpoint(PathString path)
+{
+    return path.Equals("/login", StringComparison.OrdinalIgnoreCase) ||
+           path.Equals("/signup", StringComparison.OrdinalIgnoreCase);
+}
+
+static bool IsAuthenticatedForRateLimit(HttpContext context)
+{
+    if (context.User?.Identity?.IsAuthenticated == true) return true;
+    if (context.Items.ContainsKey("User")) return true;
+
+    if (!string.IsNullOrWhiteSpace(context.Request.Cookies["jwt"])) return true;
+
+    var authorization = context.Request.Headers.Authorization.ToString();
+    return !string.IsNullOrWhiteSpace(authorization) &&
+           authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
+}
+
+static string GetAuthenticatedPartitionKey(HttpContext context)
+{
+    string? cookieToken = context.Request.Cookies["jwt"];
+    if (!string.IsNullOrWhiteSpace(cookieToken))
+        return $"cookie:{cookieToken}";
+
+    string authorization = context.Request.Headers.Authorization.ToString();
+    if (!string.IsNullOrWhiteSpace(authorization) &&
+        authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+    {
+        return $"bearer:{authorization["Bearer ".Length..]}";
+    }
+
+    string? subject = context.User?.FindFirst("sub")?.Value;
+    if (!string.IsNullOrWhiteSpace(subject))
+        return $"sub:{subject}";
+
+    return $"ip:{GetIpAddress(context)}";
+}
+
+static string GetIpAddress(HttpContext context)
+{
+    return context.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
 }
