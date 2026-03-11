@@ -30,7 +30,10 @@ public class AuthenticationMiddleware
         var path = context.Request.Path.Value ?? "";
         if (path.StartsWith("/scalar", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/openapi", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/auth/google", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/auth/microsoft", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/Auth/login", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/signup", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/login", StringComparison.OrdinalIgnoreCase))
         {
             await _next(context);
