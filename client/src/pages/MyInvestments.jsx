@@ -1,0 +1,138 @@
+import React, { useMemo } from "react";
+import { useEffect, useState } from "react";
+import axiosInstance from "@/utils/axiosConfig";
+
+import { BaseLayout } from "@/components/layouts/base-layout";
+import Logged from "@/components/Logged";
+import InvestmentsAdd from "@/components/InvestmentsAdd";
+import InvestmentsDataTable from "@/components/InvestmentsDataTable";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+function InvestmentsTableSkeleton() {
+    return (
+        <div className="space-y-4">
+            <div className="overflow-hidden rounded-lg border">
+                <div className="border-b bg-muted p-4">
+                    <div className="grid grid-cols-7 gap-3">
+                        {Array.from({ length: 7 }).map((_, i) => (
+                            <Skeleton key={i} className="h-4 w-full" />
+                        ))}
+                    </div>
+                </div>
+                <div className="space-y-3 p-4">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="grid grid-cols-7 gap-3">
+                            {Array.from({ length: 7 }).map((__, j) => (
+                                <Skeleton key={j} className="h-5 w-full" />
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const MyInvestments = () => {
+    const [investments, setInvestments] = useState([]);
+    const [loadingInvestments, setLoadingInvestments] = useState(true);
+    const [reload, setReload] = useState(0);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoadingInvestments(true);
+
+        axiosInstance
+            .get("/Investments")
+            .then((response) => {
+                if (cancelled) return;
+                setInvestments(response.data ?? []);
+            })
+            .catch((err) => {
+                console.error("Erro ao buscar investimentos:", err);
+                if (cancelled) return;
+                setInvestments([]);
+            })
+            .finally(() => {
+                if (cancelled) return;
+                setLoadingInvestments(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [reload]);
+
+    const { available, locked } = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const available = [];
+        const locked = [];
+
+        for (const inv of investments) {
+            if (!inv.due_date) {
+                available.push(inv);
+                continue;
+            }
+
+            const due = new Date(inv.due_date);
+            due.setHours(0, 0, 0, 0);
+
+            if (due <= today) {
+                available.push(inv);
+            } else {
+                locked.push(inv);
+            }
+        }
+
+        return { available, locked };
+    }, [investments]);
+
+    return (
+        <>
+            <Logged />
+            <BaseLayout title="Meus Investimentos" description="Cadastre, acompanhe e gerencie seus investimentos">
+                <div className="px-4 lg:px-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold tracking-tight">Carteira</h2>
+                        <InvestmentsAdd setReload={setReload} />
+                    </div>
+
+                    {loadingInvestments ? (
+                        <div className="space-y-4">
+                            <div className="flex gap-2">
+                                <Skeleton className="h-9 w-56 rounded-md" />
+                                <Skeleton className="h-9 w-56 rounded-md" />
+                            </div>
+                            <InvestmentsTableSkeleton />
+                        </div>
+                    ) : (
+                        <Tabs defaultValue="available" className="w-full">
+                            <TabsList>
+                                <TabsTrigger value="available" className="cursor-pointer">
+                                    Disponíveis para resgate
+                                    <Badge variant="secondary" className="ml-1.5">{available.length}</Badge>
+                                </TabsTrigger>
+                                <TabsTrigger value="locked" className="cursor-pointer">
+                                    Bloqueados até o vencimento
+                                    <Badge variant="secondary" className="ml-1.5">{locked.length}</Badge>
+                                </TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="available">
+                                <InvestmentsDataTable investments={available} setReload={setReload} />
+                            </TabsContent>
+                            <TabsContent value="locked">
+                                <InvestmentsDataTable investments={locked} setReload={setReload} />
+                            </TabsContent>
+                        </Tabs>
+                    )}
+                </div>
+            </BaseLayout>
+        </>
+    );
+};
+
+export default MyInvestments;

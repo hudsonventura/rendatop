@@ -73,7 +73,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApiDocument(config =>
 {
-    config.Title = "Controle de Investimentos";
+    config.Title = "RendaTop - Controle de Investimentos";
     config.Description = "Sistema de controle de Investimentos";
     config.Version = "v1";
     config.AddSecurity("Bearer", Enumerable.Empty<string>(), new NSwag.OpenApiSecurityScheme(){
@@ -173,7 +173,7 @@ if (app.Environment.IsDevelopment())
     });
     app.MapScalarApiReference("/scalar", options =>
     {
-        options.WithTitle("Controle de Investimentos API");
+        options.WithTitle("RendaTop - Controle de Investimentos API");
         options.WithOpenApiRoutePattern("/openapi/{documentName}.json");
         options.AddDocument("v1");
     });}

@@ -9,6 +9,7 @@ import Home from "@/pages/Home"
 import Logout from "@/pages/Logout"
 import CalendarPage from "@/pages/CalendarPage"
 import UserSettings from "@/pages/UserSettings"
+import MyInvestments from "@/pages/MyInvestments"
 
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
                             <Route path="/signup" element={<Signup />} />
                             <Route path="/logout" element={<Logout />} />
                             <Route path="/home" element={<Home />} />
+                            <Route path="/meus-investimentos" element={<MyInvestments />} />
                             <Route path="/calendar" element={<CalendarPage />} />
                             <Route path="/settings" element={<UserSettings />} />
                         </Routes>

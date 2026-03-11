@@ -2,6 +2,7 @@ import * as React from "react"
 import { useState } from "react"
 import {
     TrendingUp,
+    Wallet,
     LogOut,
     CircleUser,
     CalendarDays,
@@ -34,9 +35,14 @@ import { Button } from "@/components/ui/button"
 
 const navItems = [
     {
-        title: "Investimentos",
+        title: "Dashboard",
         url: "/home",
         icon: TrendingUp,
+    },
+    {
+        title: "Meus Investimentos",
+        url: "/meus-investimentos",
+        icon: Wallet,
     },
     {
         title: "Calendário",
