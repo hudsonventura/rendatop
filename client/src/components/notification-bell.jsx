@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Bell } from "lucide-react"
+import { Link } from "react-router-dom"
 import axiosInstance from "@/utils/axiosConfig"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,17 +28,14 @@ export function NotificationBell() {
 
     const load = React.useCallback(async () => {
         setLoading(true)
-        try
-        {
+        try {
             const [itemsRes, unreadRes] = await Promise.all([
-                axiosInstance.get("/Notifications?limit=30"),
+                axiosInstance.get("/Notifications?limit=30&unread_only=true"),
                 axiosInstance.get("/Notifications/UnreadCount"),
             ])
             setNotifications(itemsRes.data ?? [])
             setUnreadCount(unreadRes?.data?.unread_count ?? 0)
-        }
-        finally
-        {
+        } finally {
             setLoading(false)
         }
     }, [])
@@ -52,19 +50,16 @@ export function NotificationBell() {
         if (open) load()
     }, [open, load])
 
-    const markAsRead = async (id, isRead) => {
-        if (isRead) return
+    const markAsRead = async (id) => {
         const response = await axiosInstance.post(`/Notifications/${id}/Read`)
         setUnreadCount(response?.data?.unread_count ?? unreadCount)
-        setNotifications((prev) =>
-            prev.map((n) => (n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n))
-        )
+        setNotifications((prev) => prev.filter((n) => n.id !== id))
     }
 
     const markAllAsRead = async () => {
         const response = await axiosInstance.post("/Notifications/ReadAll")
         setUnreadCount(response?.data?.unread_count ?? 0)
-        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true, read_at: new Date().toISOString() })))
+        setNotifications([])
     }
 
     return (
@@ -85,36 +80,41 @@ export function NotificationBell() {
             <PopoverContent align="end" className="w-[360px] p-0">
                 <div className="flex items-center justify-between border-b px-3 py-2">
                     <div className="text-sm font-medium">Notificações</div>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 px-2 text-xs"
-                        onClick={markAllAsRead}
-                        disabled={unreadCount === 0}
-                    >
-                        Marcar todas
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-xs"
+                            onClick={markAllAsRead}
+                            disabled={unreadCount === 0}
+                        >
+                            Marcar todas
+                        </Button>
+                        <Button asChild type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs">
+                            <Link to="/notifications" onClick={() => setOpen(false)}>
+                                Ver todas
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="max-h-[380px] overflow-y-auto">
                     {loading && notifications.length === 0 ? (
                         <div className="px-3 py-4 text-sm text-muted-foreground">Carregando...</div>
                     ) : notifications.length === 0 ? (
-                        <div className="px-3 py-4 text-sm text-muted-foreground">Sem notificações.</div>
+                        <div className="px-3 py-4 text-sm text-muted-foreground">Sem notificações não lidas.</div>
                     ) : (
                         notifications.map((notification) => (
                             <button
                                 key={notification.id}
                                 type="button"
-                                className={`w-full border-b px-3 py-3 text-left transition-colors hover:bg-muted/50 ${notification.is_read ? "bg-background" : "bg-blue-500/5"}`}
-                                onClick={() => markAsRead(notification.id, notification.is_read)}
+                                className="w-full border-b bg-blue-500/5 px-3 py-3 text-left transition-colors hover:bg-muted/50"
+                                onClick={() => markAsRead(notification.id)}
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <p className="text-sm font-medium">{notification.title}</p>
-                                    {!notification.is_read && (
-                                        <span className="mt-1 h-2 w-2 rounded-full bg-blue-600" />
-                                    )}
+                                    <span className="mt-1 h-2 w-2 rounded-full bg-blue-600" />
                                 </div>
                                 <p className="mt-1 whitespace-pre-line text-xs text-muted-foreground">
                                     {notification.message}

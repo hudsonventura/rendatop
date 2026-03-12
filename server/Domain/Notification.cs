@@ -15,6 +15,7 @@ public class Notification
 
     public string title { get; set; } = string.Empty;
     public string message { get; set; } = string.Empty;
+    public string? source_key { get; set; }
 
     public bool is_read { get; set; } = false;
 

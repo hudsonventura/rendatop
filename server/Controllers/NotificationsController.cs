@@ -18,13 +18,18 @@ public class NotificationsController : AuthenticatedController
 
     [HttpGet("Notifications")]
     [ProducesResponseType(typeof(List<NotificationListItemResponse>), StatusCodes.Status200OK)]
-    public IActionResult List([FromQuery] int limit = 30)
+    public IActionResult List([FromQuery] int limit = 30, [FromQuery] bool unread_only = false)
     {
         var safeLimit = Math.Clamp(limit, 1, 100);
 
-        var notifications = _context.notifications
+        var query = _context.notifications
             .AsNoTracking()
-            .Where(n => n.user_id == _user.id)
+            .Where(n => n.user_id == _user.id);
+
+        if (unread_only)
+            query = query.Where(n => !n.is_read);
+
+        var notifications = query
             .OrderByDescending(n => n.created_at)
             .Take(safeLimit)
             .Select(n => new NotificationListItemResponse(

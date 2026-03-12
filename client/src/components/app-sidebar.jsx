@@ -7,6 +7,7 @@ import {
     CircleUser,
     CalendarDays,
     Settings,
+    Bell,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
@@ -48,6 +49,11 @@ const navItems = [
         title: "Calendário",
         url: "/calendar",
         icon: CalendarDays,
+    },
+    {
+        title: "Notificações",
+        url: "/notifications",
+        icon: Bell,
     },
     {
         title: "Configurações",

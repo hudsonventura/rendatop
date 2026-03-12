@@ -28,25 +28,10 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogInformation("Serviço de notificações de vencimento iniciado. Verificação a cada 1 minuto.");
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            var now = DateTime.Now;
-            var nextRun = new DateTime(now.Year, now.Month, now.Day, 6, 0, 0, DateTimeKind.Local);
-            if (now >= nextRun)
-                nextRun = nextRun.AddDays(1);
-
-            var delay = nextRun - now;
-            _logger.LogInformation("Notificações de vencimento aguardando próxima execução em {hours:F2} horas.", delay.TotalHours);
-
-            try
-            {
-                await Task.Delay(delay, stoppingToken);
-            }
-            catch (TaskCanceledException)
-            {
-                break;
-            }
-
             try
             {
                 await NotifyDueTomorrow(stoppingToken);
@@ -54,6 +39,15 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Falha ao processar notificações de vencimento para amanhã.");
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
             }
         }
     }
@@ -94,21 +88,28 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
             return;
         }
 
-        var groups = investments
-            .GroupBy(i => i.owner.id)
-            .ToList();
-
-        foreach (var group in groups)
+        foreach (var investment in investments)
         {
-            var user = group.First().owner;
-            var title = "📈 RentaTop | Vencimentos amanhã";
-            var message = BuildMessage(user, group.ToList(), tomorrowLocal);
+            var user = investment.owner;
+            var dueLocal = investment.due_date?.ToLocalTime() ?? tomorrowLocal;
+            var sourceKey = $"due-tomorrow:{investment.id}:{dueLocal:yyyyMMdd}";
+
+            var alreadyExists = await context.notifications
+                .AsNoTracking()
+                .AnyAsync(n => n.user_id == user.id && n.source_key == sourceKey, stoppingToken);
+
+            if (alreadyExists)
+                continue;
+
+            var title = "📈 RentaTop | Vencimento amanhã";
+            var message = BuildMessage(user, investment);
             context.notifications.Add(new Notification
             {
                 id = SnowflakeGuid.NewGuid(),
                 user_id = user.id,
                 title = title,
                 message = message,
+                source_key = sourceKey,
                 is_read = false,
                 created_at = DateTime.UtcNow
             });
@@ -155,28 +156,19 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
 
         await context.SaveChangesAsync(stoppingToken);
 
-        _logger.LogInformation("Notificações de vencimento enviadas para {users} usuário(s).", groups.Count);
+        _logger.LogInformation("Verificação de vencimentos concluída às {time}.", DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
     }
 
-    private static string BuildMessage(User user, List<Investment> investments, DateTime tomorrowLocal)
+    private static string BuildMessage(User user, Investment investment)
     {
-        var lines = new List<string>
-        {
-            $"Usuário: {user.name}",
-            $"Data de vencimento: {tomorrowLocal:dd/MM/yyyy}",
-            string.Empty,
-            "Investimentos:",
-        };
-
-        foreach (var investment in investments)
-        {
-            var bankName = investment.bank?.Name ?? "Banco não informado";
-            var due = investment.due_date?.ToLocalTime().ToString("dd/MM/yyyy") ?? tomorrowLocal.ToString("dd/MM/yyyy");
-            lines.Add($"- {investment.title} | {bankName} | R$ {investment.value:N2} | Vencimento: {due}");
-        }
-
-        lines.Add(string.Empty);
-        lines.Add("Revise seus resgates no RentaTop.");
-        return string.Join(Environment.NewLine, lines);
+        var bankName = investment.bank?.Name ?? "Banco não informado";
+        var due = investment.due_date?.ToLocalTime().ToString("dd/MM/yyyy") ?? "-";
+        return
+            $"Usuário: {user.name}{Environment.NewLine}" +
+            $"Investimento: {investment.title}{Environment.NewLine}" +
+            $"Banco: {bankName}{Environment.NewLine}" +
+            $"Valor investido: R$ {investment.value:N2}{Environment.NewLine}" +
+            $"Vencimento: {due}{Environment.NewLine}{Environment.NewLine}" +
+            "Revise seus resgates no RentaTop.";
     }
 }
