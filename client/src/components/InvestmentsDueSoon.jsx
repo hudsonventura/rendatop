@@ -15,6 +15,14 @@ const formatCurrency = (val) =>
 const formatDate = (dateStr) =>
     new Date(dateStr).toLocaleDateString("pt-BR")
 
+const isDueDateTodayOrPast = (dateStr) => {
+    const due = new Date(dateStr)
+    due.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return due <= today
+}
+
 function getDueSnapshot(investment) {
     return investment.calculated?.[1] ?? investment.calculated?.[0]
 }
@@ -46,7 +54,9 @@ export default function InvestmentsDueSoon({ investments }) {
                             <TableRow key={investment.id}>
                                 <TableCell>
                                     <div className="font-medium">{investment.title}</div>
-                                    <div className="text-xs text-muted-foreground">
+                                    <div
+                                        className={`text-xs ${isDueDateTodayOrPast(investment.due_date) ? "text-red-600 dark:text-red-400 font-medium" : "text-muted-foreground"}`}
+                                    >
                                         Vencimento: {formatDate(investment.due_date)}
                                     </div>
                                 </TableCell>

@@ -78,7 +78,7 @@ const Home = () => {
             const due = new Date(inv.due_date);
             due.setHours(0, 0, 0, 0);
 
-            if (due > today && due <= dueSoonLimit) {
+            if (due <= dueSoonLimit) {
                 dueSoon.push(inv);
             }
         }
