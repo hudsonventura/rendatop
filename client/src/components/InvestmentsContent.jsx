@@ -2,6 +2,8 @@ import React from "react";
 import { Badge } from "@/components/ui/badge"
 import InvestmentsEdit from "@/components/InvestmentsEdit"
 import InvestmentsRedeem from "@/components/InvestmentsRedeem"
+import { getIrBadgeClass } from "@/utils/ir-level"
+import { getIofBadgeClass } from "@/utils/iof-level"
 
 export default function InvestmentsContent({ investment, setReload }) {
 
@@ -11,12 +13,14 @@ export default function InvestmentsContent({ investment, setReload }) {
         {
             label: `IR (${investment.calculated[0].IR.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}%)`,
             value: `R$ ${formatCurrency(investment.calculated[0].IR_value)}`,
-            variant: investment.calculated[0].IR > 15 ? "destructive" : "secondary"
+            variant: "secondary",
+            className: getIrBadgeClass(investment.calculated[0].IR),
         },
         {
             label: `IOF (${investment.calculated[0].IOF.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%)`,
             value: `R$ ${formatCurrency(investment.calculated[0].IOF_value)}`,
-            variant: investment.calculated[0].IOF > 0 ? "destructive" : "secondary"
+            variant: "secondary",
+            className: getIofBadgeClass(investment.calculated[0].IOF),
         },
         {
             label: "Valor bruto",
@@ -50,7 +54,7 @@ export default function InvestmentsContent({ investment, setReload }) {
                 {items.map((item, index) => (
                     <div key={index} className="flex flex-col gap-1">
                         <span className="text-xs text-muted-foreground">{item.label}</span>
-                        <Badge variant={item.variant} className="w-fit text-xs">
+                        <Badge variant={item.variant} className={`w-fit text-xs ${item.className ?? ""}`}>
                             {item.value}
                         </Badge>
                     </div>

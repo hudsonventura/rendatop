@@ -5,6 +5,8 @@ import {
     HoverCardContent,
     HoverCardTrigger,
 } from "@/components/ui/hover-card"
+import { getIrBadgeClass, getIrBadgeLabel } from "@/utils/ir-level"
+import { getIofBadgeClass } from "@/utils/iof-level"
 
 
 export default function InvestmentsTitle({ investment }) {
@@ -40,14 +42,14 @@ export default function InvestmentsTitle({ investment }) {
                 {daysSinceBuy < 30 ? (
                     <HoverCard>
                         <HoverCardTrigger>
-                            <Badge variant="destructive" className="text-xs">IOF</Badge>
+                            <Badge variant="secondary" className={`text-xs ${getIofBadgeClass(1)}`}>IOF</Badge>
                         </HoverCardTrigger>
                         <HoverCardContent className="text-xs">
                             Isenção IOF em {formatDate(new Date(new Date(investment.date_buy).getTime() + 30 * 24 * 60 * 60 * 1000))}
                         </HoverCardContent>
                     </HoverCard>
                 ) : (
-                    <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+                    <Badge variant="secondary" className={`text-xs ${getIofBadgeClass(0)}`}>
                         Isento IOF
                     </Badge>
                 )}
@@ -64,17 +66,9 @@ export default function InvestmentsTitle({ investment }) {
                 )}
 
                 {/* IR Badge */}
-                {investment.calculated[0].IR > 20 ? (
-                    <Badge variant="destructive" className="text-xs">IR 22.5%</Badge>
-                ) : investment.calculated[0].IR > 17.5 ? (
-                    <Badge className="text-xs bg-orange-500 text-white border-orange-500">IR 20%</Badge>
-                ) : investment.calculated[0].IR > 15 ? (
-                    <Badge className="text-xs bg-yellow-500 text-white border-yellow-500">IR 17.5%</Badge>
-                ) : investment.calculated[0].IR > 0 ? (
-                    <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">IR 15%</Badge>
-                ) : (
-                    <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">Isento IR</Badge>
-                )}
+                <Badge variant="secondary" className={`text-xs ${getIrBadgeClass(investment.calculated[0].IR)}`}>
+                    {getIrBadgeLabel(investment.calculated[0].IR)}
+                </Badge>
             </div>
 
             {/* Right: Values */}

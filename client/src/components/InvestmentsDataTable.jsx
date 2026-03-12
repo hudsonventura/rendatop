@@ -52,6 +52,8 @@ import InvestmentsEdit from "@/components/InvestmentsEdit"
 import InvestmentsRedeem from "@/components/InvestmentsRedeem"
 import RedemptionEdit from "@/components/RedemptionEdit"
 import axiosInstance from "@/utils/axiosConfig"
+import { getIrBadgeClass } from "@/utils/ir-level"
+import { getIofBadgeClass } from "@/utils/iof-level"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -112,10 +114,10 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
                         <span className="text-xs text-muted-foreground md:whitespace-nowrap">Valores atuais:</span>
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-1.5">
-                                <Badge variant={calc.IOF > 0 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
+                                <Badge variant="secondary" className={`text-xs whitespace-nowrap ${getIofBadgeClass(calc.IOF)}`}>
                                     IOF: R$ {formatCurrency(calc.IOF_value)}
                                 </Badge>
-                                <Badge variant={calc.IR > 15 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
+                                <Badge variant="secondary" className={`text-xs whitespace-nowrap ${getIrBadgeClass(calc.IR)}`}>
                                     IR: R$ {formatCurrency(calc.IR_value)}
                                 </Badge>
                                 <Badge variant="default" className="text-xs whitespace-nowrap">
@@ -132,10 +134,10 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
                         <div className="min-w-0">
                             {hasDueEstimate ? (
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                    <Badge variant={calcDue.IOF > 0 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
+                                    <Badge variant="secondary" className={`text-xs whitespace-nowrap ${getIofBadgeClass(calcDue.IOF)}`}>
                                         IOF: R$ {formatCurrency(calcDue.IOF_value)}
                                     </Badge>
-                                    <Badge variant={calcDue.IR > 15 ? "destructive" : "secondary"} className="text-xs whitespace-nowrap">
+                                    <Badge variant="secondary" className={`text-xs whitespace-nowrap ${getIrBadgeClass(calcDue.IR)}`}>
                                         IR: R$ {formatCurrency(calcDue.IR_value)}
                                     </Badge>
                                     <Badge variant="default" className="text-xs whitespace-nowrap">

@@ -1,5 +1,6 @@
 import React from "react"
 import { Badge } from "@/components/ui/badge"
+import { formatIrPercent, getIrBadgeClass } from "@/utils/ir-level"
 import {
     Table,
     TableBody,
@@ -68,13 +69,10 @@ export default function InvestmentsDueSoon({ investments }) {
                                 </TableCell>
                                 <TableCell>
                                     <Badge
-                                        variant={dueSnapshot?.IR > 15 ? "destructive" : "secondary"}
-                                        className="whitespace-nowrap"
+                                        variant="secondary"
+                                        className={`whitespace-nowrap ${getIrBadgeClass(dueSnapshot?.IR ?? 0)}`}
                                     >
-                                        {(dueSnapshot?.IR ?? 0).toLocaleString("pt-BR", {
-                                            minimumFractionDigits: 0,
-                                            maximumFractionDigits: 1,
-                                        })}% · R$ {formatCurrency(dueSnapshot?.IR_value ?? 0)}
+                                        {formatIrPercent(dueSnapshot?.IR ?? 0)}% · R$ {formatCurrency(dueSnapshot?.IR_value ?? 0)}
                                     </Badge>
                                 </TableCell>
                             </TableRow>

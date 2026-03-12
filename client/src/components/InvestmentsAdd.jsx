@@ -61,6 +61,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 
 import axiosInstance from "../utils/axiosConfig";
+import { getIrTextClass } from "@/utils/ir-level"
 
 
 // ── IR / IOF helpers (mirror backend logic) ──────────────────────────────────
@@ -184,7 +185,7 @@ function InvestmentPreview({ form }) {
 					<span className="text-xs text-muted-foreground">
 						IR {preview ? `(${preview.irPercent.toFixed(1)}%)` : ""}
 					</span>
-					<span className="text-sm font-medium text-red-500">
+					<span className={`text-sm font-medium ${preview ? getIrTextClass(preview.irPercent) : "text-muted-foreground"}`}>
 						{preview ? `- R$ ${formatBRL(preview.irValue)}` : "-"}
 					</span>
 				</div>
