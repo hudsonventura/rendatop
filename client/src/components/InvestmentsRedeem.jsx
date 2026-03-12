@@ -97,6 +97,16 @@ export default function InvestmentsRedeem({ investment, setReload, externalOpen,
             .catch(() => { })
     }
 
+    const handleFullRedeem = () => {
+        if (!investment) return
+        const valueLiq = investment?.calculated?.[0]?.value_liq ?? investment.value ?? 0
+        const formatted = Number(valueLiq).toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })
+        form.setValue("value", formatted, { shouldValidate: true, shouldDirty: true })
+    }
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             {externalOpen === undefined && (
@@ -132,7 +142,7 @@ export default function InvestmentsRedeem({ investment, setReload, externalOpen,
                             )}
                         />
 
-                        <div className="flex flex-wrap gap-4">
+                        <div className="flex flex-wrap items-start gap-4">
                             <FormField
                                 control={form.control}
                                 name="date"
@@ -150,14 +160,19 @@ export default function InvestmentsRedeem({ investment, setReload, externalOpen,
                                 control={form.control}
                                 name="value"
                                 render={({ field }) => (
-                                    <FormItem className="w-40">
+                                    <FormItem className="w-[280px]">
                                         <FormLabel>Valor resgatado</FormLabel>
                                         <FormControl>
-                                            <Input
-                                                placeholder="Ex.: 1.500,00"
-                                                {...field}
-                                                onChange={handleInputChangeDecimal}
-                                            />
+                                            <div className="flex items-center gap-2">
+                                                <Input
+                                                    placeholder="Ex.: 1.500,00"
+                                                    {...field}
+                                                    onChange={handleInputChangeDecimal}
+                                                />
+                                                <Button type="button" variant="outline" size="sm" onClick={handleFullRedeem}>
+                                                    Resgate total
+                                                </Button>
+                                            </div>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
