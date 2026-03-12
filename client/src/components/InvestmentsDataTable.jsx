@@ -61,6 +61,16 @@ const formatCurrency = (val) =>
 const formatDate = (dateStr) =>
     new Date(dateStr).toLocaleDateString("pt-BR")
 
+const isDueDateTodayOrPast = (dateStr) => {
+    if (!dateStr) return false
+    const due = new Date(dateStr)
+    due.setHours(0, 0, 0, 0)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return due <= today
+}
+
 function getIndexLabel(investment) {
     switch (investment.index) {
         case "PERCENT_YEAR":
@@ -462,7 +472,11 @@ function getColumns(setReload, onView, onEdit, onRedeem, onDelete) {
             ),
             cell: ({ row }) =>
                 row.original.due_date ? (
-                    <span className="whitespace-nowrap">{formatDate(row.original.due_date)}</span>
+                    <span
+                        className={`whitespace-nowrap ${isDueDateTodayOrPast(row.original.due_date) ? "text-red-600 dark:text-red-400 font-medium" : ""}`}
+                    >
+                        {formatDate(row.original.due_date)}
+                    </span>
                 ) : (
                     <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
                         Liquidez diária
