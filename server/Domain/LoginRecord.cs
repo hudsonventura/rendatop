@@ -5,5 +5,5 @@ namespace server.Domain;
 /// </summary>
 /// <param name="email">Email do usuario</param>
 /// <param name="password">Senha</param>
-public record LoginRecord(string email, string password);
-
+/// <param name="totp_code">Código TOTP (opcional)</param>
+public record LoginRecord(string email, string password, string? totp_code = null);

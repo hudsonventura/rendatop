@@ -42,6 +42,15 @@ public class LoginController : ControllerBase
         if (user is null || !user.CheckPass(credentials.password))
             throw new ExpectedException("Usuário nao encontrado ou senha incorreta", HttpStatusCode.Unauthorized);
 
+        if (user.totp_enabled)
+        {
+            if (string.IsNullOrWhiteSpace(user.totp_secret) ||
+                !TotpUtility.ValidateCode(user.totp_secret, credentials.totp_code))
+            {
+                throw new ExpectedException("Código TOTP necessário para esta conta.", HttpStatusCode.Unauthorized);
+            }
+        }
+
         return CreateSession(user);
     }
 

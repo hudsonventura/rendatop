@@ -94,6 +94,71 @@ public class UserController : AuthenticatedController
         return Ok(ToResponse(user));
     }
 
+    [HttpPost("User/Settings/Totp/Generate")]
+    [ProducesResponseType(typeof(TotpSetupResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult GenerateTotpSetup()
+    {
+        var user = _context.users.AsNoTracking().FirstOrDefault(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        var secret = TotpUtility.GenerateBase32Secret();
+        var uri = TotpUtility.BuildOtpAuthUri("RentaTop", user.email, secret);
+
+        return Ok(new TotpSetupResponse(secret, uri, user.email));
+    }
+
+    [HttpPost("User/Settings/Totp/Enable")]
+    [ProducesResponseType(typeof(UserSettingsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult EnableTotp([FromBody] TotpEnableRequest request)
+    {
+        var user = _context.users.FirstOrDefault(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        if (string.IsNullOrWhiteSpace(request.secret))
+            throw new ExpectedException("Secret TOTP é obrigatório.");
+
+        if (!TotpUtility.ValidateCode(request.secret, request.code))
+            throw new ExpectedException("Código TOTP inválido.");
+
+        user.totp_secret = request.secret.Trim().ToUpperInvariant();
+        user.totp_enabled = true;
+        _context.SaveChanges();
+
+        return Ok(ToResponse(user));
+    }
+
+    [HttpPost("User/Settings/Totp/Disable")]
+    [ProducesResponseType(typeof(UserSettingsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult DisableTotp([FromBody] TotpDisableRequest request)
+    {
+        var user = _context.users.FirstOrDefault(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        if (!user.totp_enabled)
+            return Ok(ToResponse(user));
+
+        if (string.IsNullOrWhiteSpace(user.totp_secret) ||
+            !TotpUtility.ValidateCode(user.totp_secret, request.code))
+        {
+            throw new ExpectedException("Código TOTP inválido.");
+        }
+
+        user.totp_enabled = false;
+        user.totp_secret = null;
+        _context.SaveChanges();
+
+        return Ok(ToResponse(user));
+    }
+
     /// <summary>
     /// Envia uma mensagem de teste para o canal de Telegram configurado
     /// </summary>
@@ -222,7 +287,8 @@ public class UserController : AuthenticatedController
             user.notify_telegram,
             user.notify_email,
             user.calendar_public_enabled,
-            user.calendar_public_enabled ? BuildPublicCalendarUrl(user.calendar_public_token) : null
+            user.calendar_public_enabled ? BuildPublicCalendarUrl(user.calendar_public_token) : null,
+            user.totp_enabled
         );
 
     private string? BuildPublicCalendarUrl(Guid? token)
@@ -244,7 +310,8 @@ public record UserSettingsRequest(
     bool notify_whatsapp,
     bool notify_telegram,
     bool notify_email,
-    bool calendar_public_enabled
+    bool calendar_public_enabled,
+    bool? totp_enabled = null
 );
 
 public record NotificationTestRequest(
@@ -259,7 +326,23 @@ public record UserSettingsResponse(
     bool notify_telegram,
     bool notify_email,
     bool calendar_public_enabled,
-    string? calendar_public_url
+    string? calendar_public_url,
+    bool totp_enabled
+);
+
+public record TotpSetupResponse(
+    string secret,
+    string otpauth_uri,
+    string account
+);
+
+public record TotpEnableRequest(
+    string secret,
+    string code
+);
+
+public record TotpDisableRequest(
+    string code
 );
 
 public record GenericMessageResponse(

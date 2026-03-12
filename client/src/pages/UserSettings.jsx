@@ -28,6 +28,13 @@ const UserSettings = () => {
     const [notifyEmail, setNotifyEmail] = useState(true)
     const [calendarPublicEnabled, setCalendarPublicEnabled] = useState(false)
     const [calendarPublicUrl, setCalendarPublicUrl] = useState("")
+    const [totpEnabled, setTotpEnabled] = useState(false)
+    const [totpSecret, setTotpSecret] = useState("")
+    const [totpUri, setTotpUri] = useState("")
+    const [totpCode, setTotpCode] = useState("")
+    const totpQrCodeUrl = totpUri
+        ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(totpUri)}`
+        : ""
 
     useEffect(() => {
         axiosInstance
@@ -41,6 +48,7 @@ const UserSettings = () => {
                 setNotifyEmail(Boolean(data.notify_email))
                 setCalendarPublicEnabled(Boolean(data.calendar_public_enabled))
                 setCalendarPublicUrl(data.calendar_public_url || "")
+                setTotpEnabled(Boolean(data.totp_enabled))
             })
             .catch(() => {
                 setError("Não foi possível carregar suas configurações.")
@@ -117,6 +125,7 @@ const UserSettings = () => {
                 if (data.name) sessionStorage.setItem("name", data.name)
                 setCalendarPublicEnabled(Boolean(data.calendar_public_enabled))
                 setCalendarPublicUrl(data.calendar_public_url || "")
+                setTotpEnabled(Boolean(data.totp_enabled))
                 setPassword("")
                 setConfirmPassword("")
                 setSuccess("Configurações salvas com sucesso.")
@@ -195,6 +204,71 @@ const UserSettings = () => {
             })
             .finally(() => {
                 setTestingEmail(false)
+            })
+    }
+
+    const handleGenerateTotp = () => {
+        setError("")
+        setSuccess("")
+
+        axiosInstance
+            .post("/User/Settings/Totp/Generate")
+            .then((response) => {
+                const data = response.data || {}
+                setTotpSecret(data.secret || "")
+                setTotpUri(data.otpauth_uri || "")
+                setSuccess("QR Code TOTP gerado. Cadastre no app autenticador e confirme o código.")
+            })
+            .catch((err) => {
+                const message = typeof err?.response?.data === "string"
+                    ? err.response.data
+                    : "Não foi possível gerar o QR Code TOTP."
+                setError(message)
+            })
+    }
+
+    const handleEnableTotp = () => {
+        setError("")
+        setSuccess("")
+
+        axiosInstance
+            .post("/User/Settings/Totp/Enable", {
+                secret: totpSecret,
+                code: totpCode,
+            })
+            .then((response) => {
+                const data = response.data || {}
+                setTotpEnabled(Boolean(data.totp_enabled))
+                setTotpCode("")
+                setSuccess("TOTP habilitado com sucesso.")
+            })
+            .catch((err) => {
+                const message = typeof err?.response?.data === "string"
+                    ? err.response.data
+                    : "Não foi possível habilitar TOTP."
+                setError(message)
+            })
+    }
+
+    const handleDisableTotp = () => {
+        setError("")
+        setSuccess("")
+
+        axiosInstance
+            .post("/User/Settings/Totp/Disable", { code: totpCode })
+            .then((response) => {
+                const data = response.data || {}
+                setTotpEnabled(Boolean(data.totp_enabled))
+                setTotpCode("")
+                setTotpSecret("")
+                setTotpUri("")
+                setSuccess("TOTP desabilitado.")
+            })
+            .catch((err) => {
+                const message = typeof err?.response?.data === "string"
+                    ? err.response.data
+                    : "Não foi possível desabilitar TOTP."
+                setError(message)
             })
     }
 
@@ -391,6 +465,75 @@ const UserSettings = () => {
                                                         Copiar link
                                                     </Button>
                                                 </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-3 rounded-md border p-4">
+                                        <h4 className="text-sm font-medium">Autenticação em 2 fatores (TOTP)</h4>
+                                        <p className="text-xs text-muted-foreground">
+                                            Quando habilitado, o login comum (email/senha) exigirá o código TOTP. Isso aumenta a segurança da sua conta e evita acesso indevido.
+                                            <br />
+                                            Login via SSO não exige TOTP.
+                                        </p>
+
+                                        {!totpEnabled && (
+                                            <div className="space-y-2">
+                                                <Button type="button" variant="outline" onClick={handleGenerateTotp}>
+                                                    Gerar QR Code
+                                                </Button>
+
+                                                {totpSecret && (
+                                                    <>
+                                                        {totpQrCodeUrl && (
+                                                            <div className="w-fit rounded-md border p-2">
+                                                                <img
+                                                                    src={totpQrCodeUrl}
+                                                                    alt="QR Code TOTP"
+                                                                    width={220}
+                                                                    height={220}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        <Input value={totpSecret} readOnly placeholder="Chave manual TOTP" />
+                                                        <Input value={totpUri} readOnly placeholder="URI otpauth://" />
+                                                        <Input
+                                                            value={totpCode}
+                                                            onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                                            placeholder="Código TOTP (6 dígitos)"
+                                                            inputMode="numeric"
+                                                            maxLength={6}
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            onClick={handleEnableTotp}
+                                                            disabled={totpCode.length !== 6}
+                                                        >
+                                                            Habilitar TOTP
+                                                        </Button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {totpEnabled && (
+                                            <div className="space-y-2">
+                                                <p className="text-sm text-green-700 dark:text-green-400">TOTP habilitado.</p>
+                                                <Input
+                                                    value={totpCode}
+                                                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                                    placeholder="Informe o código para desabilitar"
+                                                    inputMode="numeric"
+                                                    maxLength={6}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    onClick={handleDisableTotp}
+                                                    disabled={totpCode.length !== 6}
+                                                >
+                                                    Desabilitar TOTP
+                                                </Button>
                                             </div>
                                         )}
                                     </div>

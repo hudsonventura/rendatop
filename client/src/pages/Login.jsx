@@ -13,6 +13,7 @@ const Login = () => {
     const [erroMessage, setErroMessage] = useState("Email ou senha inválidos. Tente novamente.");
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [totpRequired, setTotpRequired] = useState(false);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -47,9 +48,10 @@ const Login = () => {
         const formData = new FormData(event.target);
         const email = formData.get('email');
         const password = formData.get('password');
+        const totpCode = formData.get('totp_code');
 
         axiosInstance
-            .post("/login", { email, password })
+            .post("/login", { email, password, totp_code: totpCode || null })
             .then((response) => {
                 // Server sets the HttpOnly cookie — we only store display info
                 const { name, email: userEmail } = response.data;
@@ -59,7 +61,11 @@ const Login = () => {
             })
             .catch((error) => {
                 setErro(true);
-                setErroMessage("Email ou senha inválidos. Tente novamente.");
+                const message = typeof error?.response?.data === "string"
+                    ? error.response.data
+                    : "Email ou senha inválidos. Tente novamente.";
+                setErroMessage(message);
+                setTotpRequired((message || "").toLowerCase().includes("totp"));
                 setLoading(false);
             });
     };
@@ -170,6 +176,22 @@ const Login = () => {
                                             </button>
                                         </div>
                                     </div>
+
+                                    {totpRequired && (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="totp_code" className="text-sm font-medium">Código TOTP</Label>
+                                            <Input
+                                                id="totp_code"
+                                                type="text"
+                                                name="totp_code"
+                                                placeholder="000000"
+                                                inputMode="numeric"
+                                                maxLength={6}
+                                                className="h-11"
+                                                required
+                                            />
+                                        </div>
+                                    )}
 
                                     <Button
                                         type="submit"

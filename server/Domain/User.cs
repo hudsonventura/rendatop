@@ -59,6 +59,17 @@ public class User
     public Guid? calendar_public_token { get; set; }
 
     /// <summary>
+    /// Define se o login comum (email/senha) exige TOTP
+    /// </summary>
+    public bool totp_enabled { get; set; } = false;
+
+    /// <summary>
+    /// Chave secreta TOTP em base32
+    /// </summary>
+    [JsonIgnore]
+    public string? totp_secret { get; set; }
+
+    /// <summary>
     /// Salt para encriptação da senha
     /// </summary>
     public string salt { get; private set; } = Guid.NewGuid().ToString();
