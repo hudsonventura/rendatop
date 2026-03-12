@@ -16,6 +16,7 @@ public class Context : DbContext
 
     public DbSet<Investment> investments { get; set; }
     public DbSet<Redemption> redemptions { get; set; }
+    public DbSet<Notification> notifications { get; set; }
     
 
 }

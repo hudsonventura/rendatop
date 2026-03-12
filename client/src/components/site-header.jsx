@@ -2,6 +2,7 @@ import * as React from "react"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ModeToggle } from "@/components/mode-toggle"
+import { NotificationBell } from "@/components/notification-bell"
 
 export function SiteHeader() {
     return (
@@ -16,6 +17,7 @@ export function SiteHeader() {
                     <h2 className="text-lg font-semibold">RendaTop</h2>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
+                    <NotificationBell />
                     <ModeToggle />
                 </div>
             </div>

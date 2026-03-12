@@ -302,14 +302,8 @@ void AddBackgroundServices()
         return new IPCABackgroundService(logger, context);
     });
 
-    //serviço de envio de notificações de vencimento de investimentos
-    builder.Services.AddHostedService<NotificationBackgroudService>(provider =>
-    {
-        var contextFactory = provider.GetRequiredService<IDbContextFactory<Context>>();
-        var context = contextFactory.CreateDbContext();
-        var logger = provider.GetRequiredService<ILogger<NotificationBackgroudService>>();
-        return new NotificationBackgroudService(logger, context, telegram);
-    });
+    // serviço diário (06:00) para notificar investimentos com vencimento amanhã
+    builder.Services.AddHostedService<DueTomorrowNotificationBackgroundService>();
 }
 
 
