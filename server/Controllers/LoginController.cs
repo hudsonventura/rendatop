@@ -31,7 +31,7 @@ public class LoginController : ControllerBase
     /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LoginStartResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     public IActionResult Login([FromBody] LoginRecord credentials)
@@ -44,13 +44,57 @@ public class LoginController : ControllerBase
 
         if (user.totp_enabled)
         {
-            if (string.IsNullOrWhiteSpace(user.totp_secret) ||
-                !TotpUtility.ValidateCode(user.totp_secret, credentials.totp_code))
-            {
-                throw new ExpectedException("Código TOTP necessário para esta conta.", HttpStatusCode.Unauthorized);
-            }
+            if (string.IsNullOrWhiteSpace(user.totp_secret))
+                throw new ExpectedException("TOTP habilitado sem chave secreta configurada para esta conta.", HttpStatusCode.Unauthorized);
+
+            var challengeId = Guid.NewGuid().ToString("N");
+            _redis.StringSet(GetTotpChallengeKey(challengeId), user.id.ToString(), TimeSpan.FromMinutes(5));
+            return Ok(new LoginStartResponse(true, challengeId, null, null));
         }
 
+        var login = SetSession(user);
+        return Ok(new LoginStartResponse(false, null, login.name, login.email));
+    }
+
+    [HttpPost("login/totp")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult LoginTotp([FromBody] TotpLoginRequest request)
+    {
+        var challengeId = request.challenge_id?.Trim() ?? string.Empty;
+        var code = request.code?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(challengeId))
+            throw new ExpectedException("Desafio de login TOTP ausente.", HttpStatusCode.BadRequest);
+
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ExpectedException("Código TOTP é obrigatório.", HttpStatusCode.BadRequest);
+
+        var challengeKey = GetTotpChallengeKey(challengeId);
+        var userIdValue = _redis.StringGet(challengeKey);
+
+        if (userIdValue.IsNullOrEmpty)
+            throw new ExpectedException("Desafio TOTP expirado. Faça login novamente.", HttpStatusCode.Unauthorized);
+
+        if (!Guid.TryParse(userIdValue.ToString(), out var userId))
+        {
+            _redis.KeyDelete(challengeKey);
+            throw new ExpectedException("Desafio TOTP inválido. Faça login novamente.", HttpStatusCode.Unauthorized);
+        }
+
+        var user = _context.users.AsNoTracking().FirstOrDefault(x => x.id == userId);
+        if (user is null || !user.totp_enabled || string.IsNullOrWhiteSpace(user.totp_secret))
+        {
+            _redis.KeyDelete(challengeKey);
+            throw new ExpectedException("Não foi possível validar o TOTP para esta conta.", HttpStatusCode.Unauthorized);
+        }
+
+        if (!TotpUtility.ValidateCode(user.totp_secret, code))
+            throw new ExpectedException("Código TOTP inválido.", HttpStatusCode.Unauthorized);
+
+        _redis.KeyDelete(challengeKey);
         return CreateSession(user);
     }
 
@@ -229,6 +273,8 @@ public class LoginController : ControllerBase
     }
 
     private IActionResult CreateSession(User user) => Ok(SetSession(user));
+
+    private static string GetTotpChallengeKey(string challengeId) => $"login:totp:challenge:{challengeId}";
 
     private LoginResponse EnsureUserAndCreateSession(string emailInput, string? nameInput)
     {
@@ -510,6 +556,8 @@ public class LoginController : ControllerBase
 }
 
 public record LoginResponse(string name, string email);
+public record LoginStartResponse(bool requires_totp, string? challenge_id, string? name, string? email);
+public record TotpLoginRequest(string challenge_id, string code);
 public record SignUpRequest(string name, string email, string password);
 public record GoogleUserInfo(string Email, string Name, bool EmailVerified);
 public record MicrosoftUserInfo(string Email, string Name);

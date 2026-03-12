@@ -470,11 +470,11 @@ const UserSettings = () => {
                                     </div>
 
                                     <div className="space-y-3 rounded-md border p-4">
-                                        <h4 className="text-sm font-medium">Autenticação em 2 fatores (TOTP)</h4>
+                                        <h4 className="text-sm font-medium">Código de acesso do app Authenticator <b> Autenticação em 2 fatores (TOTP)</b></h4>
                                         <p className="text-xs text-muted-foreground">
                                             Quando habilitado, o login comum (email/senha) exigirá o código TOTP. Isso aumenta a segurança da sua conta e evita acesso indevido.
                                             <br />
-                                            Login via SSO não exige TOTP.
+                                            TOTP não funciona com login via Microsoft ou GMail (SSO).
                                         </p>
 
                                         {!totpEnabled && (
@@ -496,7 +496,8 @@ const UserSettings = () => {
                                                             </div>
                                                         )}
                                                         <Input value={totpSecret} readOnly placeholder="Chave manual TOTP" />
-                                                        <Input value={totpUri} readOnly placeholder="URI otpauth://" />
+                                                        {//<Input value={totpUri} readOnly placeholder="URI otpauth://" />
+                                                        }
                                                         <Input
                                                             value={totpCode}
                                                             onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}

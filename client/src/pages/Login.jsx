@@ -14,6 +14,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [totpRequired, setTotpRequired] = useState(false);
+    const [totpChallengeId, setTotpChallengeId] = useState("");
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -50,11 +51,28 @@ const Login = () => {
         const password = formData.get('password');
         const totpCode = formData.get('totp_code');
 
-        axiosInstance
-            .post("/login", { email, password, totp_code: totpCode || null })
+        const request = totpRequired && totpChallengeId
+            ? axiosInstance.post("/login/totp", {
+                challenge_id: totpChallengeId,
+                code: totpCode || ""
+            })
+            : axiosInstance.post("/login", { email, password });
+
+        request
             .then((response) => {
+                const data = response?.data || {};
+
+                if (data.requires_totp) {
+                    setTotpRequired(true);
+                    setTotpChallengeId(data.challenge_id || "");
+                    setErro(false);
+                    setErroMessage("");
+                    setLoading(false);
+                    return;
+                }
+
                 // Server sets the HttpOnly cookie — we only store display info
-                const { name, email: userEmail } = response.data;
+                const { name, email: userEmail } = data;
                 sessionStorage.setItem('name', name);
                 sessionStorage.setItem('email', userEmail);
                 window.location.href = '/home';
@@ -65,7 +83,12 @@ const Login = () => {
                     ? error.response.data
                     : "Email ou senha inválidos. Tente novamente.";
                 setErroMessage(message);
-                setTotpRequired((message || "").toLowerCase().includes("totp"));
+                if (!totpRequired) {
+                    setTotpChallengeId("");
+                } else if ((message || "").toLowerCase().includes("expirado")) {
+                    setTotpRequired(false);
+                    setTotpChallengeId("");
+                }
                 setLoading(false);
             });
     };
@@ -137,7 +160,9 @@ const Login = () => {
                             <CardHeader className="space-y-2 pb-6">
                                 <CardTitle className="text-2xl font-bold tracking-tight">Bem-vindo</CardTitle>
                                 <CardDescription className="text-muted-foreground">
-                                    Informe seus dados para acessar sua conta
+                                    {totpRequired
+                                        ? "Email e senha validados. Informe o código do autenticador."
+                                        : "Informe seus dados para acessar sua conta"}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -151,6 +176,7 @@ const Login = () => {
                                             placeholder="seu@email.com"
                                             required
                                             className="h-11"
+                                            disabled={totpRequired}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -162,6 +188,7 @@ const Login = () => {
                                                 name="password"
                                                 required
                                                 className="h-11 pr-10"
+                                                disabled={totpRequired}
                                             />
                                             <button
                                                 type="button"
@@ -179,7 +206,7 @@ const Login = () => {
 
                                     {totpRequired && (
                                         <div className="space-y-2">
-                                            <Label htmlFor="totp_code" className="text-sm font-medium">Código TOTP</Label>
+                                            <Label htmlFor="totp_code" className="text-sm font-medium">Código de acesso do app Authenticator (TOTP)</Label>
                                             <Input
                                                 id="totp_code"
                                                 type="text"
@@ -204,7 +231,7 @@ const Login = () => {
                                                 Entrando...
                                             </span>
                                         ) : (
-                                            "Entrar"
+                                            totpRequired ? "Validar código" : "Entrar"
                                         )}
                                     </Button>
                                     <Button variant="outline" className="w-full cursor-pointer" type="button" onClick={handleGoogleLogin}>
