@@ -26,6 +26,8 @@ const UserSettings = () => {
     const [notifyWhatsapp, setNotifyWhatsapp] = useState(false)
     const [notifyTelegram, setNotifyTelegram] = useState(true)
     const [notifyEmail, setNotifyEmail] = useState(true)
+    const [calendarPublicEnabled, setCalendarPublicEnabled] = useState(false)
+    const [calendarPublicUrl, setCalendarPublicUrl] = useState("")
 
     useEffect(() => {
         axiosInstance
@@ -37,6 +39,8 @@ const UserSettings = () => {
                 setNotifyWhatsapp(Boolean(data.notify_whatsapp))
                 setNotifyTelegram(Boolean(data.notify_telegram))
                 setNotifyEmail(Boolean(data.notify_email))
+                setCalendarPublicEnabled(Boolean(data.calendar_public_enabled))
+                setCalendarPublicUrl(data.calendar_public_url || "")
             })
             .catch(() => {
                 setError("Não foi possível carregar suas configurações.")
@@ -105,11 +109,14 @@ const UserSettings = () => {
                 notify_whatsapp: notifyWhatsapp,
                 notify_telegram: notifyTelegram,
                 notify_email: notifyEmail,
+                calendar_public_enabled: calendarPublicEnabled,
             })
             .then((response) => {
                 const data = response.data
                 sessionStorage.setItem("email", data.email)
                 if (data.name) sessionStorage.setItem("name", data.name)
+                setCalendarPublicEnabled(Boolean(data.calendar_public_enabled))
+                setCalendarPublicUrl(data.calendar_public_url || "")
                 setPassword("")
                 setConfirmPassword("")
                 setSuccess("Configurações salvas com sucesso.")
@@ -336,6 +343,56 @@ const UserSettings = () => {
                                                 {testingEmail ? "Enviando..." : "Test Email"}
                                             </Button>
                                         </div>
+                                    </div>
+
+                                    <div className="space-y-3 rounded-md border p-4">
+                                        <h4 className="text-sm font-medium">Calendário público (.ics) para Outlook</h4>
+                                        <p className="text-xs text-muted-foreground">
+                                            Gere um link público para assinar no Outlook. Quando habilitado, o link público exibirá vencimento e conteúdo dos investimentos. Não compartilhe este link com ninguem.
+                                            <br />
+                                            Você pode assinar este link pelo Outlook, Thunderbird ou qualquer outro aplicativo de calendário compartivel com link <b>.ics</b>
+                                        </p>
+
+                                        <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                                            <div>
+                                                <p className="text-sm font-medium">Compartilhar calendário</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    
+                                                </p>
+                                            </div>
+                                            <div className="md:justify-self-end">
+                                                <Switch
+                                                    checked={calendarPublicEnabled}
+                                                    onCheckedChange={setCalendarPublicEnabled}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {calendarPublicEnabled && (
+                                            <div className="space-y-2">
+                                                <div className="flex flex-col gap-2 md:flex-row">
+                                                    <Input
+                                                        id="calendarPublicUrl"
+                                                        value={calendarPublicUrl}
+                                                        readOnly
+                                                        placeholder="Salve as alterações para gerar o link"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={async () => {
+                                                            if (!calendarPublicUrl) return
+                                                            await navigator.clipboard.writeText(calendarPublicUrl)
+                                                            setSuccess("Link do calendário copiado.")
+                                                            setError("")
+                                                        }}
+                                                        disabled={!calendarPublicUrl}
+                                                    >
+                                                        Copiar link
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {error && (

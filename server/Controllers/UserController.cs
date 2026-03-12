@@ -77,6 +77,9 @@ public class UserController : AuthenticatedController
         user.notify_whatsapp = request.notify_whatsapp;
         user.notify_telegram = request.notify_telegram;
         user.notify_email = request.notify_email;
+        user.calendar_public_enabled = request.calendar_public_enabled;
+        if (user.calendar_public_enabled && user.calendar_public_token is null)
+            user.calendar_public_token = Guid.NewGuid();
 
         if (!string.IsNullOrWhiteSpace(request.password))
         {
@@ -210,15 +213,28 @@ public class UserController : AuthenticatedController
         return digits;
     }
 
-    private static UserSettingsResponse ToResponse(User user) =>
+    private UserSettingsResponse ToResponse(User user) =>
         new UserSettingsResponse(
             user.name,
             user.email,
             user.phone ?? string.Empty,
             user.notify_whatsapp,
             user.notify_telegram,
-            user.notify_email
+            user.notify_email,
+            user.calendar_public_enabled,
+            user.calendar_public_enabled ? BuildPublicCalendarUrl(user.calendar_public_token) : null
         );
+
+    private string? BuildPublicCalendarUrl(Guid? token)
+    {
+        if (token is null) return null;
+
+        var publicApiUrl = Environment.GetEnvironmentVariable("PUBLIC_API_URL")?.TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(publicApiUrl))
+            return $"{publicApiUrl}/public/calendar/{token}.ics";
+
+        return $"{Request.Scheme}://{Request.Host}/public/calendar/{token}.ics";
+    }
 }
 
 public record UserSettingsRequest(
@@ -227,7 +243,8 @@ public record UserSettingsRequest(
     string? phone,
     bool notify_whatsapp,
     bool notify_telegram,
-    bool notify_email
+    bool notify_email,
+    bool calendar_public_enabled
 );
 
 public record NotificationTestRequest(
@@ -240,7 +257,9 @@ public record UserSettingsResponse(
     string phone,
     bool notify_whatsapp,
     bool notify_telegram,
-    bool notify_email
+    bool notify_email,
+    bool calendar_public_enabled,
+    string? calendar_public_url
 );
 
 public record GenericMessageResponse(

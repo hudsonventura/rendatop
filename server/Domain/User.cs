@@ -49,6 +49,16 @@ public class User
     public bool notify_email { get; set; } = false;
 
     /// <summary>
+    /// Habilita o compartilhamento público do calendário de vencimentos (.ics)
+    /// </summary>
+    public bool calendar_public_enabled { get; set; } = false;
+
+    /// <summary>
+    /// Token público usado no link do calendário. Não é o id do usuário.
+    /// </summary>
+    public Guid? calendar_public_token { get; set; }
+
+    /// <summary>
     /// Salt para encriptação da senha
     /// </summary>
     public string salt { get; private set; } = Guid.NewGuid().ToString();
