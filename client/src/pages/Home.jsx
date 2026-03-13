@@ -74,6 +74,7 @@ const Home = () => {
         const dueSoon = [];
 
         for (const inv of investments) {
+            if (inv.archived) continue;
             if (!inv.due_date) continue;
             const due = new Date(inv.due_date);
             due.setHours(0, 0, 0, 0);
