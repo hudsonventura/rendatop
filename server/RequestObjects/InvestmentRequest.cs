@@ -67,9 +67,9 @@ public class InvestmentRequest
     /// </summary>
     public bool taxes { get; set; } = true;
 
-
     /// <summary>
-    /// Indica o tipo de calculo a ser feito. Se true, calcula os valores atuais, se false, calcula os valores futuros, considerando o vencimento
+    /// Indica se o investimento está arquivado.
     /// </summary>
-    public bool atual { get; set; }
+    public bool archived { get; set; } = false;
+
 }

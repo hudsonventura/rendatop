@@ -6,6 +6,7 @@ import { BaseLayout } from "@/components/layouts/base-layout";
 import Logged from "@/components/Logged";
 import InvestmentsAdd from "@/components/InvestmentsAdd";
 import InvestmentsDataTable from "@/components/InvestmentsDataTable";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -69,6 +70,7 @@ const MyInvestments = () => {
     const [reload, setReload] = useState(0);
     const [reinvestOpen, setReinvestOpen] = useState(false);
     const [reinvestInitialValues, setReinvestInitialValues] = useState(null);
+    const [showArchived, setShowArchived] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -108,6 +110,10 @@ const MyInvestments = () => {
         const locked = [];
 
         for (const inv of investments) {
+            if (!showArchived && inv.archived) {
+                continue;
+            }
+
             if (!inv.due_date) {
                 available.push(inv);
                 continue;
@@ -124,7 +130,7 @@ const MyInvestments = () => {
         }
 
         return { available, locked };
-    }, [investments]);
+    }, [investments, showArchived]);
 
     return (
         <>
@@ -135,6 +141,13 @@ const MyInvestments = () => {
                         <h2 className="text-lg font-semibold tracking-tight">Carteira</h2>
                         <InvestmentsAdd setReload={setReload} />
                     </div>
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Checkbox
+                            checked={showArchived}
+                            onCheckedChange={(checked) => setShowArchived(Boolean(checked))}
+                        />
+                        Mostrar investimentos arquivados junto com os ativos
+                    </label>
 
                     {loadingInvestments ? (
                         <div className="space-y-4">

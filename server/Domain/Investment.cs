@@ -74,6 +74,11 @@ public class Investment
     /// </summary>
     public List<Redemption> redemptions { get; set; } = new();
 
+    /// <summary>
+    /// Indica se o investimento foi arquivado pelo usuário.
+    /// </summary>
+    public bool archived { get; set; } = false;
+
     
     [NotMapped] //impede que vá para o entity
     public List<Calculated> calculated { get; set; }
@@ -92,6 +97,7 @@ public class Investment
         this.index_percent = request.index_percent;
         this.index_value = request.index_value;
         this.taxes = request.taxes;
+        this.archived = request.archived;
         this.date_buy = DateTime.SpecifyKind(request.date_buy, DateTimeKind.Utc);
         this.due_date = request.date_expected_sell is null ? null : DateTime.SpecifyKind((DateTime) request.date_expected_sell, DateTimeKind.Utc);
     }
@@ -112,6 +118,7 @@ public class Investment
         this.due_date = request.date_expected_sell is null
             ? null
             : DateTime.SpecifyKind((DateTime)request.date_expected_sell, DateTimeKind.Utc);
+        this.archived = request.archived;
     }
 
     internal InvestmentRequest ToRequest()
@@ -124,6 +131,7 @@ public class Investment
             index_percent = this.index_percent,
             index_value = this.index_value,
             taxes = this.taxes,
+            archived = this.archived,
             date_buy = this.date_buy,
             date_expected_sell = this.due_date
         };

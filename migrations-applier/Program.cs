@@ -11,6 +11,7 @@ try
     Console.WriteLine("Starting migrations applier...");
 
     var factory = new ContextFactory();
+    
     await using var db = factory.CreateDbContext(args);
 
     Console.WriteLine("Applying EF Core migrations...");

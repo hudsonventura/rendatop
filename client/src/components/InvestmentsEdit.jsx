@@ -134,6 +134,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
             date_buy: values.date_buy,
             date_expected_sell: values.liquidez_diaria ? null : (values.due_date ?? null),
             taxes: values.taxes ?? true,
+            archived: investment.archived ?? false,
             bank_code: values.bank_code,
             value: Number(values.value),
             index: Number(values.index),

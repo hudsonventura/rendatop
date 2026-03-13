@@ -13,6 +13,8 @@ import {
     Pencil,
     HandCoins,
     CopyPlus,
+    Archive,
+    ArchiveRestore,
     Trash2,
     ArrowUpDown,
     ChevronLeft,
@@ -101,13 +103,14 @@ function getIndexLabel(investment) {
 
 // ── View Dialog (investment details) ──────────────────────────────────────────
 
-function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinvest, onEditRedemption, onDelete }) {
+function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinvest, onEditRedemption, onArchive, onDelete }) {
     if (!investment) return null
 
     const calc = investment.calculated?.[0]
     const calcDue = investment.calculated?.[1]
     const hasDueEstimate = Boolean(investment.due_date && calcDue)
     const showReinvest = canShowReinvest(investment.due_date)
+    const canArchive = investment.archived || isDueDateTodayOrPast(investment.due_date)
     const redemptions = [...(investment.redemptions ?? [])].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     )
@@ -241,6 +244,19 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
                         Resgatar
                     </Button>
                     <Button
+                        variant="secondary"
+                        className="cursor-pointer"
+                        disabled={!canArchive}
+                        onClick={() => {
+                            if (!canArchive) return
+                            onOpenChange(false)
+                            onArchive()
+                        }}
+                    >
+                        {investment.archived ? <ArchiveRestore className="h-4 w-4 mr-1" /> : <Archive className="h-4 w-4 mr-1" />}
+                        {investment.archived ? "Desarquivar" : "Arquivar"}
+                    </Button>
+                    <Button
                         variant="destructive"
                         className="cursor-pointer"
                         onClick={() => { onOpenChange(false); onDelete() }}
@@ -279,6 +295,40 @@ function DeleteDialog({ investment, open, onOpenChange, onConfirm }) {
                     <Button variant="destructive" className="flex-1" onClick={onConfirm}>
                         <Trash2 className="h-4 w-4 mr-1" />
                         Excluir
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+function ArchiveDialog({ investment, open, onOpenChange, onConfirm }) {
+    if (!investment) return null
+
+    const isArchived = Boolean(investment.archived)
+    const title = isArchived ? "Desarquivar investimento" : "Arquivar investimento"
+    const description = isArchived
+        ? `Deseja desarquivar ${investment.title}? Ele voltará para a lista principal.`
+        : `Deseja arquivar ${investment.title}? Ele deixará de aparecer em Meus Investimentos por padrão.`
+    const actionLabel = isArchived ? "Sim, desarquivar" : "Sim, arquivar"
+    const Icon = isArchived ? ArchiveRestore : Archive
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Icon className="h-5 w-5" />
+                        {title}
+                    </DialogTitle>
+                    <DialogDescription>{description}</DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="flex gap-2 sm:gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+                        Não
+                    </Button>
+                    <Button className="flex-1" onClick={onConfirm}>
+                        {actionLabel}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -558,6 +608,7 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
     const [selectedRedemption, setSelectedRedemption] = useState(null)
     const [editRedemptionOpen, setEditRedemptionOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
+    const [archiveOpen, setArchiveOpen] = useState(false)
 
     const openView = (inv) => { setSelectedInvestment(inv); setViewOpen(true) }
     const openEdit = (inv) => { setSelectedInvestment(inv); setEditOpen(true) }
@@ -565,6 +616,7 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
     const handleReinvest = (inv) => { onReinvest?.(inv) }
     const openEditRedemption = (redemption) => { setSelectedRedemption(redemption); setEditRedemptionOpen(true) }
     const openDelete = (inv) => { setSelectedInvestment(inv); setDeleteOpen(true) }
+    const openArchive = (inv) => { setSelectedInvestment(inv); setArchiveOpen(true) }
 
     const handleDelete = () => {
         if (!selectedInvestment) return
@@ -576,6 +628,21 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
                 setReload(Math.floor(Math.random() * 10000) + 1)
             })
             .catch((err) => console.error("Erro ao excluir:", err))
+    }
+
+    const handleArchive = () => {
+        if (!selectedInvestment) return
+
+        axiosInstance
+            .patch(`/Investments/${selectedInvestment.id}/archive`, {
+                archived: !selectedInvestment.archived,
+            })
+            .then(() => {
+                setArchiveOpen(false)
+                setSelectedInvestment(null)
+                setReload(Math.floor(Math.random() * 10000) + 1)
+            })
+            .catch((err) => console.error("Erro ao arquivar investimento:", err))
     }
 
     const columns = React.useMemo(
@@ -716,6 +783,7 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
                 onEdit={() => openEdit(selectedInvestment)}
                 onRedeem={() => openRedeem(selectedInvestment)}
                 onReinvest={() => handleReinvest(selectedInvestment)}
+                onArchive={() => openArchive(selectedInvestment)}
                 onEditRedemption={openEditRedemption}
                 onDelete={() => openDelete(selectedInvestment)}
             />
@@ -756,6 +824,13 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
                 open={deleteOpen}
                 onOpenChange={setDeleteOpen}
                 onConfirm={handleDelete}
+            />
+
+            <ArchiveDialog
+                investment={selectedInvestment}
+                open={archiveOpen}
+                onOpenChange={setArchiveOpen}
+                onConfirm={handleArchive}
             />
         </div>
     )

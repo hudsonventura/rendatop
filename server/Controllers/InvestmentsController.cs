@@ -137,6 +137,31 @@ public class InvestmentsController : AuthenticatedController
         }
     }
 
+    /// <summary>
+    /// Arquiva ou desarquiva um investimento.
+    /// </summary>
+    /// <returns>Retorno vazio</returns>
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [HttpPatch("Investments/{id}/archive")]
+    public IActionResult Archive(Guid id, [FromBody] ArchiveInvestmentRequest request)
+    {
+        var investment = GetInvestmentByID(id);
+
+        if (investment == null)
+            throw new ExpectedException("Investimento não encontrado.");
+
+        if (request.archived && (!investment.due_date.HasValue || investment.due_date.Value.Date > DateTime.UtcNow.Date))
+            throw new ExpectedException("Somente investimentos vencidos podem ser arquivados.");
+
+        investment.archived = request.archived;
+        _context.investments.Update(investment);
+        _context.SaveChanges();
+
+        return NoContent();
+    }
+
 
     /// <summary>
     /// Remove um investimento
