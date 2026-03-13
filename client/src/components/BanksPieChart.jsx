@@ -34,6 +34,7 @@ function buildChartData(investments) {
     const colorMap = new Map()
 
     for (const inv of investments) {
+        if (inv.archived) continue
         const firstCalc = inv.calculated?.[0]
         const liquidValue = firstCalc?.value_liq ?? inv.value
         const bankName = inv.bank?.name || "Banco Desconhecido"
