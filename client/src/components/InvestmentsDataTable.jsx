@@ -12,6 +12,7 @@ import {
     Eye,
     Pencil,
     HandCoins,
+    CopyPlus,
     Trash2,
     ArrowUpDown,
     ChevronLeft,
@@ -73,6 +74,18 @@ const isDueDateTodayOrPast = (dateStr) => {
     return due <= today
 }
 
+const canShowReinvest = (dateStr) => {
+    if (!dateStr) return false
+
+    const due = new Date(dateStr)
+    due.setHours(0, 0, 0, 0)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    return due <= today
+}
+
 function getIndexLabel(investment) {
     switch (investment.index) {
         case "PERCENT_YEAR":
@@ -88,12 +101,13 @@ function getIndexLabel(investment) {
 
 // ── View Dialog (investment details) ──────────────────────────────────────────
 
-function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRedemption, onDelete }) {
+function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinvest, onEditRedemption, onDelete }) {
     if (!investment) return null
 
     const calc = investment.calculated?.[0]
     const calcDue = investment.calculated?.[1]
     const hasDueEstimate = Boolean(investment.due_date && calcDue)
+    const showReinvest = canShowReinvest(investment.due_date)
     const redemptions = [...(investment.redemptions ?? [])].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     )
@@ -212,6 +226,15 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onEditRe
                     <Button
                         variant="secondary"
                         className="cursor-pointer"
+                        disabled={!showReinvest}
+                        onClick={() => { onOpenChange(false); onReinvest() }}
+                    >
+                        <CopyPlus className="h-4 w-4 mr-1" />
+                        Reinvestir
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        className="cursor-pointer"
                         onClick={() => { onOpenChange(false); onRedeem() }}
                     >
                         <HandCoins className="h-4 w-4 mr-1" />
@@ -265,11 +288,12 @@ function DeleteDialog({ investment, open, onOpenChange, onConfirm }) {
 
 // ── Actions Cell ──────────────────────────────────────────────────────────────
 
-function ActionsCell({ investment, onView, onEdit, onRedeem, onDelete }) {
+function ActionsCell({ investment, onView, onEdit, onRedeem, onReinvest, onDelete }) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
     const btnRef = React.useRef(null)
     const menuRef = React.useRef(null)
+    const showReinvest = canShowReinvest(investment.due_date)
 
     // Close menu when clicking outside or scrolling
     React.useEffect(() => {
@@ -343,6 +367,18 @@ function ActionsCell({ investment, onView, onEdit, onRedeem, onDelete }) {
                         <HandCoins className="h-4 w-4" />
                         Resgatar
                     </button>
+                    <button
+                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={!showReinvest}
+                        onClick={() => {
+                            if (!showReinvest) return
+                            setMenuOpen(false)
+                            onReinvest(investment)
+                        }}
+                    >
+                        <CopyPlus className="h-4 w-4" />
+                        Reinvestir
+                    </button>
                     <div className="my-1 h-px bg-border" />
                     <button
                         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 cursor-pointer"
@@ -360,7 +396,7 @@ function ActionsCell({ investment, onView, onEdit, onRedeem, onDelete }) {
 
 // ── Column definitions ────────────────────────────────────────────────────────
 
-function getColumns(setReload, onView, onEdit, onRedeem, onDelete) {
+function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
     return [
         {
             accessorKey: "title",
@@ -499,6 +535,7 @@ function getColumns(setReload, onView, onEdit, onRedeem, onDelete) {
                     onView={onView}
                     onEdit={onEdit}
                     onRedeem={onRedeem}
+                    onReinvest={onReinvest}
                     onDelete={onDelete}
                 />
             ),
@@ -509,7 +546,7 @@ function getColumns(setReload, onView, onEdit, onRedeem, onDelete) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function InvestmentsDataTable({ investments, setReload }) {
+export default function InvestmentsDataTable({ investments, setReload, onReinvest }) {
     const [sorting, setSorting] = useState([])
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
 
@@ -525,6 +562,7 @@ export default function InvestmentsDataTable({ investments, setReload }) {
     const openView = (inv) => { setSelectedInvestment(inv); setViewOpen(true) }
     const openEdit = (inv) => { setSelectedInvestment(inv); setEditOpen(true) }
     const openRedeem = (inv) => { setSelectedInvestment(inv); setRedeemOpen(true) }
+    const handleReinvest = (inv) => { onReinvest?.(inv) }
     const openEditRedemption = (redemption) => { setSelectedRedemption(redemption); setEditRedemptionOpen(true) }
     const openDelete = (inv) => { setSelectedInvestment(inv); setDeleteOpen(true) }
 
@@ -541,8 +579,8 @@ export default function InvestmentsDataTable({ investments, setReload }) {
     }
 
     const columns = React.useMemo(
-        () => getColumns(setReload, openView, openEdit, openRedeem, openDelete),
-        [setReload]
+        () => getColumns(setReload, openView, openEdit, openRedeem, handleReinvest, openDelete),
+        [setReload, onReinvest]
     )
 
     const table = useReactTable({
@@ -677,6 +715,7 @@ export default function InvestmentsDataTable({ investments, setReload }) {
                 onOpenChange={setViewOpen}
                 onEdit={() => openEdit(selectedInvestment)}
                 onRedeem={() => openRedeem(selectedInvestment)}
+                onReinvest={() => handleReinvest(selectedInvestment)}
                 onEditRedemption={openEditRedemption}
                 onDelete={() => openDelete(selectedInvestment)}
             />

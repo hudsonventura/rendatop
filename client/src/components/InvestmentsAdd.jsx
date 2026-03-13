@@ -234,8 +234,25 @@ const formSchema = z.object({
 
 
 
-const InvestmentsAdd = ({ setReload }) => {
-	const [isOpen, setIsOpen] = useState(false);
+function formatDecimalDisplay(value) {
+	if (value === null || value === undefined || value === "") return ""
+
+	const [int, dec = ""] = String(value).split(".")
+	const intFormatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+	return dec ? `${intFormatted},${dec.substring(0, 2)}` : intFormatted
+}
+
+const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValues }) => {
+	const [internalOpen, setInternalOpen] = useState(false);
+	const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
+	const setIsOpen = (value) => {
+		if (externalOpen !== undefined) {
+			if (!value && onExternalClose) onExternalClose();
+			return;
+		}
+
+		setInternalOpen(value);
+	};
 
 
 
@@ -268,6 +285,23 @@ const InvestmentsAdd = ({ setReload }) => {
 		},
 	})
 
+	useEffect(() => {
+		if (!isOpen) return;
+
+		form.reset({
+			title: initialValues?.title ?? "",
+			date_buy: initialValues?.date_buy ?? undefined,
+			due_date: initialValues?.due_date ?? undefined,
+			liquidez_diaria: initialValues?.liquidez_diaria ?? false,
+			taxes: initialValues?.taxes ?? true,
+			bank_code: initialValues?.bank_code ?? undefined,
+			value: initialValues?.value ?? "",
+			index: initialValues?.index ?? "",
+			index_percent: initialValues?.index_percent ?? "",
+		});
+		setLiquidezDiaria(initialValues?.liquidez_diaria ?? false);
+	}, [form, initialValues, isOpen]);
+
 	function onSubmit(values) {
 		const payload = {
 			title: values.title,
@@ -284,6 +318,18 @@ const InvestmentsAdd = ({ setReload }) => {
 			.post("/Investments", payload)
 			.then((response) => {
 				setIsOpen(false);
+				form.reset({
+					title: "",
+					date_buy: undefined,
+					due_date: undefined,
+					liquidez_diaria: false,
+					taxes: true,
+					bank_code: undefined,
+					value: "",
+					index: "",
+					index_percent: "",
+				});
+				setLiquidezDiaria(false);
 				setReload(Math.floor(Math.random() * 10000) + 1);
 			})
 			.catch((err) => {
@@ -317,19 +363,21 @@ const InvestmentsAdd = ({ setReload }) => {
 
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
-			<DialogTrigger asChild>
-				<Button
-					type="button"
-					onClick={() => setIsOpen(true)}
-					size="sm"
-				>
-					<Plus className="h-4 w-4 mr-1" />
-					Adicionar investimento
-				</Button>
-			</DialogTrigger>
+			{externalOpen === undefined && (
+				<DialogTrigger asChild>
+					<Button
+						type="button"
+						onClick={() => setIsOpen(true)}
+						size="sm"
+					>
+						<Plus className="h-4 w-4 mr-1" />
+						Adicionar investimento
+					</Button>
+				</DialogTrigger>
+			)}
 			<DialogContent className="w-[95vw] sm:max-w-5xl md:w-[85vw] max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
-					<DialogTitle>Adicionando novo investimento</DialogTitle>
+					<DialogTitle>{initialValues ? "Reinvestir em novo investimento" : "Adicionando novo investimento"}</DialogTitle>
 					<DialogDescription>Preencha os dados do seu novo investimento.</DialogDescription>
 				</DialogHeader>
 

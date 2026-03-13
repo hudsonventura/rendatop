@@ -10,6 +10,34 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+function getTodayAtMidnight() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+}
+
+function formatDecimalDisplay(value) {
+    if (value === null || value === undefined || value === "") return "";
+
+    const [int, dec = ""] = String(value).split(".");
+    const intFormatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return dec ? `${intFormatted},${dec.substring(0, 2)}` : intFormatted;
+}
+
+function getReinvestmentInitialValues(investment) {
+    return {
+        title: investment.title ?? "",
+        date_buy: getTodayAtMidnight(),
+        due_date: undefined,
+        liquidez_diaria: false,
+        taxes: investment.taxes ?? true,
+        bank_code: investment.bank?.code ?? investment.bank_code ?? undefined,
+        value: formatDecimalDisplay(investment.calculated?.[0]?.value_liq ?? ""),
+        index: investment.index === "CDI" ? "0" : investment.index === "IPCA_MAIS" ? "1" : investment.index === "PERCENT_YEAR" ? "2" : "",
+        index_percent: formatDecimalDisplay(investment.index_percent ?? ""),
+    };
+}
+
 function InvestmentsTableSkeleton() {
     return (
         <div className="space-y-4">
@@ -39,6 +67,8 @@ const MyInvestments = () => {
     const [investments, setInvestments] = useState([]);
     const [loadingInvestments, setLoadingInvestments] = useState(true);
     const [reload, setReload] = useState(0);
+    const [reinvestOpen, setReinvestOpen] = useState(false);
+    const [reinvestInitialValues, setReinvestInitialValues] = useState(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -64,6 +94,11 @@ const MyInvestments = () => {
             cancelled = true;
         };
     }, [reload]);
+
+    const handleReinvest = (investment) => {
+        setReinvestInitialValues(getReinvestmentInitialValues(investment));
+        setReinvestOpen(true);
+    };
 
     const { available, locked } = useMemo(() => {
         const today = new Date();
@@ -130,15 +165,24 @@ const MyInvestments = () => {
                                 </TabsTrigger>
                             </TabsList>
                             <TabsContent value="available">
-                                <InvestmentsDataTable investments={available} setReload={setReload} />
+                                <InvestmentsDataTable investments={available} setReload={setReload} onReinvest={handleReinvest} />
                             </TabsContent>
                             <TabsContent value="locked">
-                                <InvestmentsDataTable investments={locked} setReload={setReload} />
+                                <InvestmentsDataTable investments={locked} setReload={setReload} onReinvest={handleReinvest} />
                             </TabsContent>
                         </Tabs>
                     )}
                 </div>
             </BaseLayout>
+            <InvestmentsAdd
+                setReload={setReload}
+                externalOpen={reinvestOpen}
+                onExternalClose={() => {
+                    setReinvestOpen(false);
+                    setReinvestInitialValues(null);
+                }}
+                initialValues={reinvestInitialValues}
+            />
         </>
     );
 };
