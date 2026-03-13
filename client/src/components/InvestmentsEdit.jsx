@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from "react-hook-form"
 import { Checkbox } from "@/components/ui/checkbox"
-import { cn } from "@/lib/utils"
 
 import {
     Dialog,
@@ -30,30 +29,17 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 
-import { Check, ChevronsUpDown, Pencil } from "lucide-react"
-
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
-
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
+import { Pencil } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import Calendario from "@/components/Calendario"
+import BankCombobox from "@/components/BankCombobox"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import axiosInstance from "../utils/axiosConfig"
+import { getCachedBanks, primeBanksCache } from "@/utils/banksCache"
 
 // ── Schema (same as InvestmentsAdd) ─────────────────────────────────────────
 
@@ -114,13 +100,14 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
         }
     }
     const [bankList, setBankList] = useState([])
-    const [popbank, setPopbank] = useState(false)
     const [liquidez_diaria, setLiquidezDiaria] = useState(!investment.due_date)
 
     useEffect(() => {
-        axiosInstance
-            .get("/Banks")
-            .then((response) => setBankList(response.data))
+        getCachedBanks()
+            .then((banks) => {
+                setBankList(banks)
+                primeBanksCache(banks)
+            })
             .catch(() => { })
     }, [])
 
@@ -291,57 +278,15 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                 control={form.control}
                                 name="bank_code"
                                 render={({ field }) => {
-                                    const selectedBank = bankList.find((b) => b.code === field.value)
-                                    const formatBankLabel = (bank) => `${String(bank.code ?? "").padStart(3, "0")} - ${bank.name}`
-
                                     return (
                                         <FormItem className="flex flex-col">
                                             <FormLabel>Banco</FormLabel>
                                             <FormControl>
-                                                <Popover modal={true} open={popbank} onOpenChange={setPopbank}>
-                                                    <PopoverTrigger asChild>
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            role="combobox"
-                                                            className={cn(
-                                                                "w-[280px] justify-between",
-                                                                !field.value && "text-muted-foreground"
-                                                            )}
-                                                        >
-                                                            {selectedBank ? formatBankLabel(selectedBank) : "Selecione seu banco"}
-                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent align="start" className="w-[280px] p-0 z-[70]">
-                                                        <Command>
-                                                            <CommandInput placeholder="Buscar banco..." />
-                                                            <CommandList>
-                                                                <CommandEmpty>Nenhum banco encontrado.</CommandEmpty>
-                                                                <CommandGroup>
-                                                                    {bankList.map((bank) => (
-                                                                        <CommandItem
-                                                                            key={bank.id}
-                                                                            value={formatBankLabel(bank)}
-                                                                            onSelect={() => {
-                                                                                field.onChange(bank.code)
-                                                                                setPopbank(false)
-                                                                            }}
-                                                                        >
-                                                                            <Check
-                                                                                className={cn(
-                                                                                    "h-4 w-4",
-                                                                                    field.value === bank.code ? "opacity-100" : "opacity-0"
-                                                                                )}
-                                                                            />
-                                                                            {formatBankLabel(bank)}
-                                                                        </CommandItem>
-                                                                    ))}
-                                                                </CommandGroup>
-                                                            </CommandList>
-                                                        </Command>
-                                                    </PopoverContent>
-                                                </Popover>
+                                                <BankCombobox
+                                                    banks={bankList}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

@@ -28,11 +28,15 @@ public class Banks : AuthenticatedController
     [HttpGet]
     public List<Bank> Get()
     {
-        return _context.banks
+        var banks = _context.banks
             .AsNoTracking()
             .Where(b => b.Active)
             .OrderBy(b => b.Name)
             .ToList();
+
+            Console.WriteLine("Retornando " + banks.Count + " bancos");
+
+            return banks;
     }
 }
 
