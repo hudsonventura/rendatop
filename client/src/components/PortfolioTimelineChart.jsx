@@ -1,11 +1,19 @@
 import * as React from "react"
-import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const SELIC_ANNUAL_ESTIMATE = 0.1315
 const IPCA_ANNUAL_ESTIMATE = 0.045
+const CHART_COLORS = [
+    "var(--chart-1)",
+    "var(--chart-2)",
+    "var(--chart-3)",
+    "var(--chart-4)",
+    "var(--chart-5)",
+]
 
 function startOfDay(date) {
     const normalized = new Date(date)
@@ -44,15 +52,36 @@ function formatCurrency(value) {
     }).format(value)
 }
 
+function getBankName(investment) {
+    return investment.bank?.name || "Banco Desconhecido"
+}
+
+function getBankColor(investment) {
+    return investment.bank?.color || null
+}
+
+function getBankKey(bankName) {
+    return `bank_${bankName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .toLowerCase()}`
+}
+
 function estimateLiquidValue(investment, date) {
     const investedValue = Number(investment.value ?? 0)
     if (investedValue <= 0 || !investment.date_buy) return 0
 
     const startDate = startOfDay(new Date(investment.date_buy))
     const finishDate = investment.due_date ? startOfDay(new Date(investment.due_date)) : null
-    const currentDate = finishDate && startOfDay(date) > finishDate
-        ? finishDate
-        : startOfDay(date)
+    const targetDate = startOfDay(date)
+
+    if (finishDate && targetDate > finishDate) {
+        return 0
+    }
+
+    const currentDate = targetDate
 
     if (Number.isNaN(startDate.getTime()) || currentDate < startDate) {
         return 0
@@ -88,6 +117,23 @@ function estimateLiquidValue(investment, date) {
 function buildTimelineData(investments) {
     const validInvestments = (investments ?? []).filter((investment) => investment?.date_buy)
     if (validInvestments.length === 0) return []
+    const bankColorMap = new Map()
+
+    for (const investment of validInvestments) {
+        const bankName = getBankName(investment)
+        const bankColor = getBankColor(investment)
+
+        if (bankColor && !bankColorMap.has(bankName)) {
+            bankColorMap.set(bankName, bankColor)
+        }
+    }
+
+    const bankNames = Array.from(new Set(validInvestments.map(getBankName)))
+    const bankSeries = bankNames.map((bankName, index) => ({
+        bankName,
+        key: getBankKey(bankName),
+        color: bankColorMap.get(bankName) ?? CHART_COLORS[index % CHART_COLORS.length],
+    }))
 
     const firstInvestmentDate = validInvestments.reduce((earliest, investment) => {
         const date = startOfDay(new Date(investment.date_buy))
@@ -110,18 +156,26 @@ function buildTimelineData(investments) {
 
     for (let offset = 0; offset <= totalDays; offset += 1) {
         const currentDate = addDays(firstInvestmentDate, offset)
-        const liquidValue = validInvestments.reduce(
-            (sum, investment) => sum + estimateLiquidValue(investment, currentDate),
-            0
-        )
+        const bankTotals = Object.fromEntries(bankSeries.map(({ key }) => [key, 0]))
+
+        for (const investment of validInvestments) {
+            const value = estimateLiquidValue(investment, currentDate)
+            const bankKey = getBankKey(getBankName(investment))
+            bankTotals[bankKey] += value
+        }
+
+        const liquidValue = Object.values(bankTotals).reduce((sum, value) => sum + value, 0)
 
         chartData.push({
             date: currentDate.toISOString(),
             liquidValue: Number(liquidValue.toFixed(2)),
+            ...Object.fromEntries(
+                Object.entries(bankTotals).map(([key, value]) => [key, Number(value.toFixed(2))])
+            ),
         })
     }
 
-    return chartData
+    return { chartData, bankSeries }
 }
 
 function TimelineSkeleton() {
@@ -139,8 +193,38 @@ function TimelineSkeleton() {
 }
 
 export default function PortfolioTimelineChart({ investments }) {
-    const chartData = React.useMemo(() => buildTimelineData(investments), [investments])
+    const { chartData, bankSeries } = React.useMemo(() => {
+        const result = buildTimelineData(investments)
+        return Array.isArray(result) ? { chartData: result, bankSeries: [] } : result
+    }, [investments])
     const todayIso = React.useMemo(() => startOfDay(new Date()).toISOString(), [])
+    const [selectedBanks, setSelectedBanks] = React.useState([])
+
+    React.useEffect(() => {
+        setSelectedBanks(bankSeries.map((series) => series.key))
+    }, [bankSeries])
+
+    const visibleBankSeries = React.useMemo(() => {
+        if (selectedBanks.length === 0) return bankSeries
+        return bankSeries.filter((series) => selectedBanks.includes(series.key))
+    }, [bankSeries, selectedBanks])
+    const filteredChartData = React.useMemo(() => {
+        if (visibleBankSeries.length === bankSeries.length) {
+            return chartData
+        }
+
+        return chartData.map((point) => {
+            const liquidValue = visibleBankSeries.reduce(
+                (sum, series) => sum + Number(point[series.key] ?? 0),
+                0
+            )
+
+            return {
+                ...point,
+                liquidValue: Number(liquidValue.toFixed(2)),
+            }
+        })
+    }, [bankSeries.length, chartData, visibleBankSeries])
 
     if (!investments) {
         return <TimelineSkeleton />
@@ -171,14 +255,58 @@ export default function PortfolioTimelineChart({ investments }) {
                 </CardDescription>
             </CardHeader>
             <CardContent>
+                {bankSeries.length > 0 && (
+                    <div className="mb-4 flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant={selectedBanks.length === bankSeries.length ? "default" : "outline"}
+                            onClick={() => setSelectedBanks(bankSeries.map((series) => series.key))}
+                        >
+                            Todos
+                        </Button>
+                        {bankSeries.map((series) => {
+                            const isSelected = selectedBanks.includes(series.key)
+
+                            return (
+                                <Button
+                                    key={series.key}
+                                    type="button"
+                                    size="sm"
+                                    variant={isSelected ? "default" : "outline"}
+                                    onClick={() =>
+                                        setSelectedBanks((current) =>
+                                            current.includes(series.key)
+                                                ? current.filter((key) => key !== series.key)
+                                                : [...current, series.key]
+                                        )
+                                    }
+                                    className="gap-2"
+                                >
+                                    <span
+                                        className="h-2.5 w-2.5 rounded-full"
+                                        style={{ backgroundColor: series.color }}
+                                    />
+                                    {series.bankName}
+                                </Button>
+                            )
+                        })}
+                    </div>
+                )}
                 <div className="h-[320px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                        <AreaChart data={filteredChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                             <defs>
-                                <linearGradient id="portfolio-liquid-fill" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.35} />
-                                    <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.05} />
+                                <linearGradient id="portfolio-total-fill" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.22} />
+                                    <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.04} />
                                 </linearGradient>
+                                {bankSeries.map((series) => (
+                                    <linearGradient key={series.key} id={`fill-${series.key}`} x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={series.color} stopOpacity={0.16} />
+                                        <stop offset="95%" stopColor={series.color} stopOpacity={0.02} />
+                                    </linearGradient>
+                                ))}
                             </defs>
                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
                             <XAxis
@@ -200,7 +328,7 @@ export default function PortfolioTimelineChart({ investments }) {
                                 tickFormatter={(value) => formatCurrency(value)}
                             />
                             <Tooltip
-                                formatter={(value) => [formatCurrency(Number(value)), "Valor líquido"]}
+                                formatter={(value, name) => [formatCurrency(Number(value)), name]}
                                 labelFormatter={(value) =>
                                     new Date(value).toLocaleDateString("pt-BR", {
                                         day: "2-digit",
@@ -209,6 +337,7 @@ export default function PortfolioTimelineChart({ investments }) {
                                     })
                                 }
                             />
+                            <Legend />
                             <ReferenceLine
                                 x={todayIso}
                                 stroke="var(--chart-5)"
@@ -226,11 +355,27 @@ export default function PortfolioTimelineChart({ investments }) {
                                 type="monotone"
                                 dataKey="liquidValue"
                                 stroke="var(--chart-1)"
-                                strokeWidth={2}
-                                fill="url(#portfolio-liquid-fill)"
+                                strokeWidth={3}
+                                fill="url(#portfolio-total-fill)"
+                                fillOpacity={1}
                                 dot={false}
                                 activeDot={{ r: 4 }}
+                                name="Total"
                             />
+                            {visibleBankSeries.map((series) => (
+                                <Area
+                                    key={series.key}
+                                    type="monotone"
+                                    dataKey={series.key}
+                                    stroke={series.color}
+                                    strokeWidth={2}
+                                    fill={`url(#fill-${series.key})`}
+                                    fillOpacity={1}
+                                    dot={false}
+                                    activeDot={{ r: 3 }}
+                                    name={series.bankName}
+                                />
+                            ))}
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>

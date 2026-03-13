@@ -94,9 +94,6 @@ const Home = () => {
             <Logged />
             <BaseLayout title="Dashboard" description="Veja a distribuição por banco e os vencimentos dos próximos 30 dias">
                 <div className="px-4 lg:px-6 space-y-6">
-                    <BanksPieChart investments={loadingInvestments ? null : investments} />
-                    <PortfolioTimelineChart investments={loadingInvestments ? null : investments} />
-
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
                             <h2 className="text-lg font-semibold tracking-tight">Vencimentos dos próximos 30 dias</h2>
@@ -113,6 +110,8 @@ const Home = () => {
                         )}
                     </div>
                 </div>
+                <BanksPieChart investments={loadingInvestments ? null : investments} />
+                <PortfolioTimelineChart investments={loadingInvestments ? null : investments} />
             </BaseLayout>
         </>
     );

@@ -89,7 +89,7 @@ export default function BanksPieChart({ investments }) {
         return (
             <Card className="flex flex-col">
                 <CardHeader className="pb-2">
-                    <CardTitle>Distribuição por Banco</CardTitle>
+                    <CardTitle>Distribuição por Banco Hoje</CardTitle>
                     <CardDescription>Resumo dos seus investimentos por instituição</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-1 justify-center">
@@ -125,7 +125,7 @@ export default function BanksPieChart({ investments }) {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Distribuição por Banco</CardTitle>
+                    <CardTitle>Distribuição por Banco Hoje</CardTitle>
                     <CardDescription>Resumo dos seus investimentos por instituição</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -142,7 +142,7 @@ export default function BanksPieChart({ investments }) {
     return (
         <Card className="flex flex-col">
             <CardHeader className="pb-2">
-                <CardTitle>Distribuição por Banco</CardTitle>
+                <CardTitle>Distribuição por Banco Hoje</CardTitle>
                 <CardDescription>Resumo dos seus investimentos por instituição</CardDescription>
             </CardHeader>
 
