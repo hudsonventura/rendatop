@@ -452,7 +452,7 @@ const InvestmentsAdd = ({ setReload }) => {
 															variant="outline"
 															role="combobox"
 															className={cn(
-																"w-[200px] justify-between",
+																"w-[280px] justify-between",
 																!field.value && "text-muted-foreground"
 															)}
 														>
@@ -460,7 +460,7 @@ const InvestmentsAdd = ({ setReload }) => {
 															<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 														</Button>
 													</PopoverTrigger>
-													<PopoverContent align="start" className="w-[200px] p-0 z-[70]">
+													<PopoverContent align="start" className="w-[280px] p-0 z-[70]">
 														<Command>
 															<CommandInput placeholder="Buscar banco..." />
 															<CommandList>
