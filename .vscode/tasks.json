@@ -4,7 +4,7 @@
         {
             "label": "docker compose up db",
             "type": "shell",
-            "command": "docker compose up -d db redis evolution",
+            "command": "docker compose up -d db redis evolution migrations-applier",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
