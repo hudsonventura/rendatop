@@ -27,6 +27,7 @@ function formatDecimalDisplay(value) {
 
 function getReinvestmentInitialValues(investment) {
     return {
+        source_investment_id: investment.id,
         title: investment.title ?? "",
         date_buy: getTodayAtMidnight(),
         due_date: undefined,

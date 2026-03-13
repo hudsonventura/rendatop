@@ -70,6 +70,12 @@ function formatBRL(v) {
 	return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function addOneYear(date) {
+	const nextYear = new Date(date)
+	nextYear.setFullYear(nextYear.getFullYear() + 1)
+	return nextYear
+}
+
 // ── Preview Component ─────────────────────────────────────────────────────────
 
 function InvestmentPreview({ form }) {
@@ -103,7 +109,11 @@ function InvestmentPreview({ form }) {
 		if (!watchDateBuy) return null
 
 		const dateBuy = new Date(watchDateBuy)
-		const sellDate = watchLiquidez || !watchDueDate ? new Date() : new Date(watchDueDate)
+		const sellDate = watchLiquidez
+			? addOneYear(dateBuy)
+			: !watchDueDate
+				? new Date()
+				: new Date(watchDueDate)
 
 		if (sellDate <= dateBuy) return null
 
@@ -316,7 +326,14 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 
 		axiosInstance
 			.post("/Investments", payload)
-			.then((response) => {
+			.then(() => {
+				if (!initialValues?.source_investment_id) return Promise.resolve();
+
+				return axiosInstance.patch(`/Investments/${initialValues.source_investment_id}/archive`, {
+					archived: true,
+				});
+			})
+			.then(() => {
 				setIsOpen(false);
 				form.reset({
 					title: "",
