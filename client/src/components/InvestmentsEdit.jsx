@@ -291,7 +291,8 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                 control={form.control}
                                 name="bank_code"
                                 render={({ field }) => {
-                                    const displayName = bankList.find((b) => b.code === field.value)?.name
+                                    const selectedBank = bankList.find((b) => b.code === field.value)
+                                    const formatBankLabel = (bank) => `${String(bank.code ?? "").padStart(3, "0")} - ${bank.name}`
 
                                     return (
                                         <FormItem className="flex flex-col">
@@ -308,7 +309,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                                                 !field.value && "text-muted-foreground"
                                                             )}
                                                         >
-                                                            {displayName || "Selecione seu banco"}
+                                                            {selectedBank ? formatBankLabel(selectedBank) : "Selecione seu banco"}
                                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                         </Button>
                                                     </PopoverTrigger>
@@ -321,7 +322,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                                                     {bankList.map((bank) => (
                                                                         <CommandItem
                                                                             key={bank.id}
-                                                                            value={bank.name}
+                                                                            value={formatBankLabel(bank)}
                                                                             onSelect={() => {
                                                                                 field.onChange(bank.code)
                                                                                 setPopbank(false)
@@ -333,7 +334,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                                                                     field.value === bank.code ? "opacity-100" : "opacity-0"
                                                                                 )}
                                                                             />
-                                                                            {bank.name}
+                                                                            {formatBankLabel(bank)}
                                                                         </CommandItem>
                                                                     ))}
                                                                 </CommandGroup>
