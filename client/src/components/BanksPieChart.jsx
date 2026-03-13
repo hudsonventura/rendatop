@@ -87,7 +87,7 @@ export default function BanksPieChart({ investments }) {
     // Loading state
     if (!investments) {
         return (
-            <Card className="flex flex-col">
+            <Card className="m-6 flex flex-col">
                 <CardHeader className="pb-2">
                     <CardTitle>Distribuição por Banco Hoje</CardTitle>
                     <CardDescription>Resumo dos seus investimentos por instituição</CardDescription>
@@ -123,7 +123,7 @@ export default function BanksPieChart({ investments }) {
     // Empty state
     if (chartData.length === 0) {
         return (
-            <Card>
+            <Card className="m-6">
                 <CardHeader>
                     <CardTitle>Distribuição por Banco Hoje</CardTitle>
                     <CardDescription>Resumo dos seus investimentos por instituição</CardDescription>
@@ -140,7 +140,7 @@ export default function BanksPieChart({ investments }) {
     const activeSlice = chartData[activeIndex]
 
     return (
-        <Card className="flex flex-col">
+        <Card className="m-6 flex flex-col">
             <CardHeader className="pb-2">
                 <CardTitle>Distribuição por Banco Hoje</CardTitle>
                 <CardDescription>Resumo dos seus investimentos por instituição</CardDescription>

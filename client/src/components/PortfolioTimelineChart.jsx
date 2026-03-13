@@ -180,7 +180,7 @@ function buildTimelineData(investments) {
 
 function TimelineSkeleton() {
     return (
-        <Card>
+        <Card className="m-6 flex flex-col">
             <CardHeader className="pb-2">
                 <CardTitle>Evolução da carteira</CardTitle>
                 <CardDescription>Valor líquido total desde o primeiro investimento até hoje</CardDescription>
@@ -232,7 +232,7 @@ export default function PortfolioTimelineChart({ investments }) {
 
     if (chartData.length === 0) {
         return (
-            <Card>
+            <Card className="m-6 flex flex-col">
                 <CardHeader>
                     <CardTitle>Evolução da carteira</CardTitle>
                     <CardDescription>Valor líquido total desde o primeiro investimento até hoje</CardDescription>
@@ -247,7 +247,7 @@ export default function PortfolioTimelineChart({ investments }) {
     }
 
     return (
-        <Card>
+        <Card className="m-6 flex flex-col">
             <CardHeader className="pb-2">
                 <CardTitle>Evolução da carteira</CardTitle>
                 <CardDescription>
