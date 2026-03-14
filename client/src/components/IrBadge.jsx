@@ -17,23 +17,28 @@ export default function IrBadge({
     showValue = false,
     showPercentInTooltip = true,
     label,
+    asBadge = true,
 }) {
-    const content = label ?? (showValue ? `IR: R$ ${formatCurrency(irValue)}` : getIrBadgeLabel(irPercent))
+    const colorClassName = `${getIrBadgeClass(irPercent)} ${className}`.trim()
 
-    const badge = (
-        <Badge variant={variant} className={`${getIrBadgeClass(irPercent)} ${className}`.trim()}>
-            {content}
+    const contentNode = asBadge ? (
+        <Badge variant={variant} className={colorClassName}>
+            {label ?? (showValue ? `IR: R$ ${formatCurrency(irValue)}` : getIrBadgeLabel(irPercent))}
         </Badge>
+    ) : (
+        <span className={colorClassName}>
+            {label ?? (showValue ? `R$ ${formatCurrency(irValue)}` : getIrBadgeLabel(irPercent))}
+        </span>
     )
 
     if (!showPercentInTooltip) {
-        return badge
+        return contentNode
     }
 
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <span className="inline-flex">{badge}</span>
+                <span className="inline-flex">{contentNode}</span>
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-xs space-y-1">
                 <div>Alíquota de IR: {formatIrPercent(irPercent)}%</div>

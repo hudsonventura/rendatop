@@ -25,23 +25,29 @@ export default function IofBadge({
     showValue = false,
     showPercentInTooltip = false,
     label,
+    asBadge = true,
 }) {
-    const content = label ?? (showValue ? `IOF: R$ ${formatCurrency(iofValue)}` : iofPercent > 0 ? "IOF" : "Isento IOF")
 
-    const badge = (
-        <Badge variant={variant} className={`${getIofBadgeClass(iofPercent)} ${className}`.trim()}>
-            {content}
+    const colorClassName = `${getIofBadgeClass(iofPercent)} ${className}`.trim()
+
+    const contentNode = asBadge ? (
+        <Badge variant={variant} className={colorClassName}>
+            {label ?? (showValue ? `IOF: R$ ${formatCurrency(iofValue)}` : iofPercent > 0 ? "IOF" : "Isento IOF")}
         </Badge>
+    ) : (
+        <span className={colorClassName}>
+            {label ?? (showValue ? `R$ ${formatCurrency(iofValue)}` : iofPercent > 0 ? "IOF" : "Isento IOF")}
+        </span>
     )
 
     if (!showPercentInTooltip) {
-        return badge
+        return contentNode
     }
 
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <span className="inline-flex">{badge}</span>
+                <span className="inline-flex">{contentNode}</span>
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-xs space-y-1">
                 <div>Alíquota de IOF: {formatPercent(iofPercent)}%</div>

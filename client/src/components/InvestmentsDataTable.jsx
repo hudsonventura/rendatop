@@ -505,15 +505,32 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
             ),
         },
         {
-            id: "value_liq",
-            header: "Valor líquido",
-            cell: ({ row }) => (
-                <span className="text-green-600 dark:text-green-400 whitespace-nowrap">
-                    R$ {formatCurrency(row.original.calculated[0].value_liq)}
-                </span>
-            ),
+            id: "ir",
+            header: "IR",
+            cell: ({ row }) => {
+                const ir = row.original.calculated?.[0]?.IR ?? 0
+                const irValue = row.original.calculated?.[0]?.IR_value ?? 0
+
+                return (
+                    <IrBadge asBadge={false} irPercent={ir} irValue={irValue} showValue showPercentInTooltip className="whitespace-nowrap" />
+                )
+            },
             sortingFn: (rowA, rowB) =>
-                rowA.original.calculated[0].value_liq - rowB.original.calculated[0].value_liq,
+                (rowA.original.calculated?.[0]?.IR_value ?? 0) - (rowB.original.calculated?.[0]?.IR_value ?? 0),
+        },
+        {
+            id: "iof",
+            header: "IOF",
+            cell: ({ row }) => {
+                const iof = row.original.calculated?.[0]?.IOF ?? 0
+                const iofValue = row.original.calculated?.[0]?.IOF_value ?? 0
+
+                return (
+                    <IofBadge asBadge={false} iofPercent={iof} iofValue={iofValue} showValue showPercentInTooltip className="whitespace-nowrap" />
+                )
+            },
+            sortingFn: (rowA, rowB) =>
+                (rowA.original.calculated?.[0]?.IOF_value ?? 0) - (rowB.original.calculated?.[0]?.IOF_value ?? 0),
         },
         {
             id: "profit_liq",
@@ -540,32 +557,15 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
                 rowA.original.calculated[0].profit_liq - rowB.original.calculated[0].profit_liq,
         },
         {
-            id: "ir",
-            header: "IR",
-            cell: ({ row }) => {
-                const ir = row.original.calculated?.[0]?.IR ?? 0
-                const irValue = row.original.calculated?.[0]?.IR_value ?? 0
-
-                return (
-                    <IrBadge irPercent={ir} irValue={irValue} showValue showPercentInTooltip className="whitespace-nowrap" />
-                )
-            },
+            id: "value_liq",
+            header: "Valor líquido",
+            cell: ({ row }) => (
+                <span className="text-green-600 dark:text-green-400 whitespace-nowrap">
+                    R$ {formatCurrency(row.original.calculated[0].value_liq)}
+                </span>
+            ),
             sortingFn: (rowA, rowB) =>
-                (rowA.original.calculated?.[0]?.IR_value ?? 0) - (rowB.original.calculated?.[0]?.IR_value ?? 0),
-        },
-        {
-            id: "iof",
-            header: "IOF",
-            cell: ({ row }) => {
-                const iof = row.original.calculated?.[0]?.IOF ?? 0
-                const iofValue = row.original.calculated?.[0]?.IOF_value ?? 0
-
-                return (
-                    <IofBadge iofPercent={iof} iofValue={iofValue} showValue showPercentInTooltip className="whitespace-nowrap" />
-                )
-            },
-            sortingFn: (rowA, rowB) =>
-                (rowA.original.calculated?.[0]?.IOF_value ?? 0) - (rowB.original.calculated?.[0]?.IOF_value ?? 0),
+                rowA.original.calculated[0].value_liq - rowB.original.calculated[0].value_liq,
         },
         {
             id: "due_date",
