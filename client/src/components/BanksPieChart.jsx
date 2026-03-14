@@ -73,10 +73,10 @@ export default function BanksPieChart({ investments }) {
         [investments]
     )
 
-    const [activeIndex, setActiveIndex] = React.useState(0)
+    const [activeIndex, setActiveIndex] = React.useState(null)
 
     React.useEffect(() => {
-        setActiveIndex(0)
+        setActiveIndex(null)
     }, [chartData.length])
 
     const totalValue = React.useMemo(
@@ -137,7 +137,7 @@ export default function BanksPieChart({ investments }) {
         )
     }
 
-    const activeSlice = chartData[activeIndex]
+    const activeSlice = activeIndex === null ? null : chartData[activeIndex]
 
     return (
         <Card className="m-6 flex flex-col">
@@ -150,7 +150,7 @@ export default function BanksPieChart({ investments }) {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
 
                     {/* ── Donut chart ── */}
-                    <div className="flex justify-center">
+                    <div className="flex justify-center" onMouseLeave={() => setActiveIndex(null)}>
                         <PieChart width={300} height={300}>
                             <Pie
                                 data={chartData}
@@ -163,7 +163,7 @@ export default function BanksPieChart({ investments }) {
                                 stroke="none"
                                 strokeWidth={0}
                                 activeShape={ActiveShape}
-                                activeIndex={[activeIndex]}
+                                activeIndex={activeIndex === null ? undefined : [activeIndex]}
                                 onMouseEnter={(_, index) => setActiveIndex(index)}
                                 onClick={(_, index) => setActiveIndex(index)}
                                 className="cursor-pointer"

@@ -251,7 +251,7 @@ export default function PortfolioTimelineChart({ investments }) {
             <CardHeader className="pb-2">
                 <CardTitle>Evolução da carteira</CardTitle>
                 <CardDescription>
-                    Valor líquido total do primeiro investimento até hoje, incluindo itens arquivados.
+                    <b>Valor líquido</b> de todos seus investimento <small>(incluindo itens arquivados)</small>
                 </CardDescription>
             </CardHeader>
             <CardContent>
