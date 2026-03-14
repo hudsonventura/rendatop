@@ -115,8 +115,8 @@ const Login = () => {
                 </div>
                 <div className="relative z-10 text-center space-y-6 px-12">
                     <div className="flex items-center justify-center gap-3 mb-8">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                            <TrendingUp className="h-8 w-8 text-primary-foreground" />
+                        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-white/20 backdrop-blur-sm">
+                            <img src="/favicon.svg" alt="RendaTop" className="h-14 w-14" />
                         </div>
                     </div>
                     <h1 className="text-4xl font-bold text-primary-foreground tracking-tight">
@@ -149,8 +149,8 @@ const Login = () => {
                 <div className="w-full max-w-md space-y-8">
                     {/* Mobile logo */}
                     <div className="lg:hidden flex items-center justify-center gap-3 mb-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                            <TrendingUp className="h-5 w-5 text-primary-foreground" />
+                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg">
+                            <img src="/favicon.svg" alt="RendaTop" className="h-10 w-10" />
                         </div>
                         <span className="text-xl font-bold">RendaTop</span>
                     </div>

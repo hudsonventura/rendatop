@@ -88,8 +88,8 @@ export function AppSidebar({ ...props }) {
                         <SidebarMenuItem>
                             <SidebarMenuButton size="lg" asChild className="overflow-visible">
                                 <Link to="/home">
-                                    <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                                        <TrendingUp className="size-5" />
+                                    <div className="flex aspect-square size-7 min-h-7 min-w-7 shrink-0 items-center justify-center overflow-hidden rounded-md">
+                                        <img src="/favicon.svg" alt="RendaTop" className="size-7 min-h-7 min-w-7 shrink-0" />
                                     </div>
                                     <div className="grid flex-1 text-left text-sm leading-tight">
                                         <span className="truncate font-medium">RendaTop</span>

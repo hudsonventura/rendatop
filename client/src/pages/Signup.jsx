@@ -66,8 +66,8 @@ const Signup = () => {
                 </div>
                 <div className="relative z-10 text-center space-y-6 px-12">
                     <div className="flex items-center justify-center gap-3 mb-8">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                            <UserPlus className="h-8 w-8 text-primary-foreground" />
+                        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-white/20 backdrop-blur-sm">
+                            <img src="/favicon.svg" alt="RendaTop" className="h-14 w-14" />
                         </div>
                     </div>
                     <h1 className="text-4xl font-bold text-primary-foreground tracking-tight">
