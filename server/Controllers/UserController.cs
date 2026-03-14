@@ -241,7 +241,6 @@ public class UserController : AuthenticatedController
 
         var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
         var message = $"📈 RentaTop{Environment.NewLine}✅ Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
-
         try
         {
             await _email.Notify(user.email, "📈 RentaTop | Teste Email", message);

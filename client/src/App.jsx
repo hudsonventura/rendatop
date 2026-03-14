@@ -11,6 +11,8 @@ import CalendarPage from "@/pages/CalendarPage"
 import UserSettings from "@/pages/UserSettings"
 import MyInvestments from "@/pages/MyInvestments"
 import NotificationsPage from "@/pages/NotificationsPage"
+import ResetPassword from "@/pages/ResetPassword"
+import ForgotPassword from "@/pages/ForgotPassword"
 
 
 function App() {
@@ -29,6 +31,8 @@ function App() {
                             <Route path="/calendar" element={<CalendarPage />} />
                             <Route path="/notifications" element={<NotificationsPage />} />
                             <Route path="/settings" element={<UserSettings />} />
+                            <Route path="/forgot-password" element={<ForgotPassword />} />
+                            <Route path="/reset-password" element={<ResetPassword />} />
                         </Routes>
                     </Router>
                 </SidebarConfigProvider>

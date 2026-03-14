@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
+using System.Net.Mail;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
@@ -18,12 +20,18 @@ public class LoginController : ControllerBase
     private readonly Context _context;
     private readonly IDatabase _redis;
     private readonly IWebHostEnvironment _env;
+    private readonly IEmailNotification _email;
 
-    public LoginController(IDbContextFactory<Context> contextFactory, IConnectionMultiplexer muxer_redis, IWebHostEnvironment env)
+    public LoginController(
+        IDbContextFactory<Context> contextFactory,
+        IConnectionMultiplexer muxer_redis,
+        IWebHostEnvironment env,
+        IEmailNotification email)
     {
         _context = contextFactory.CreateDbContext();
         _redis = muxer_redis.GetDatabase();
         _env = env;
+        _email = email;
     }
 
     /// <summary>
@@ -136,6 +144,75 @@ public class LoginController : ControllerBase
         _context.SaveChanges();
 
         return CreateSession(user);
+    }
+
+    [HttpPost("password-reset/request")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PasswordResetRequestResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RequestPasswordReset([FromBody] PasswordResetRequest request)
+    {
+        var email = (request.email ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ExpectedException("Email é obrigatório.");
+
+        ValidateEmail(email);
+
+        var user = _context.users.AsNoTracking().FirstOrDefault(x => x.email == email);
+        if (user is not null)
+        {
+            var token = GeneratePasswordResetToken(user);
+            var resetUrl = BuildPasswordResetUrl(token);
+            var expiresAt = DateTime.Now.AddHours(1).ToString("dd/MM/yyyy HH:mm");
+            var message =
+$@"Olá, {user.name}.
+
+Recebemos uma solicitação para redefinir sua senha no RendaTop.
+
+Use o link abaixo para cadastrar uma nova senha:
+{resetUrl}
+
+Esse link expira em 1 hora ({expiresAt}).
+
+Se você não solicitou essa alteração, ignore este email.";
+
+            try
+            {
+                await _email.Notify(user.email, "RendaTop | Redefinição de senha", message);
+            }
+            catch (Exception ex)
+            {
+                throw new ExpectedException($"Falha ao enviar email de redefinição de senha: {ex.Message}", HttpStatusCode.BadGateway);
+            }
+        }
+
+        return Ok(new PasswordResetRequestResponse("Se existir uma conta com esse email, enviaremos um link de redefinição válido por 1 hora."));
+    }
+
+    [HttpPost("password-reset/confirm")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PasswordResetRequestResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    public IActionResult ConfirmPasswordReset([FromBody] PasswordResetConfirmRequest request)
+    {
+        var token = (request.token ?? string.Empty).Trim();
+        var password = request.password ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(token))
+            throw new ExpectedException("Token de redefinição é obrigatório.");
+
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
+            throw new ExpectedException("A senha deve ter pelo menos 6 caracteres.");
+
+        var payload = ValidatePasswordResetToken(token);
+        var user = _context.users.FirstOrDefault(x => x.id == payload.UserId && x.email == payload.Email);
+        if (user is null)
+            throw new ExpectedException("Link de redefinição inválido.", HttpStatusCode.BadRequest);
+
+        user.password = password;
+        _context.SaveChanges();
+
+        return Ok(new PasswordResetRequestResponse("Senha redefinida com sucesso."));
     }
 
     /// <summary>
@@ -380,6 +457,96 @@ public class LoginController : ControllerBase
         return "http://localhost:5173/login";
     }
 
+    private string BuildPasswordResetUrl(string token)
+    {
+        var configured = Environment.GetEnvironmentVariable("PASSWORD_RESET_FRONTEND_URL");
+        if (!string.IsNullOrWhiteSpace(configured))
+            return $"{configured.Trim()}?token={Uri.EscapeDataString(token)}";
+
+        var loginUrl = GetFrontLoginUrl();
+        const string loginSuffix = "/login";
+        var resetUrl = loginUrl.EndsWith("/login", StringComparison.OrdinalIgnoreCase)
+            ? $"{loginUrl[..^loginSuffix.Length]}/reset-password"
+            : $"{loginUrl.TrimEnd('/')}/reset-password";
+
+        return $"{resetUrl}?token={Uri.EscapeDataString(token)}";
+    }
+
+    private static void ValidateEmail(string email)
+    {
+        try
+        {
+            _ = new MailAddress(email);
+        }
+        catch
+        {
+            throw new ExpectedException("Email inválido.");
+        }
+    }
+
+    private static string GeneratePasswordResetToken(User user)
+    {
+        var payload = new PasswordResetTokenPayload(
+            user.id,
+            user.email,
+            DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds(),
+            "password-reset");
+
+        var payloadJson = JsonSerializer.Serialize(payload);
+        var payloadPart = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(payloadJson));
+        var signaturePart = SignResetPayload(payloadPart);
+        return $"{payloadPart}.{signaturePart}";
+    }
+
+    private static PasswordResetTokenPayload ValidatePasswordResetToken(string token)
+    {
+        var parts = token.Split('.');
+        if (parts.Length != 2)
+            throw new ExpectedException("Link de redefinição inválido.", HttpStatusCode.BadRequest);
+
+        var payloadPart = parts[0];
+        var providedSignature = parts[1];
+        var expectedSignature = SignResetPayload(payloadPart);
+
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(providedSignature),
+                Encoding.UTF8.GetBytes(expectedSignature)))
+        {
+            throw new ExpectedException("Link de redefinição inválido.", HttpStatusCode.BadRequest);
+        }
+
+        PasswordResetTokenPayload? payload;
+        try
+        {
+            var payloadJson = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(payloadPart));
+            payload = JsonSerializer.Deserialize<PasswordResetTokenPayload>(payloadJson);
+        }
+        catch
+        {
+            throw new ExpectedException("Link de redefinição inválido.", HttpStatusCode.BadRequest);
+        }
+
+        if (payload is null ||
+            payload.Purpose != "password-reset" ||
+            payload.Exp < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+        {
+            throw new ExpectedException("Link de redefinição expirado ou inválido.", HttpStatusCode.BadRequest);
+        }
+
+        return payload;
+    }
+
+    private static string SignResetPayload(string payloadPart)
+    {
+        var secret = Environment.GetEnvironmentVariable("VITE_JWT_KEY");
+        if (string.IsNullOrWhiteSpace(secret))
+            throw new ExpectedException("VITE_JWT_KEY não configurado no servidor.", HttpStatusCode.InternalServerError);
+
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var signatureBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(payloadPart));
+        return WebEncoders.Base64UrlEncode(signatureBytes);
+    }
+
     private static string BuildFrontLoginRedirect(string status, string? message = null, LoginResponse? login = null)
     {
         var baseUrl = GetFrontLoginUrl();
@@ -559,5 +726,9 @@ public record LoginResponse(string name, string email);
 public record LoginStartResponse(bool requires_totp, string? challenge_id, string? name, string? email);
 public record TotpLoginRequest(string challenge_id, string code);
 public record SignUpRequest(string name, string email, string password);
+public record PasswordResetRequest(string email);
+public record PasswordResetConfirmRequest(string token, string password);
+public record PasswordResetRequestResponse(string message);
+public record PasswordResetTokenPayload(Guid UserId, string Email, long Exp, string Purpose);
 public record GoogleUserInfo(string Email, string Name, bool EmailVerified);
 public record MicrosoftUserInfo(string Email, string Name);

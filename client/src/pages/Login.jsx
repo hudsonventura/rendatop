@@ -260,16 +260,16 @@ const Login = () => {
                                     )}
 
                                     <div className="pt-2 space-y-2 text-center">
-                                        <a href="#" className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors">
-                                            Esqueci minha senha
+                                        <a href="/forgot-password" className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors">
+                                            Esqueceu sua senha?
                                         </a>
-                                    <p className="text-sm text-muted-foreground">
-                                        Não tem uma conta?{" "}
-                                        <a href="/signup" className="text-foreground hover:underline underline-offset-4 font-medium">
-                                            Criar conta
-                                        </a>
-                                    </p>
-                                </div>
+                                        <p className="text-sm text-muted-foreground">
+                                            Não tem uma conta?{" "}
+                                            <a href="/signup" className="text-foreground hover:underline underline-offset-4 font-medium">
+                                                Criar conta
+                                            </a>
+                                        </p>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
