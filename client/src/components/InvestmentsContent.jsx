@@ -12,11 +12,11 @@ export default function InvestmentsContent({ investment, setReload }) {
     const items = [
         {
             label: `IR (${investment.calculated[0].IR.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}%)`,
-            badge: <IrBadge irPercent={investment.calculated[0].IR} irValue={investment.calculated[0].IR_value} showValue />,
+            badge: <IrBadge irPercent={investment.calculated[0].IR} irValue={investment.calculated[0].IR_value} showValue investmentDate={investment.date_buy} />,
         },
         {
             label: `IOF (${investment.calculated[0].IOF.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%)`,
-            badge: <IofBadge iofPercent={investment.calculated[0].IOF} iofValue={investment.calculated[0].IOF_value} showValue />,
+            badge: <IofBadge iofPercent={investment.calculated[0].IOF} iofValue={investment.calculated[0].IOF_value} showValue investmentDate={investment.date_buy} />,
         },
         {
             label: "Valor bruto",

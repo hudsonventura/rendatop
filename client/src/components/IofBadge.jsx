@@ -17,6 +17,33 @@ function formatPercent(value) {
     })
 }
 
+function formatIofZeroDate(investmentDate) {
+    if (!investmentDate) return null
+
+    const startDate = new Date(investmentDate)
+    if (Number.isNaN(startDate.getTime())) return null
+
+    const zeroDate = new Date(startDate)
+    zeroDate.setDate(zeroDate.getDate() + 30)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    zeroDate.setHours(0, 0, 0, 0)
+    const diffInDays = Math.max(
+        0,
+        Math.ceil((zeroDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    )
+
+    return {
+        dateLabel: zeroDate.toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        }),
+        daysUntil: diffInDays,
+    }
+}
+
 export default function IofBadge({
     iofPercent,
     iofValue,
@@ -26,9 +53,10 @@ export default function IofBadge({
     showPercentInTooltip = false,
     label,
     asBadge = true,
+    investmentDate,
 }) {
-
     const colorClassName = `${getIofBadgeClass(iofPercent)} ${className}`.trim()
+    const iofZeroDate = formatIofZeroDate(investmentDate)
 
     const contentNode = asBadge ? (
         <Badge variant={variant} className={colorClassName}>
@@ -50,7 +78,12 @@ export default function IofBadge({
                 <span className="inline-flex">{contentNode}</span>
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-xs space-y-1">
-                <div>Alíquota de IOF: {formatPercent(iofPercent)}%</div>
+                <div>Alíquota de IOF: {formatPercent(iofPercent)}%</div><br />
+                {iofZeroDate && (
+                    <div className="text-[11px] opacity-90">
+                        IOF zerado em: {iofZeroDate.dateLabel} (em {iofZeroDate.daysUntil} dias)<br /><br />
+                    </div>
+                )}
                 <div className="text-[11px] opacity-90">
                     Regras: <br />
                     - IOF é cobrado de forma regressiva nos primeiros 30 dias<br />

@@ -42,14 +42,14 @@ export default function InvestmentsTitle({ investment }) {
                 {daysSinceBuy < 30 ? (
                     <HoverCard>
                         <HoverCardTrigger>
-                            <IofBadge iofPercent={1} className="text-xs" label="IOF" />
+                            <IofBadge iofPercent={1} className="text-xs" label="IOF" investmentDate={investment.date_buy} />
                         </HoverCardTrigger>
                         <HoverCardContent className="text-xs">
                             Isenção IOF em {formatDate(new Date(new Date(investment.date_buy).getTime() + 30 * 24 * 60 * 60 * 1000))}
                         </HoverCardContent>
                     </HoverCard>
                 ) : (
-                    <IofBadge iofPercent={0} className="text-xs" />
+                    <IofBadge iofPercent={0} className="text-xs" investmentDate={investment.date_buy} />
                 )}
 
                 {/* Liquidez Badge */}
@@ -64,7 +64,7 @@ export default function InvestmentsTitle({ investment }) {
                 )}
 
                 {/* IR Badge */}
-                <IrBadge irPercent={investment.calculated[0].IR} className="text-xs" />
+                <IrBadge irPercent={investment.calculated[0].IR} className="text-xs" investmentDate={investment.date_buy} />
             </div>
 
             {/* Right: Values */}

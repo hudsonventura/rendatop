@@ -132,8 +132,8 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
                         <span className="text-xs text-muted-foreground md:whitespace-nowrap">Valores atuais:</span>
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-1.5">
-                                <IofBadge iofPercent={calc.IOF} iofValue={calc.IOF_value} showValue className="text-xs whitespace-nowrap" />
-                                <IrBadge irPercent={calc.IR} irValue={calc.IR_value} showValue className="text-xs whitespace-nowrap" />
+                                <IofBadge iofPercent={calc.IOF} iofValue={calc.IOF_value} showValue className="text-xs whitespace-nowrap" investmentDate={investment.date_buy} />
+                                <IrBadge irPercent={calc.IR} irValue={calc.IR_value} showValue className="text-xs whitespace-nowrap" investmentDate={investment.date_buy} />
                                 <Badge variant="default" className="text-xs whitespace-nowrap">
                                     Valor líquido: R$ {formatCurrency(calc.value_liq)}
                                 </Badge>
@@ -148,8 +148,8 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
                         <div className="min-w-0">
                             {hasDueEstimate ? (
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                    <IofBadge iofPercent={calcDue.IOF} iofValue={calcDue.IOF_value} showValue className="text-xs whitespace-nowrap" />
-                                    <IrBadge irPercent={calcDue.IR} irValue={calcDue.IR_value} showValue className="text-xs whitespace-nowrap" />
+                                    <IofBadge iofPercent={calcDue.IOF} iofValue={calcDue.IOF_value} showValue className="text-xs whitespace-nowrap" investmentDate={investment.date_buy} />
+                                    <IrBadge irPercent={calcDue.IR} irValue={calcDue.IR_value} showValue className="text-xs whitespace-nowrap" investmentDate={investment.date_buy} />
                                     <Badge variant="default" className="text-xs whitespace-nowrap">
                                         Valor líquido: R$ {formatCurrency(calcDue.value_liq)}
                                     </Badge>
@@ -512,7 +512,7 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
                 const irValue = row.original.calculated?.[0]?.IR_value ?? 0
 
                 return (
-                    <IrBadge asBadge={false} irPercent={ir} irValue={irValue} showValue showPercentInTooltip className="whitespace-nowrap" />
+                    <IrBadge asBadge={false} irPercent={ir} irValue={irValue} showValue showPercentInTooltip className="whitespace-nowrap" investmentDate={row.original.date_buy} />
                 )
             },
             sortingFn: (rowA, rowB) =>
@@ -526,7 +526,7 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
                 const iofValue = row.original.calculated?.[0]?.IOF_value ?? 0
 
                 return (
-                    <IofBadge asBadge={false} iofPercent={iof} iofValue={iofValue} showValue showPercentInTooltip className="whitespace-nowrap" />
+                    <IofBadge asBadge={false} iofPercent={iof} iofValue={iofValue} showValue showPercentInTooltip className="whitespace-nowrap" investmentDate={row.original.date_buy} />
                 )
             },
             sortingFn: (rowA, rowB) =>
