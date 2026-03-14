@@ -5,8 +5,8 @@ import {
     HoverCardContent,
     HoverCardTrigger,
 } from "@/components/ui/hover-card"
-import { getIrBadgeClass, getIrBadgeLabel } from "@/utils/ir-level"
-import { getIofBadgeClass } from "@/utils/iof-level"
+import IrBadge from "@/components/IrBadge"
+import IofBadge from "@/components/IofBadge"
 
 
 export default function InvestmentsTitle({ investment }) {
@@ -42,16 +42,14 @@ export default function InvestmentsTitle({ investment }) {
                 {daysSinceBuy < 30 ? (
                     <HoverCard>
                         <HoverCardTrigger>
-                            <Badge variant="secondary" className={`text-xs ${getIofBadgeClass(1)}`}>IOF</Badge>
+                            <IofBadge iofPercent={1} className="text-xs" label="IOF" />
                         </HoverCardTrigger>
                         <HoverCardContent className="text-xs">
                             Isenção IOF em {formatDate(new Date(new Date(investment.date_buy).getTime() + 30 * 24 * 60 * 60 * 1000))}
                         </HoverCardContent>
                     </HoverCard>
                 ) : (
-                    <Badge variant="secondary" className={`text-xs ${getIofBadgeClass(0)}`}>
-                        Isento IOF
-                    </Badge>
+                    <IofBadge iofPercent={0} className="text-xs" />
                 )}
 
                 {/* Liquidez Badge */}
@@ -66,9 +64,7 @@ export default function InvestmentsTitle({ investment }) {
                 )}
 
                 {/* IR Badge */}
-                <Badge variant="secondary" className={`text-xs ${getIrBadgeClass(investment.calculated[0].IR)}`}>
-                    {getIrBadgeLabel(investment.calculated[0].IR)}
-                </Badge>
+                <IrBadge irPercent={investment.calculated[0].IR} className="text-xs" />
             </div>
 
             {/* Right: Values */}

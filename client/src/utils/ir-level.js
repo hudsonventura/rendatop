@@ -6,7 +6,7 @@ const IR_STYLE_BY_LEVEL = {
     blue: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
 }
 
-function resolveIrLevel(irPercent) {
+export function resolveIrLevel(irPercent) {
     const ir = Number(irPercent ?? 0)
     if (ir >= 22.5) return "red"
     if (ir >= 20) return "orange"

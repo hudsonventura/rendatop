@@ -54,9 +54,10 @@ import {
 import InvestmentsEdit from "@/components/InvestmentsEdit"
 import InvestmentsRedeem from "@/components/InvestmentsRedeem"
 import RedemptionEdit from "@/components/RedemptionEdit"
+import IrBadge from "@/components/IrBadge"
+import IofBadge from "@/components/IofBadge"
 import axiosInstance from "@/utils/axiosConfig"
 import { getIrBadgeClass } from "@/utils/ir-level"
-import { getIofBadgeClass } from "@/utils/iof-level"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -131,12 +132,8 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
                         <span className="text-xs text-muted-foreground md:whitespace-nowrap">Valores atuais:</span>
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-1.5">
-                                <Badge variant="secondary" className={`text-xs whitespace-nowrap ${getIofBadgeClass(calc.IOF)}`}>
-                                    IOF: R$ {formatCurrency(calc.IOF_value)}
-                                </Badge>
-                                <Badge variant="secondary" className={`text-xs whitespace-nowrap ${getIrBadgeClass(calc.IR)}`}>
-                                    IR: R$ {formatCurrency(calc.IR_value)}
-                                </Badge>
+                                <IofBadge iofPercent={calc.IOF} iofValue={calc.IOF_value} showValue className="text-xs whitespace-nowrap" />
+                                <IrBadge irPercent={calc.IR} irValue={calc.IR_value} showValue className="text-xs whitespace-nowrap" />
                                 <Badge variant="default" className="text-xs whitespace-nowrap">
                                     Valor líquido: R$ {formatCurrency(calc.value_liq)}
                                 </Badge>
@@ -151,12 +148,8 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
                         <div className="min-w-0">
                             {hasDueEstimate ? (
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                    <Badge variant="secondary" className={`text-xs whitespace-nowrap ${getIofBadgeClass(calcDue.IOF)}`}>
-                                        IOF: R$ {formatCurrency(calcDue.IOF_value)}
-                                    </Badge>
-                                    <Badge variant="secondary" className={`text-xs whitespace-nowrap ${getIrBadgeClass(calcDue.IR)}`}>
-                                        IR: R$ {formatCurrency(calcDue.IR_value)}
-                                    </Badge>
+                                    <IofBadge iofPercent={calcDue.IOF} iofValue={calcDue.IOF_value} showValue className="text-xs whitespace-nowrap" />
+                                    <IrBadge irPercent={calcDue.IR} irValue={calcDue.IR_value} showValue className="text-xs whitespace-nowrap" />
                                     <Badge variant="default" className="text-xs whitespace-nowrap">
                                         Valor líquido: R$ {formatCurrency(calcDue.value_liq)}
                                     </Badge>
@@ -547,6 +540,34 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
                 rowA.original.calculated[0].profit_liq - rowB.original.calculated[0].profit_liq,
         },
         {
+            id: "ir",
+            header: "IR",
+            cell: ({ row }) => {
+                const ir = row.original.calculated?.[0]?.IR ?? 0
+                const irValue = row.original.calculated?.[0]?.IR_value ?? 0
+
+                return (
+                    <IrBadge irPercent={ir} irValue={irValue} showValue showPercentInTooltip className="whitespace-nowrap" />
+                )
+            },
+            sortingFn: (rowA, rowB) =>
+                (rowA.original.calculated?.[0]?.IR_value ?? 0) - (rowB.original.calculated?.[0]?.IR_value ?? 0),
+        },
+        {
+            id: "iof",
+            header: "IOF",
+            cell: ({ row }) => {
+                const iof = row.original.calculated?.[0]?.IOF ?? 0
+                const iofValue = row.original.calculated?.[0]?.IOF_value ?? 0
+
+                return (
+                    <IofBadge iofPercent={iof} iofValue={iofValue} showValue showPercentInTooltip className="whitespace-nowrap" />
+                )
+            },
+            sortingFn: (rowA, rowB) =>
+                (rowA.original.calculated?.[0]?.IOF_value ?? 0) - (rowB.original.calculated?.[0]?.IOF_value ?? 0),
+        },
+        {
             id: "due_date",
             header: ({ column }) => (
                 <Button
@@ -774,6 +795,12 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
                     </div>
                 </div>
             )}
+
+            <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+                Regras:
+                IR regressivo conforme prazo da aplicação: 22,5% até 180 dias, 20% até 365 dias, 17,5% até 730 dias e 15% acima disso.
+                IOF regressivo apenas nos primeiros 30 dias; após 30 dias, a alíquota é zero.
+            </div>
 
             {/* Shared View Dialog */}
             <ViewDialog

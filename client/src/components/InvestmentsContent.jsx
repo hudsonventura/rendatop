@@ -2,8 +2,8 @@ import React from "react";
 import { Badge } from "@/components/ui/badge"
 import InvestmentsEdit from "@/components/InvestmentsEdit"
 import InvestmentsRedeem from "@/components/InvestmentsRedeem"
-import { getIrBadgeClass } from "@/utils/ir-level"
-import { getIofBadgeClass } from "@/utils/iof-level"
+import IrBadge from "@/components/IrBadge"
+import IofBadge from "@/components/IofBadge"
 
 export default function InvestmentsContent({ investment, setReload }) {
 
@@ -12,15 +12,11 @@ export default function InvestmentsContent({ investment, setReload }) {
     const items = [
         {
             label: `IR (${investment.calculated[0].IR.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}%)`,
-            value: `R$ ${formatCurrency(investment.calculated[0].IR_value)}`,
-            variant: "secondary",
-            className: getIrBadgeClass(investment.calculated[0].IR),
+            badge: <IrBadge irPercent={investment.calculated[0].IR} irValue={investment.calculated[0].IR_value} showValue />,
         },
         {
             label: `IOF (${investment.calculated[0].IOF.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%)`,
-            value: `R$ ${formatCurrency(investment.calculated[0].IOF_value)}`,
-            variant: "secondary",
-            className: getIofBadgeClass(investment.calculated[0].IOF),
+            badge: <IofBadge iofPercent={investment.calculated[0].IOF} iofValue={investment.calculated[0].IOF_value} showValue />,
         },
         {
             label: "Valor bruto",
@@ -54,9 +50,11 @@ export default function InvestmentsContent({ investment, setReload }) {
                 {items.map((item, index) => (
                     <div key={index} className="flex flex-col gap-1">
                         <span className="text-xs text-muted-foreground">{item.label}</span>
-                        <Badge variant={item.variant} className={`w-fit text-xs ${item.className ?? ""}`}>
-                            {item.value}
-                        </Badge>
+                        {item.badge ? item.badge : (
+                            <Badge variant={item.variant} className={`w-fit text-xs ${item.className ?? ""}`}>
+                                {item.value}
+                            </Badge>
+                        )}
                     </div>
                 ))}
             </div>
