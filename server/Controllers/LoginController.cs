@@ -215,6 +215,71 @@ Se você não solicitou essa alteração, ignore este email.";
         return Ok(new PasswordResetRequestResponse("Senha redefinida com sucesso."));
     }
 
+    [HttpPost("totp-reset/request")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PasswordResetRequestResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RequestTotpReset([FromBody] TotpResetRequest request)
+    {
+        var email = (request.email ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ExpectedException("Email é obrigatório.");
+
+        ValidateEmail(email);
+
+        var user = _context.users.AsNoTracking().FirstOrDefault(x => x.email == email);
+        if (user is not null && user.totp_enabled)
+        {
+            var token = GenerateActionToken(user, "totp-reset");
+            var resetUrl = BuildTotpResetUrl(token);
+            var expiresAt = DateTime.Now.AddHours(1).ToString("dd/MM/yyyy HH:mm");
+            var message =
+$@"Olá, {user.name}.
+
+Recebemos uma solicitação para remover a autenticação em duas etapas (TOTP) da sua conta no RendaTop.
+
+Use o link abaixo para confirmar a remoção:
+{resetUrl}
+
+Esse link expira em 1 hora ({expiresAt}).
+
+Se você não solicitou essa alteração, ignore este email.";
+
+            try
+            {
+                await _email.Notify(user.email, "RendaTop | Remoção do TOTP", message);
+            }
+            catch (Exception ex)
+            {
+                throw new ExpectedException($"Falha ao enviar email para remoção do TOTP: {ex.Message}", HttpStatusCode.BadGateway);
+            }
+        }
+
+        return Ok(new PasswordResetRequestResponse("Se existir uma conta com TOTP ativo nesse email, enviaremos um link para remover a autenticação em duas etapas válido por 1 hora."));
+    }
+
+    [HttpPost("totp-reset/confirm")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PasswordResetRequestResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    public IActionResult ConfirmTotpReset([FromBody] TotpResetConfirmRequest request)
+    {
+        var token = (request.token ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(token))
+            throw new ExpectedException("Token de redefinição do TOTP é obrigatório.");
+
+        var payload = ValidateActionToken(token, "totp-reset");
+        var user = _context.users.FirstOrDefault(x => x.id == payload.UserId && x.email == payload.Email);
+        if (user is null)
+            throw new ExpectedException("Link de redefinição do TOTP inválido.", HttpStatusCode.BadRequest);
+
+        user.totp_enabled = false;
+        user.totp_secret = null;
+        _context.SaveChanges();
+
+        return Ok(new PasswordResetRequestResponse("Autenticação em duas etapas removida com sucesso."));
+    }
+
     /// <summary>
     /// Inicia o fluxo de autenticação do Google (OAuth2)
     /// </summary>
@@ -463,13 +528,27 @@ Se você não solicitou essa alteração, ignore este email.";
         if (!string.IsNullOrWhiteSpace(configured))
             return $"{configured.Trim()}?token={Uri.EscapeDataString(token)}";
 
+        return BuildFrontActionUrl("/reset-password", token);
+    }
+
+    private string BuildTotpResetUrl(string token)
+    {
+        var configured = Environment.GetEnvironmentVariable("TOTP_RESET_FRONTEND_URL");
+        if (!string.IsNullOrWhiteSpace(configured))
+            return $"{configured.Trim()}?token={Uri.EscapeDataString(token)}";
+
+        return BuildFrontActionUrl("/reset-totp", token);
+    }
+
+    private static string BuildFrontActionUrl(string path, string token)
+    {
         var loginUrl = GetFrontLoginUrl();
         const string loginSuffix = "/login";
-        var resetUrl = loginUrl.EndsWith("/login", StringComparison.OrdinalIgnoreCase)
-            ? $"{loginUrl[..^loginSuffix.Length]}/reset-password"
-            : $"{loginUrl.TrimEnd('/')}/reset-password";
+        var actionUrl = loginUrl.EndsWith(loginSuffix, StringComparison.OrdinalIgnoreCase)
+            ? $"{loginUrl[..^loginSuffix.Length]}{path}"
+            : $"{loginUrl.TrimEnd('/')}{path}";
 
-        return $"{resetUrl}?token={Uri.EscapeDataString(token)}";
+        return $"{actionUrl}?token={Uri.EscapeDataString(token)}";
     }
 
     private static void ValidateEmail(string email)
@@ -485,12 +564,15 @@ Se você não solicitou essa alteração, ignore este email.";
     }
 
     private static string GeneratePasswordResetToken(User user)
+        => GenerateActionToken(user, "password-reset");
+
+    private static string GenerateActionToken(User user, string purpose)
     {
-        var payload = new PasswordResetTokenPayload(
+        var payload = new ActionTokenPayload(
             user.id,
             user.email,
             DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds(),
-            "password-reset");
+            purpose);
 
         var payloadJson = JsonSerializer.Serialize(payload);
         var payloadPart = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(payloadJson));
@@ -498,7 +580,10 @@ Se você não solicitou essa alteração, ignore este email.";
         return $"{payloadPart}.{signaturePart}";
     }
 
-    private static PasswordResetTokenPayload ValidatePasswordResetToken(string token)
+    private static ActionTokenPayload ValidatePasswordResetToken(string token)
+        => ValidateActionToken(token, "password-reset");
+
+    private static ActionTokenPayload ValidateActionToken(string token, string purpose)
     {
         var parts = token.Split('.');
         if (parts.Length != 2)
@@ -515,11 +600,11 @@ Se você não solicitou essa alteração, ignore este email.";
             throw new ExpectedException("Link de redefinição inválido.", HttpStatusCode.BadRequest);
         }
 
-        PasswordResetTokenPayload? payload;
+        ActionTokenPayload? payload;
         try
         {
             var payloadJson = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(payloadPart));
-            payload = JsonSerializer.Deserialize<PasswordResetTokenPayload>(payloadJson);
+            payload = JsonSerializer.Deserialize<ActionTokenPayload>(payloadJson);
         }
         catch
         {
@@ -527,7 +612,7 @@ Se você não solicitou essa alteração, ignore este email.";
         }
 
         if (payload is null ||
-            payload.Purpose != "password-reset" ||
+            payload.Purpose != purpose ||
             payload.Exp < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
         {
             throw new ExpectedException("Link de redefinição expirado ou inválido.", HttpStatusCode.BadRequest);
@@ -728,7 +813,9 @@ public record TotpLoginRequest(string challenge_id, string code);
 public record SignUpRequest(string name, string email, string password);
 public record PasswordResetRequest(string email);
 public record PasswordResetConfirmRequest(string token, string password);
+public record TotpResetRequest(string email);
+public record TotpResetConfirmRequest(string token);
 public record PasswordResetRequestResponse(string message);
-public record PasswordResetTokenPayload(Guid UserId, string Email, long Exp, string Purpose);
+public record ActionTokenPayload(Guid UserId, string Email, long Exp, string Purpose);
 public record GoogleUserInfo(string Email, string Name, bool EmailVerified);
 public record MicrosoftUserInfo(string Email, string Name);

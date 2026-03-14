@@ -217,6 +217,11 @@ const Login = () => {
                                                 className="h-11"
                                                 required
                                             />
+                                            <div className="pt-1 text-right">
+                                                <a href="/forgot-totp" className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors">
+                                                    Não tenho acesso ao app Authenticator
+                                                </a>
+                                            </div>
                                         </div>
                                     )}
 

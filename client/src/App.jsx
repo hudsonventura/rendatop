@@ -13,6 +13,8 @@ import MyInvestments from "@/pages/MyInvestments"
 import NotificationsPage from "@/pages/NotificationsPage"
 import ResetPassword from "@/pages/ResetPassword"
 import ForgotPassword from "@/pages/ForgotPassword"
+import ForgotTotp from "@/pages/ForgotTotp"
+import ResetTotp from "@/pages/ResetTotp"
 
 
 function App() {
@@ -33,6 +35,8 @@ function App() {
                             <Route path="/settings" element={<UserSettings />} />
                             <Route path="/forgot-password" element={<ForgotPassword />} />
                             <Route path="/reset-password" element={<ResetPassword />} />
+                            <Route path="/forgot-totp" element={<ForgotTotp />} />
+                            <Route path="/reset-totp" element={<ResetTotp />} />
                         </Routes>
                     </Router>
                 </SidebarConfigProvider>
