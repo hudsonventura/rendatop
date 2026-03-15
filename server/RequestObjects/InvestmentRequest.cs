@@ -53,7 +53,7 @@ public class InvestmentRequest
     public IdexesType index { get; set; }
 
     /// <summary>
-    /// Percentual do índice. Ex.: 12% ao ano, 110% do CDI ou 96% do IPCA
+    /// Percentual do índice. Ex.: X% ao ano, X% do CDI ou IPCA+X%
     /// </summary>
     public decimal index_percent { get; set; }
 
