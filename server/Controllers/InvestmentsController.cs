@@ -36,6 +36,13 @@ public class InvestmentsController : AuthenticatedController
 
     private static List<Calculated> BuildTableCalculated(Investment investment)
     {
+        if (investment.archived)
+        {
+            return (investment.calculated ?? new List<Calculated>())
+                .Select(CloneCalculated)
+                .ToList();
+        }
+
         var redeemedTotal = investment.redemptions?.Sum(r => r.value) ?? 0m;
         var baseCalculated = investment.calculated ?? new List<Calculated>();
 
@@ -103,6 +110,35 @@ public class InvestmentsController : AuthenticatedController
         };
     }
 
+    private void ArchiveIfFullyRedeemed(Investment investment)
+    {
+        if (investment == null)
+            return;
+
+        var calcType = typeof(ICalculator).Assembly.GetType(
+            $"server.Domain.Calculator_{investment.index}"
+        );
+
+        if (calcType == null)
+            throw new ExpectedException($"Tipo de calculo nao encontrado: Calculator_{investment.index}");
+
+        var calculator = (ICalculator)Activator.CreateInstance(calcType, _context)!;
+        var currentCalculated = calculator.Calculate(investment.ToRequest()).FirstOrDefault();
+
+        if (currentCalculated == null)
+            return;
+
+        var redeemedTotal = _context.redemptions
+            .Where(r => r.investment.id == investment.id)
+            .Sum(r => (decimal?)r.value) ?? 0m;
+
+        if (currentCalculated.value_liq - redeemedTotal <= 0m)
+        {
+            investment.archived = true;
+            _context.investments.Update(investment);
+        }
+    }
+
     /// <summary>
 	/// Lista todos os investimentos do usuário
 	/// </summary>
@@ -135,6 +171,12 @@ public class InvestmentsController : AuthenticatedController
 
             invest.calculated = calc.Calculate(invest.ToRequest());
             invest.table_calculated = BuildTableCalculated(invest);
+            if (invest.archived)
+            {
+                invest.table_value = invest.value;
+                continue;
+            }
+
             var redeemedTotal = invest.redemptions?.Sum(r => r.value) ?? 0m;
             var currentValueLiq = invest.calculated.FirstOrDefault()?.value_liq ?? 0m;
             var currentRatio = GetDisplayRedemptionRatio(redeemedTotal, currentValueLiq);
@@ -275,6 +317,8 @@ public class InvestmentsController : AuthenticatedController
 
         _context.redemptions.Add(redemption);
         _context.SaveChanges();
+        ArchiveIfFullyRedeemed(invest);
+        _context.SaveChanges();
 
         return invest;
     }
@@ -302,6 +346,8 @@ public class InvestmentsController : AuthenticatedController
         redemption.date = DateTime.SpecifyKind(request.date, DateTimeKind.Utc);
 
         _context.redemptions.Update(redemption);
+        _context.SaveChanges();
+        ArchiveIfFullyRedeemed(redemption.investment);
         _context.SaveChanges();
 
         return NoContent();

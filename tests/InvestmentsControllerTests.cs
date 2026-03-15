@@ -82,6 +82,39 @@ public class InvestmentsControllerTests
     }
 
     [Fact]
+    public void Get_ArchivedInvestmentKeepsOriginalDisplayValues()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var investment = fixture.SeedInvestment(
+            title: "Investimento arquivado",
+            value: 1000m,
+            dueDate: DateTime.UtcNow.Date.AddYears(1),
+            archived: true,
+            index: IdexesType.PERCENT_YEAR,
+            indexPercent: 10m);
+
+        fixture.Context.redemptions.Add(new Redemption(
+            investment,
+            new RedemptionRequest
+            {
+                title = "Resgate antigo",
+                value = 100m,
+                date = new DateTime(2025, 3, 10, 0, 0, 0, DateTimeKind.Utc)
+            }));
+        fixture.Context.SaveChanges();
+
+        var returnedInvestment = Assert.Single(fixture.Controller.Get());
+        var baseCalc = returnedInvestment.calculated.First();
+        var tableCalc = returnedInvestment.table_calculated!.First();
+
+        Assert.Equal(returnedInvestment.value, returnedInvestment.table_value);
+        Assert.Equal(baseCalc.value_liq, tableCalc.value_liq, 6);
+        Assert.Equal(baseCalc.profit_liq, tableCalc.profit_liq, 6);
+        Assert.Equal(baseCalc.IR_value, tableCalc.IR_value, 6);
+        Assert.Equal(baseCalc.IOF_value, tableCalc.IOF_value, 6);
+    }
+
+    [Fact]
     public void Insert_PersistsInvestmentForAuthenticatedUser()
     {
         using var fixture = new InvestmentsControllerFixture();
@@ -153,6 +186,29 @@ public class InvestmentsControllerTests
         Assert.Equal(500m, savedRedemption.value);
         Assert.Equal(request.date, savedRedemption.date);
         Assert.Equal(investment.id, savedRedemption.investment.id);
+    }
+
+    [Fact]
+    public void Redeem_ArchivesInvestmentWhenRedemptionConsumesCurrentLiquidValue()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var investment = fixture.SeedInvestment(
+            value: 1000m,
+            dueDate: DateTime.UtcNow.Date.AddYears(1),
+            index: IdexesType.PERCENT_YEAR,
+            indexPercent: 10m);
+
+        var currentValueLiq = fixture.Controller.Get().Single().calculated.First().value_liq;
+
+        fixture.Controller.Redeem(investment.id, new RedemptionRequest
+        {
+            title = "Resgate total",
+            value = currentValueLiq,
+            date = DateTime.UtcNow
+        });
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        Assert.True(assertionContext.investments.Single(i => i.id == investment.id).archived);
     }
 
     [Fact]
