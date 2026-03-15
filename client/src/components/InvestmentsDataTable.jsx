@@ -102,6 +102,10 @@ function getIndexLabel(investment) {
     }
 }
 
+function getRedeemedValue(investment) {
+    return (investment.redemptions ?? []).reduce((total, redemption) => total + (redemption.value ?? 0), 0)
+}
+
 // ── View Dialog (investment details) ──────────────────────────────────────────
 
 function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinvest, onEditRedemption, onArchive, onDelete }) {
@@ -121,8 +125,13 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
             <DialogContent className="w-[70vw] max-w-[70vw] sm:max-w-6xl max-h-[60vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{investment.title}</DialogTitle>
-                    <DialogDescription>
-                        {investment.bank?.name || "Banco Desconhecido"} · {getIndexLabel(investment)}
+                    <DialogDescription className="space-y-1">
+                        <div>
+                            {investment.bank?.name || "Banco Desconhecido"} · {getIndexLabel(investment)}
+                        </div>
+                        <div>
+                            Data do investimento: {formatDate(investment.date_buy)}
+                        </div>
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3 rounded-md border p-3 min-w-0">
@@ -454,7 +463,9 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
                 </Button>
             ),
             cell: ({ row }) => (
-                <span className="font-medium">{row.original.title}</span>
+                <span className="font-medium whitespace-normal break-words leading-snug">
+                    {row.original.title}
+                </span>
             ),
         },
         {
@@ -471,7 +482,7 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
             ),
             cell: ({ row }) => {
                 const bankName = row.original.bank?.name || "Banco Desconhecido"
-                return <span className="whitespace-nowrap">{bankName}</span>
+                return <span className="whitespace-normal break-words leading-snug">{bankName}</span>
             },
             sortingFn: (rowA, rowB) => {
                 const a = rowA.original.bank?.name || ""
@@ -493,7 +504,7 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
             header: ({ column }) => (
                 <Button
                     variant="ghost"
-                    className="cursor-pointer -ml-3"
+                    className="cursor-pointer -ml-3 h-auto py-1 text-left whitespace-normal"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
                     Valor investido
@@ -503,6 +514,46 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
             cell: ({ row }) => (
                 <span className="whitespace-nowrap">R$ {formatCurrency(row.original.value)}</span>
             ),
+        },
+        {
+            id: "date_buy",
+            header: ({ column }) => (
+                <Button
+                    variant="ghost"
+                    className="cursor-pointer -ml-3 h-auto py-1 text-left whitespace-normal"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                >
+                    Data do investimento
+                    <ArrowUpDown className="ml-1 h-4 w-4" />
+                </Button>
+            ),
+            cell: ({ row }) => (
+                <span className="whitespace-nowrap">
+                    {formatDate(row.original.date_buy)}
+                </span>
+            ),
+            sortingFn: (rowA, rowB) =>
+                new Date(rowA.original.date_buy).getTime() - new Date(rowB.original.date_buy).getTime(),
+        },
+        {
+            id: "redeemed_value",
+            header: ({ column }) => (
+                <Button
+                    variant="ghost"
+                    className="cursor-pointer -ml-3 h-auto py-1 text-left whitespace-normal"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                >
+                    Valor total resgatado
+                    <ArrowUpDown className="ml-1 h-4 w-4" />
+                </Button>
+            ),
+            cell: ({ row }) => (
+                <span className="whitespace-nowrap">
+                    R$ {formatCurrency(getRedeemedValue(row.original))}
+                </span>
+            ),
+            sortingFn: (rowA, rowB) =>
+                getRedeemedValue(rowA.original) - getRedeemedValue(rowB.original),
         },
         {
             id: "ir",
@@ -572,7 +623,7 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
             header: ({ column }) => (
                 <Button
                     variant="ghost"
-                    className="cursor-pointer -ml-3"
+                    className="cursor-pointer -ml-3 h-auto py-1 text-left whitespace-normal"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
                     Vencimento
@@ -686,12 +737,30 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
     return (
         <div className="space-y-4">
             <div className="overflow-hidden rounded-lg border">
-                <Table>
+                <Table className="table-fixed">
                     <TableHeader className="bg-muted sticky top-0 z-10">
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id} colSpan={header.colSpan}>
+                                    <TableHead
+                                        key={header.id}
+                                        colSpan={header.colSpan}
+                                        className={
+                                            header.id === "title" ? "w-[15%]" :
+                                            header.id === "bank" ? "w-[12%]" :
+                                            header.id === "index" ? "w-[10%]" :
+                                            header.id === "value" ? "w-[9%]" :
+                                            header.id === "date_buy" ? "w-[10%]" :
+                                            header.id === "redeemed_value" ? "w-[10%]" :
+                                            header.id === "ir" ? "w-[7%]" :
+                                            header.id === "iof" ? "w-[7%]" :
+                                            header.id === "profit_liq" ? "w-[9%]" :
+                                            header.id === "value_liq" ? "w-[9%]" :
+                                            header.id === "due_date" ? "w-[8%]" :
+                                            header.id === "actions" ? "w-[48px]" :
+                                            ""
+                                        }
+                                    >
                                         {header.isPlaceholder
                                             ? null
                                             : flexRender(header.column.columnDef.header, header.getContext())}
@@ -709,7 +778,16 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
                                     onDoubleClick={() => openView(row.original)}
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
+                                        <TableCell
+                                            key={cell.id}
+                                            className={
+                                                cell.column.id === "title" || cell.column.id === "bank"
+                                                    ? "whitespace-normal break-words"
+                                                    : cell.column.id === "actions"
+                                                        ? "w-[48px]"
+                                                        : ""
+                                            }
+                                        >
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}

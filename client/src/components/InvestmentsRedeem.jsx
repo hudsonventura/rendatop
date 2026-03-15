@@ -161,7 +161,7 @@ export default function InvestmentsRedeem({ investment, setReload, externalOpen,
                                 name="value"
                                 render={({ field }) => (
                                     <FormItem className="w-[280px]">
-                                        <FormLabel>Valor resgatado</FormLabel>
+                                        <FormLabel>Valor a ser resgatado</FormLabel>
                                         <FormControl>
                                             <div className="flex items-center gap-2">
                                                 <Input
