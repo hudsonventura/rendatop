@@ -3,7 +3,7 @@ using server.RequestObjects;
 
 namespace server.Domain;
 
-public class Calculator
+public abstract class Calculator
 {
     private Context _context;
 

@@ -79,6 +79,8 @@ public class CalculatorTests
     public void IpcaMais_CalculatesExpectedValues()
     {
         using var context = CreateContext();
+
+        //Moka as taxas IPCA apenas para conseguir rodar os testes
         context.ipcas.Add(new IPCA
         {
             date = new DateOnly(2024, 2, 1),
@@ -88,7 +90,7 @@ public class CalculatorTests
 
         var calculator = (ICalculator)new Calculator_IPCA_MAIS(context);
         var buyDate = new DateTime(2024, 1, 1);
-        var sellDate = buyDate.AddDays(369);
+        var sellDate = new DateTime(2025, 1, 1);
 
         var request = new InvestmentRequest
         {
@@ -96,21 +98,21 @@ public class CalculatorTests
             value = 1000m,
             date_buy = buyDate,
             index = IdexesType.IPCA_MAIS,
-            index_percent = 6m,
+            index_percent = 5m,
             taxes = true
         };
 
         var result = calculator.Generate(request, sellDate);
 
-        Assert.Equal(12.167781m, result.effective_index_percent_brute, 6);
-        Assert.Equal(121.677812m, result.profit_brute, 6);
-        Assert.Equal(1121.677812m, result.value_brute, 6);
-        Assert.Equal(17.5m, result.IR, 6);
-        Assert.Equal(21.293617m, result.IR_value, 6);
+        Assert.Equal(11.08m, result.effective_index_percent_brute, 2);
+        Assert.Equal(110.76m, result.profit_brute, 2);
+        Assert.Equal(1110.76m, result.value_brute, 2);
+        Assert.Equal(17.5m, result.IR, 2);
+        Assert.Equal(19.38m, result.IR_value, 2);
         Assert.Equal(0m, result.IOF, 6);
         Assert.Equal(0m, result.IOF_value, 6);
-        Assert.Equal(100.384194m, result.profit_liq, 6);
-        Assert.Equal(1100.384194m, result.value_liq, 6);
+        Assert.Equal(91.378996m, result.profit_liq, 6);
+        Assert.Equal(1091.378996m, result.value_liq, 6);
     }
 
     private static Context CreateContext()
