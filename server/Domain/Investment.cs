@@ -83,6 +83,12 @@ public class Investment
     [NotMapped] //impede que vá para o entity
     public List<Calculated> calculated { get; set; }
 
+    [NotMapped]
+    public decimal? table_value { get; set; }
+
+    [NotMapped]
+    public List<Calculated>? table_calculated { get; set; }
+
 
 
     public Investment(){}

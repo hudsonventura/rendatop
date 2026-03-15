@@ -42,7 +42,43 @@ public class InvestmentsControllerTests
         Assert.NotNull(investment.owner);
         Assert.NotNull(investment.calculated);
         Assert.NotEmpty(investment.calculated);
+        Assert.NotNull(investment.table_calculated);
+        Assert.NotEmpty(investment.table_calculated);
         Assert.NotEmpty(investment.redemptions);
+    }
+
+    [Fact]
+    public void Get_BuildsTableDisplayValuesDiscountingRedemptions()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var investment = fixture.SeedInvestment(
+            title: "Investimento com resgate",
+            value: 1000m,
+            dueDate: DateTime.UtcNow.Date.AddYears(1),
+            archived: false,
+            index: IdexesType.PERCENT_YEAR,
+            indexPercent: 10m);
+
+        fixture.Context.redemptions.Add(new Redemption(
+            investment,
+            new RedemptionRequest
+            {
+                title = "Resgate parcial",
+                value = 100m,
+                date = new DateTime(2025, 3, 10, 0, 0, 0, DateTimeKind.Utc)
+            }));
+        fixture.Context.SaveChanges();
+
+        var returnedInvestment = Assert.Single(fixture.Controller.Get());
+        var baseCalc = returnedInvestment.calculated.First();
+        var tableCalc = returnedInvestment.table_calculated!.First();
+        var expectedRatio = 100m / baseCalc.value_liq;
+
+        Assert.Equal(1000m - (1000m * expectedRatio), returnedInvestment.table_value!.Value, 6);
+        Assert.Equal(baseCalc.IOF_value - (baseCalc.IOF_value * expectedRatio), tableCalc.IOF_value, 6);
+        Assert.Equal(baseCalc.IR_value - (baseCalc.IR_value * expectedRatio), tableCalc.IR_value, 6);
+        Assert.Equal(baseCalc.profit_liq - (baseCalc.profit_liq * expectedRatio), tableCalc.profit_liq, 6);
+        Assert.Equal(returnedInvestment.table_value.Value + tableCalc.profit_liq, tableCalc.value_liq, 6);
     }
 
     [Fact]
@@ -117,6 +153,31 @@ public class InvestmentsControllerTests
         Assert.Equal(500m, savedRedemption.value);
         Assert.Equal(request.date, savedRedemption.date);
         Assert.Equal(investment.id, savedRedemption.investment.id);
+    }
+
+    [Fact]
+    public void DeleteRedemption_RemovesRedemptionFromDatabase()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var investment = fixture.SeedInvestment();
+        var redemption = new Redemption(
+            investment,
+            new RedemptionRequest
+            {
+                title = "Resgate errado",
+                value = 200m,
+                date = new DateTime(2025, 3, 10, 0, 0, 0, DateTimeKind.Utc)
+            });
+
+        fixture.Context.redemptions.Add(redemption);
+        fixture.Context.SaveChanges();
+
+        var result = fixture.Controller.DeleteRedemption(redemption.id);
+
+        Assert.IsType<NoContentResult>(result);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        Assert.Empty(assertionContext.redemptions);
     }
 
     [Fact]

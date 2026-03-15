@@ -34,6 +34,75 @@ public class InvestmentsController : AuthenticatedController
                             .FirstOrDefault();
     }
 
+    private static List<Calculated> BuildTableCalculated(Investment investment)
+    {
+        var redeemedTotal = investment.redemptions?.Sum(r => r.value) ?? 0m;
+        var baseCalculated = investment.calculated ?? new List<Calculated>();
+
+        if (redeemedTotal <= 0m)
+        {
+            return baseCalculated
+                .Select(CloneCalculated)
+                .ToList();
+        }
+
+        return baseCalculated
+            .Select(calc => ApplyRedemptionDisplay(calc, investment.value, redeemedTotal))
+            .ToList();
+    }
+
+    private static decimal GetDisplayRedemptionRatio(decimal redeemedTotal, decimal valueLiq)
+    {
+        if (redeemedTotal <= 0m || valueLiq <= 0m)
+            return 0m;
+
+        return Math.Min(1m, redeemedTotal / valueLiq);
+    }
+
+    private static Calculated ApplyRedemptionDisplay(Calculated calc, decimal principal, decimal redeemedTotal)
+    {
+        if (calc.value_liq <= 0m)
+            return CloneCalculated(calc);
+
+        var ratio = GetDisplayRedemptionRatio(redeemedTotal, calc.value_liq);
+
+        var adjustedPrincipal = principal - (principal * ratio);
+        var adjustedIofValue = calc.IOF_value - (calc.IOF_value * ratio);
+        var adjustedIrValue = calc.IR_value - (calc.IR_value * ratio);
+        var adjustedProfitLiq = calc.profit_liq - (calc.profit_liq * ratio);
+        var adjustedProfitBrute = calc.profit_brute - (calc.profit_brute * ratio);
+        var adjustedValueBrute = calc.value_brute - (calc.value_brute * ratio);
+
+        return new Calculated
+        {
+            effective_index_percent_brute = calc.effective_index_percent_brute,
+            profit_brute = Math.Max(0m, adjustedProfitBrute),
+            value_brute = Math.Max(0m, adjustedValueBrute),
+            IOF = calc.IOF,
+            IOF_value = Math.Max(0m, adjustedIofValue),
+            IR = calc.IR,
+            IR_value = Math.Max(0m, adjustedIrValue),
+            profit_liq = Math.Max(0m, adjustedProfitLiq),
+            value_liq = Math.Max(0m, adjustedPrincipal + adjustedProfitLiq)
+        };
+    }
+
+    private static Calculated CloneCalculated(Calculated calc)
+    {
+        return new Calculated
+        {
+            effective_index_percent_brute = calc.effective_index_percent_brute,
+            profit_brute = calc.profit_brute,
+            value_brute = calc.value_brute,
+            IOF = calc.IOF,
+            IOF_value = calc.IOF_value,
+            IR = calc.IR,
+            IR_value = calc.IR_value,
+            profit_liq = calc.profit_liq,
+            value_liq = calc.value_liq
+        };
+    }
+
     /// <summary>
 	/// Lista todos os investimentos do usuário
 	/// </summary>
@@ -65,6 +134,11 @@ public class InvestmentsController : AuthenticatedController
             var calc = (ICalculator)Activator.CreateInstance(calcType, _context)!;
 
             invest.calculated = calc.Calculate(invest.ToRequest());
+            invest.table_calculated = BuildTableCalculated(invest);
+            var redeemedTotal = invest.redemptions?.Sum(r => r.value) ?? 0m;
+            var currentValueLiq = invest.calculated.FirstOrDefault()?.value_liq ?? 0m;
+            var currentRatio = GetDisplayRedemptionRatio(redeemedTotal, currentValueLiq);
+            invest.table_value = Math.Max(0m, invest.value - (invest.value * currentRatio));
         }
 
 
@@ -228,6 +302,30 @@ public class InvestmentsController : AuthenticatedController
         redemption.date = DateTime.SpecifyKind(request.date, DateTimeKind.Utc);
 
         _context.redemptions.Update(redemption);
+        _context.SaveChanges();
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Remove um resgate já registrado
+    /// </summary>
+    /// <returns>Retorno vazio</returns>
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [HttpDelete("Redemptions/{id}")]
+    public IActionResult DeleteRedemption(Guid id)
+    {
+        var redemption = _context.redemptions
+            .Include(r => r.investment)
+            .ThenInclude(i => i.owner)
+            .FirstOrDefault(r => r.id == id && r.investment.owner.id == _user.id);
+
+        if (redemption == null)
+            throw new ExpectedException("Resgate não encontrado.");
+
+        _context.redemptions.Remove(redemption);
         _context.SaveChanges();
 
         return NoContent();

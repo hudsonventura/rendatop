@@ -106,13 +106,44 @@ function getRedeemedValue(investment) {
     return (investment.redemptions ?? []).reduce((total, redemption) => total + (redemption.value ?? 0), 0)
 }
 
+function getTableCalculated(investment, index = 0) {
+    return investment.table_calculated?.[index] ?? investment.calculated?.[index]
+}
+
+function getTableValue(investment) {
+    return investment.table_value ?? investment.value
+}
+
+function getRedemptionComposition(investment, redemption) {
+    const baseCalc = investment.calculated?.[0]
+    const redemptionValue = redemption?.value ?? 0
+
+    if (!baseCalc || redemptionValue <= 0 || (baseCalc.value_liq ?? 0) <= 0) {
+        return {
+            principal: redemptionValue,
+            profit: 0,
+            ir: 0,
+            iof: 0,
+        }
+    }
+
+    const ratio = Math.min(1, redemptionValue / baseCalc.value_liq)
+
+    return {
+        principal: investment.value * ratio,
+        profit: (baseCalc.profit_liq ?? 0) * ratio,
+        ir: (baseCalc.IR_value ?? 0) * ratio,
+        iof: (baseCalc.IOF_value ?? 0) * ratio,
+    }
+}
+
 // ── View Dialog (investment details) ──────────────────────────────────────────
 
-function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinvest, onEditRedemption, onArchive, onDelete }) {
+function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinvest, onEditRedemption, onDeleteRedemption, onArchive, onDelete }) {
     if (!investment) return null
 
-    const calc = investment.calculated?.[0]
-    const calcDue = investment.calculated?.[1]
+    const calc = getTableCalculated(investment, 0)
+    const calcDue = getTableCalculated(investment, 1)
     const hasDueEstimate = Boolean(investment.due_date && calcDue)
     const showReinvest = canShowReinvest(investment.due_date)
     const canArchive = investment.archived || isDueDateTodayOrPast(investment.due_date)
@@ -132,10 +163,21 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
                         <div>
                             Data do investimento: {formatDate(investment.date_buy)}
                         </div>
+                        <div>
+                            Valor original investido: R$ {formatCurrency(investment.value)}
+                        </div>
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3 rounded-md border p-3 min-w-0">
                     <h4 className="text-sm font-semibold">Valor atual do investimento</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                        <Badge variant="outline" className="text-xs whitespace-nowrap">
+                            Valor investido atual: R$ {formatCurrency(getTableValue(investment))}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs whitespace-nowrap">
+                            Valor total resgatado: R$ {formatCurrency(getRedeemedValue(investment))}
+                        </Badge>
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-[max-content_1fr] items-start md:items-center gap-x-2 gap-y-2">
                         <span className="text-xs text-muted-foreground md:whitespace-nowrap">Valores atuais:</span>
@@ -194,7 +236,22 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
                                             </TableCell>
                                             <TableCell>{formatDate(redemption.date)}</TableCell>
                                             <TableCell className="text-right">
-                                                R$ {formatCurrency(redemption.value)}
+                                                <div className="space-y-1 text-right">
+                                                    <div>R$ {formatCurrency(redemption.value)}</div>
+                                                    <div className="text-[11px] text-muted-foreground leading-snug">
+                                                        {(() => {
+                                                            const composition = getRedemptionComposition(investment, redemption)
+                                                            return (
+                                                                <>
+                                                                    <div>Valor original: R$ {formatCurrency(composition.principal)}</div>
+                                                                    <div>Lucro: R$ {formatCurrency(composition.profit)}</div>
+                                                                    <div>IR: R$ {formatCurrency(composition.ir)}</div>
+                                                                    <div>IOF: R$ {formatCurrency(composition.iof)}</div>
+                                                                </>
+                                                            )
+                                                        })()}
+                                                    </div>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Button
@@ -205,6 +262,15 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
                                                 >
                                                     <Pencil className="h-4 w-4" />
                                                     <span className="sr-only">Editar resgate</span>
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-8 cursor-pointer text-destructive hover:text-destructive"
+                                                    onClick={() => onDeleteRedemption(redemption)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">Excluir resgate</span>
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -287,6 +353,36 @@ function DeleteDialog({ investment, open, onOpenChange, onConfirm }) {
                     </DialogTitle>
                     <DialogDescription>
                         Tem certeza que deseja excluir <strong>{investment.title}</strong>?
+                        Essa ação não pode ser desfeita.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="flex gap-2 sm:gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+                        Cancelar
+                    </Button>
+                    <Button variant="destructive" className="flex-1" onClick={onConfirm}>
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Excluir
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+function DeleteRedemptionDialog({ redemption, open, onOpenChange, onConfirm }) {
+    if (!redemption) return null
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Trash2 className="h-5 w-5 text-destructive" />
+                        Excluir resgate
+                    </DialogTitle>
+                    <DialogDescription>
+                        Tem certeza que deseja excluir <strong>{redemption.title}</strong>?
                         Essa ação não pode ser desfeita.
                     </DialogDescription>
                 </DialogHeader>
@@ -512,7 +608,7 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
                 </Button>
             ),
             cell: ({ row }) => (
-                <span className="whitespace-nowrap">R$ {formatCurrency(row.original.value)}</span>
+                <span className="whitespace-nowrap">R$ {formatCurrency(getTableValue(row.original))}</span>
             ),
         },
         {
@@ -559,36 +655,38 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
             id: "ir",
             header: "IR",
             cell: ({ row }) => {
-                const ir = row.original.calculated?.[0]?.IR ?? 0
-                const irValue = row.original.calculated?.[0]?.IR_value ?? 0
+                const tableCalc = getTableCalculated(row.original)
+                const ir = tableCalc?.IR ?? 0
+                const irValue = tableCalc?.IR_value ?? 0
 
                 return (
                     <IrBadge asBadge={false} irPercent={ir} irValue={irValue} showValue showPercentInTooltip className="whitespace-nowrap" investmentDate={row.original.date_buy} />
                 )
             },
             sortingFn: (rowA, rowB) =>
-                (rowA.original.calculated?.[0]?.IR_value ?? 0) - (rowB.original.calculated?.[0]?.IR_value ?? 0),
+                (getTableCalculated(rowA.original)?.IR_value ?? 0) - (getTableCalculated(rowB.original)?.IR_value ?? 0),
         },
         {
             id: "iof",
             header: "IOF",
             cell: ({ row }) => {
-                const iof = row.original.calculated?.[0]?.IOF ?? 0
-                const iofValue = row.original.calculated?.[0]?.IOF_value ?? 0
+                const tableCalc = getTableCalculated(row.original)
+                const iof = tableCalc?.IOF ?? 0
+                const iofValue = tableCalc?.IOF_value ?? 0
 
                 return (
                     <IofBadge asBadge={false} iofPercent={iof} iofValue={iofValue} showValue showPercentInTooltip className="whitespace-nowrap" investmentDate={row.original.date_buy} />
                 )
             },
             sortingFn: (rowA, rowB) =>
-                (rowA.original.calculated?.[0]?.IOF_value ?? 0) - (rowB.original.calculated?.[0]?.IOF_value ?? 0),
+                (getTableCalculated(rowA.original)?.IOF_value ?? 0) - (getTableCalculated(rowB.original)?.IOF_value ?? 0),
         },
         {
             id: "profit_liq",
             header: "Lucro líquido",
             cell: ({ row }) => {
-                const profit = row.original.calculated[0].profit_liq
-                const invested = row.original.value
+                const profit = getTableCalculated(row.original)?.profit_liq ?? 0
+                const invested = getTableValue(row.original)
                 const pct = invested > 0 ? (profit / invested * 100) : 0
                 return (
                     <div className="flex items-center gap-1.5 whitespace-nowrap">
@@ -605,18 +703,18 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
                 )
             },
             sortingFn: (rowA, rowB) =>
-                rowA.original.calculated[0].profit_liq - rowB.original.calculated[0].profit_liq,
+                (getTableCalculated(rowA.original)?.profit_liq ?? 0) - (getTableCalculated(rowB.original)?.profit_liq ?? 0),
         },
         {
             id: "value_liq",
             header: "Valor líquido",
             cell: ({ row }) => (
                 <span className="text-green-600 dark:text-green-400 whitespace-nowrap">
-                    R$ {formatCurrency(row.original.calculated[0].value_liq)}
+                    R$ {formatCurrency(getTableCalculated(row.original)?.value_liq ?? 0)}
                 </span>
             ),
             sortingFn: (rowA, rowB) =>
-                rowA.original.calculated[0].value_liq - rowB.original.calculated[0].value_liq,
+                (getTableCalculated(rowA.original)?.value_liq ?? 0) - (getTableCalculated(rowB.original)?.value_liq ?? 0),
         },
         {
             id: "due_date",
@@ -679,6 +777,7 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
     const [redeemOpen, setRedeemOpen] = useState(false)
     const [selectedRedemption, setSelectedRedemption] = useState(null)
     const [editRedemptionOpen, setEditRedemptionOpen] = useState(false)
+    const [deleteRedemptionOpen, setDeleteRedemptionOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [archiveOpen, setArchiveOpen] = useState(false)
 
@@ -687,6 +786,7 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
     const openRedeem = (inv) => { setSelectedInvestment(inv); setRedeemOpen(true) }
     const handleReinvest = (inv) => { onReinvest?.(inv) }
     const openEditRedemption = (redemption) => { setSelectedRedemption(redemption); setEditRedemptionOpen(true) }
+    const openDeleteRedemption = (redemption) => { setSelectedRedemption(redemption); setDeleteRedemptionOpen(true) }
     const openDelete = (inv) => { setSelectedInvestment(inv); setDeleteOpen(true) }
     const openArchive = (inv) => { setSelectedInvestment(inv); setArchiveOpen(true) }
 
@@ -715,6 +815,21 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
                 setReload(Math.floor(Math.random() * 10000) + 1)
             })
             .catch((err) => console.error("Erro ao arquivar investimento:", err))
+    }
+
+    const handleDeleteRedemption = () => {
+        if (!selectedRedemption) return
+
+        axiosInstance
+            .delete(`/Redemptions/${selectedRedemption.id}`)
+            .then(() => {
+                setDeleteRedemptionOpen(false)
+                setSelectedRedemption(null)
+                setViewOpen(false)
+                setSelectedInvestment(null)
+                setReload(Math.floor(Math.random() * 10000) + 1)
+            })
+            .catch((err) => console.error("Erro ao excluir resgate:", err))
     }
 
     const columns = React.useMemo(
@@ -890,6 +1005,7 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
                 onReinvest={() => handleReinvest(selectedInvestment)}
                 onArchive={() => openArchive(selectedInvestment)}
                 onEditRedemption={openEditRedemption}
+                onDeleteRedemption={openDeleteRedemption}
                 onDelete={() => openDelete(selectedInvestment)}
             />
 
@@ -922,6 +1038,16 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
                     onExternalClose={() => { setEditRedemptionOpen(false); setSelectedRedemption(null) }}
                 />
             )}
+
+            <DeleteRedemptionDialog
+                redemption={selectedRedemption}
+                open={deleteRedemptionOpen}
+                onOpenChange={(open) => {
+                    setDeleteRedemptionOpen(open)
+                    if (!open) setSelectedRedemption(null)
+                }}
+                onConfirm={handleDeleteRedemption}
+            />
 
             {/* Shared Delete Dialog */}
             <DeleteDialog
