@@ -62,6 +62,9 @@ builder.Services.AddLogging(logging =>
 });
 
 builder.Services.AddHttpContextAccessor(); //usado para injetar o IHttpContextAccessor no construtor dos controllers
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<OpenAiInvestmentDocumentExtractor>();
+builder.Services.AddScoped<IInvestmentDocumentExtractor, InvestmentDocumentExtractorRouter>();
 
 
 // Add services to the container.

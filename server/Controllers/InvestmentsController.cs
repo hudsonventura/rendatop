@@ -206,7 +206,7 @@ public class InvestmentsController : AuthenticatedController
 	/// Adiciona um novo investimento
 	/// </summary>
 	/// <returns>Retono com o id do investimento</returns>
-	[ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [HttpPost("Investments")]
@@ -222,6 +222,27 @@ public class InvestmentsController : AuthenticatedController
         _context.SaveChanges();
 
         return investment.id;
+    }
+
+    /// <summary>
+    /// Extrai campos de investimento a partir de um arquivo enviado para a IA.
+    /// </summary>
+    [ProducesResponseType(typeof(InvestmentDocumentExtractionResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [HttpPost("Investments/extract")]
+    public async Task<InvestmentDocumentExtractionResult> ExtractInvestmentFromFile(
+        [FromForm] InvestmentDocumentUploadRequest request,
+        [FromServices] IInvestmentDocumentExtractor extractor,
+        CancellationToken cancellationToken
+    )
+    {
+        var banks = _context.banks
+            .AsNoTracking()
+            .Where(bank => bank.Active)
+            .ToList();
+
+        return await extractor.ExtractAsync(request.file, banks, cancellationToken);
     }
 
 

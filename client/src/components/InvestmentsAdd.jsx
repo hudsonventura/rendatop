@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useState } from "react";
 
 import { useForm } from "react-hook-form"
@@ -34,7 +34,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select"
 
-import { Plus, TrendingUp } from "lucide-react"
+import { Loader2, Plus, TrendingUp, Upload } from "lucide-react"
 
 
 import { Input } from "@/components/ui/input"
@@ -49,6 +49,7 @@ import { z } from "zod"
 import axiosInstance from "../utils/axiosConfig";
 import { getIrTextClass } from "@/utils/ir-level"
 import { getCachedBanks, primeBanksCache } from "@/utils/banksCache"
+import { toast } from "@/hooks/use-toast"
 
 
 // ── IR / IOF helpers (mirror backend logic) ──────────────────────────────────
@@ -396,8 +397,24 @@ function formatDecimalDisplay(value) {
 	return dec ? `${intFormatted},${dec.substring(0, 2)}` : intFormatted
 }
 
+function parseApiDate(value) {
+	if (!value) return undefined
+
+	const parsed = new Date(value)
+	if (!Number.isNaN(parsed.getTime())) return parsed
+
+	const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
+	if (!match) return undefined
+
+	const [, year, month, day] = match
+	const normalized = new Date(Number(year), Number(month) - 1, Number(day))
+	return Number.isNaN(normalized.getTime()) ? undefined : normalized
+}
+
 const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValues }) => {
 	const [internalOpen, setInternalOpen] = useState(false);
+	const [isExtracting, setIsExtracting] = useState(false);
+	const fileInputRef = useRef(null);
 	const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
 	const setIsOpen = (value) => {
 		if (externalOpen !== undefined) {
@@ -500,6 +517,71 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			);
 	}
 
+	const applyExtractedValues = (data) => {
+		if (data.title) form.setValue("title", data.title, { shouldDirty: true });
+		const parsedDateBuy = parseApiDate(data.date_buy);
+		if (parsedDateBuy) {
+			form.setValue("date_buy", parsedDateBuy, { shouldDirty: true });
+		}
+		const parsedDueDate = parseApiDate(data.due_date);
+		if (parsedDueDate) {
+			form.setValue("due_date", parsedDueDate, { shouldDirty: true });
+		}
+		if (typeof data.liquidez_diaria === "boolean") {
+			form.setValue("liquidez_diaria", data.liquidez_diaria, { shouldDirty: true });
+			setLiquidezDiaria(data.liquidez_diaria);
+			if (data.liquidez_diaria) {
+				form.setValue("due_date", undefined, { shouldDirty: true });
+			}
+		}
+		if (typeof data.taxes === "boolean") form.setValue("taxes", data.taxes, { shouldDirty: true });
+		if (typeof data.bank_code === "number") form.setValue("bank_code", data.bank_code, { shouldDirty: true });
+		if (data.value !== null && data.value !== undefined) {
+			form.setValue("value", formatDecimalDisplay(data.value), { shouldDirty: true });
+		}
+		if (data.index !== null && data.index !== undefined) {
+			form.setValue("index", String(data.index), { shouldDirty: true });
+		}
+		if (data.index_percent !== null && data.index_percent !== undefined) {
+			form.setValue("index_percent", formatDecimalDisplay(data.index_percent), { shouldDirty: true });
+		}
+	};
+
+	const handleExtractFile = async (event) => {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+
+		if (!file) return;
+
+		const formData = new FormData();
+		formData.append("file", file);
+		setIsExtracting(true);
+
+		try {
+			const response = await axiosInstance.post("/Investments/extract", formData, {
+				headers: {
+					"Content-Type": "multipart/form-data",
+				},
+				timeout: 60000,
+			});
+
+			applyExtractedValues(response.data ?? {});
+			toast({
+				title: "Campos preenchidos",
+				description: response.data?.notes ?? "A IA preencheu os campos encontrados no documento.",
+			});
+		} catch (error) {
+			const message = error?.response?.data?.message ?? "Não foi possível extrair os dados do arquivo.";
+			toast({
+				title: "Falha ao ler documento",
+				description: message,
+				variant: "destructive",
+			});
+		} finally {
+			setIsExtracting(false);
+		}
+	};
+
 
 	const handleInputChangeDecimal = (event) => {
 		const input = event.target;
@@ -544,6 +626,35 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 
 				<Form {...form}>
 					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+						<div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4">
+							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+								<div className="space-y-1">
+									<p className="text-sm font-medium">Importar comprovante com IA</p>
+									<p className="text-xs text-muted-foreground">
+										Envie `txt`, `html`, imagem ou `pdf` para tentar preencher os campos automaticamente.
+									</p>
+								</div>
+								<div className="flex items-center gap-2">
+									<input
+										ref={fileInputRef}
+										type="file"
+										className="hidden"
+										accept=".txt,.html,.htm,.pdf,image/png,image/jpeg,image/webp"
+										onChange={handleExtractFile}
+									/>
+									<Button
+										type="button"
+										variant="outline"
+										onClick={() => fileInputRef.current?.click()}
+										disabled={isExtracting}
+									>
+										{isExtracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+										{isExtracting ? "Lendo arquivo..." : "Enviar para IA"}
+									</Button>
+								</div>
+							</div>
+						</div>
+
 						<FormField
 							control={form.control}
 							name="title"
@@ -722,7 +833,6 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 							<Button
 								type="submit"
 								variant="destructive"
-								onClick={onsubmit}
 							>
 								Adicionar
 							</Button>

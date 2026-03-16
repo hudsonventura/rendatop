@@ -15,12 +15,29 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover"
 
+function normalizeDate(value) {
+	if (!value) return undefined
+	if (value instanceof Date) {
+		return Number.isNaN(value.getTime()) ? undefined : value
+	}
+
+	const parsed = new Date(value)
+	return Number.isNaN(parsed.getTime()) ? undefined : parsed
+}
+
 const Calendario = ({ field, disabled = false }) => {
-	const [date, setDate] = useState(field.value || undefined)
+	const normalizedFieldValue = normalizeDate(field.value)
+	const [date, setDate] = useState(normalizedFieldValue)
 	const [inputValue, setInputValue] = useState(
-		field.value ? format(field.value, "dd/MM/yyyy") : ""
+		normalizedFieldValue ? format(normalizedFieldValue, "dd/MM/yyyy") : ""
 	)
 	const [isOpen, setIsOpen] = useState(false)
+
+	useEffect(() => {
+		const nextDate = normalizeDate(field.value)
+		setDate(nextDate)
+		setInputValue(nextDate ? format(nextDate, "dd/MM/yyyy") : "")
+	}, [field.value])
 
 	useEffect(() => {
 		if (disabled) {
@@ -71,12 +88,12 @@ const Calendario = ({ field, disabled = false }) => {
 					variant="outline"
 					className={cn(
 						"w-[240px] pl-3 text-left font-normal",
-						!field.value && "text-muted-foreground"
+						!normalizedFieldValue && "text-muted-foreground"
 					)}
 					disabled={disabled}
 				>
-					{field.value ? (
-						format(field.value, "dd/MM/yyyy")
+					{normalizedFieldValue ? (
+						format(normalizedFieldValue, "dd/MM/yyyy")
 					) : (
 						<span>Escolha uma data</span>
 					)}
