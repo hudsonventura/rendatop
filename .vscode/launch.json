@@ -23,6 +23,20 @@
                 "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
                 "uriFormat": "%s/scalar/v1"
             }
+        },
+        {
+            "name": "migrations-applier",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "Prepare Debug",
+            "postDebugTask": "Cleanup Debug",
+            "program": "${workspaceFolder}/migrations-applier/bin/Debug/net10.0/migrations-applier.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            }
         }
     ]
 }

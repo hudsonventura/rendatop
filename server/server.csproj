@@ -17,7 +17,7 @@
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <PackageReference Include="NSwag.AspNetCore" Version="14.6.3" />
-    <PackageReference Include="Scalar.AspNetCore" Version="2.13.8" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.13.9" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
