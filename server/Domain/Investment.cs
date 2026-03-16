@@ -83,9 +83,29 @@ public class Investment
     [NotMapped] //impede que vá para o entity
     public List<Calculated> calculated { get; set; }
 
+    /// <summary>
+    /// Valor total considerando valores resgatados.
+    /// </summary>
     [NotMapped]
-    public decimal? table_value { get; set; }
+    public decimal? table_value {
+        get
+        {
+            return _table_value;
+        }
+        set
+        {
+            //Se o valor final, considerando os resgates for menor ou igual a zero, então o investimento deve ser arquivado
+            if (value <= 0.01m)
+                archived = true;
 
+            _table_value = value ?? 0;
+        } }
+    private decimal _table_value;
+
+
+    /// <summary>
+    /// Tabela de resgates
+    /// </summary>
     [NotMapped]
     public List<Calculated>? table_calculated { get; set; }
 

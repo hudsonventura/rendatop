@@ -693,12 +693,12 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
                         <span className="text-green-600 dark:text-green-400">
                             R$ {formatCurrency(profit)}
                         </span>
-                        {pct > 0 && (
+                        {/* {pct > 0 && (
                             <Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
                                 <TrendingUp className="h-3 w-3 mr-0.5" />
                                 +{pct.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
                             </Badge>
-                        )}
+                        )} */}
                     </div>
                 )
             },
