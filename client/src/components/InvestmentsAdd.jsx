@@ -76,102 +76,138 @@ function addOneYear(date) {
 	return nextYear
 }
 
-// ── Preview Component ─────────────────────────────────────────────────────────
+function getIndexLabelByType(indexType, rawPercent) {
+	const formattedPercent = Number(rawPercent ?? 0).toLocaleString("pt-BR", {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	})
+	if (indexType === 0) return `${formattedPercent}% CDI`
+	if (indexType === 1) return `IPCA+${formattedPercent}%`
+	return `${formattedPercent}% a.a.`
+}
 
-function InvestmentPreview({ form }) {
-	const watchValue = form.watch("value")
-	const watchIndex = form.watch("index")
-	const watchIndexPercent = form.watch("index_percent")
-	const watchDateBuy = form.watch("date_buy")
-	const watchDueDate = form.watch("due_date")
-	const watchTaxes = form.watch("taxes")
-	const watchLiquidez = form.watch("liquidez_diaria")
+function getLciEquivalentPercent(selectedIndexType, rawPercent, taxes) {
+	const SELIC_ANNUAL_ESTIMATE = 0.1315
+	const IPCA_ANNUAL_ESTIMATE = 0.045
+	const assumedDays = 366
+	const irFactor = 1 - (getIRPercent(taxes ?? true, assumedDays) / 100)
 
+	let annualNetRate = 0
+
+	if (selectedIndexType === 0) {
+		annualNetRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100) * irFactor
+	} else if (selectedIndexType === 1) {
+		annualNetRate = (IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)) * irFactor
+	} else {
+		annualNetRate = (rawPercent / 100) * irFactor
+	}
+
+	return SELIC_ANNUAL_ESTIMATE <= 0 ? 0 : (annualNetRate / SELIC_ANNUAL_ESTIMATE) * 100
+}
+
+function getEquivalentPercent(indexType, selectedIndexType, rawPercent) {
 	const SELIC_ANNUAL_ESTIMATE = 0.1315
 	const IPCA_ANNUAL_ESTIMATE = 0.045
 
-	const preview = useMemo(() => {
-		// Parse value (remove dots, replace comma with dot)
-		const rawValue = typeof watchValue === "string"
-			? parseFloat(watchValue.replace(/\./g, "").replace(",", "."))
-			: Number(watchValue)
-		if (!rawValue || rawValue <= 0) return null
+	let annualRate = 0
 
-		const indexType = parseInt(watchIndex, 10)
-		if (isNaN(indexType)) return null
+	if (selectedIndexType === 0) {
+		annualRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100)
+	} else if (selectedIndexType === 1) {
+		annualRate = IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)
+	} else {
+		annualRate = rawPercent / 100
+	}
 
-		// Parse index_percent
-		const rawPercent = typeof watchIndexPercent === "string"
-			? parseFloat(watchIndexPercent.replace(/\./g, "").replace(",", "."))
-			: Number(watchIndexPercent)
-		if (Number.isNaN(rawPercent) || rawPercent < 0) return null
+	if (indexType === 0) {
+		return SELIC_ANNUAL_ESTIMATE <= 0 ? 0 : (annualRate / SELIC_ANNUAL_ESTIMATE) * 100
+	}
 
-		if (!watchDateBuy) return null
+	if (indexType === 1) {
+		return (annualRate - IPCA_ANNUAL_ESTIMATE) * 100
+	}
 
-		const dateBuy = new Date(watchDateBuy)
-		const sellDate = watchLiquidez
-			? addOneYear(dateBuy)
-			: !watchDueDate
-				? new Date()
-				: new Date(watchDueDate)
+	return annualRate * 100
+}
 
-		if (sellDate <= dateBuy) return null
+function buildPreview({
+	rawValue,
+	indexType,
+	rawPercent,
+	dateBuy,
+	watchDueDate,
+	watchLiquidez,
+	watchTaxes,
+}) {
+	const SELIC_ANNUAL_ESTIMATE = 0.1315
+	const IPCA_ANNUAL_ESTIMATE = 0.045
 
-		const days = Math.floor((sellDate - dateBuy) / (1000 * 60 * 60 * 24))
-		if (days <= 0) return null
+	const sellDate = watchLiquidez
+		? addOneYear(dateBuy)
+		: !watchDueDate
+			? new Date()
+			: new Date(watchDueDate)
 
-		const taxes = watchTaxes ?? true
-		const IR = getIRPercent(taxes, days) / 100
-		const IOF = getIOFPercent(days) / 100
+	if (sellDate <= dateBuy) return null
 
-		let effectivePercent = 0
-		let estimateLabel = null
+	const days = Math.floor((sellDate - dateBuy) / (1000 * 60 * 60 * 24))
+	if (days <= 0) return null
 
-		// CDI (index=0): uses an estimated annual Selic base
-		if (indexType === 0) {
-			const annualRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100)
-			effectivePercent = annualRate / 365 * days
-			estimateLabel = "Selic"
-		}
-		// IPCA+ (index=1): estimated annual IPCA + spread
-		else if (indexType === 1) {
-			const annualRate = IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)
-			effectivePercent = annualRate / 366 * (days - 3)
-			estimateLabel = "IPCA"
-		}
-		// %a.a. (index=2)
-		else {
-			effectivePercent = (rawPercent / 100) / 366 * (days - 3)
-		}
+	const taxes = watchTaxes ?? true
+	const IR = getIRPercent(taxes, days) / 100
+	const IOF = getIOFPercent(days) / 100
 
-		const profitBrute = rawValue * effectivePercent
-		const profitBruteIOF = profitBrute * (1 - IOF)
-		const irValue = profitBruteIOF * IR
-		const profitLiq = profitBruteIOF * (1 - IR)
+	let effectivePercent = 0
+	let estimateLabel = null
 
-		return {
-			profitBrute,
-			irPercent: IR * 100,
-			irValue,
-			profitLiq,
-			days,
-			isEstimate: indexType === 0 || indexType === 1,
-			estimateLabel,
-		}
-	}, [watchValue, watchIndex, watchIndexPercent, watchDateBuy, watchDueDate, watchTaxes, watchLiquidez])
+	if (indexType === 0) {
+		const annualRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100)
+		effectivePercent = annualRate / 365 * days
+		estimateLabel = "Selic estimada"
+	} else if (indexType === 1) {
+		const annualRate = IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)
+		effectivePercent = annualRate / 366 * (days - 3)
+		estimateLabel = "IPCA estimado"
+	} else {
+		effectivePercent = (rawPercent / 100) / 366 * (days - 3)
+	}
 
+	const profitBrute = rawValue * effectivePercent
+	const profitBruteIOF = profitBrute * (1 - IOF)
+	const irValue = profitBruteIOF * IR
+	const profitLiq = profitBruteIOF * (1 - IR)
+
+	return {
+		indexType,
+		indexLabel: getIndexLabelByType(indexType, rawPercent),
+		profitBrute,
+		irPercent: IR * 100,
+		irValue,
+		profitLiq,
+		days,
+		isEstimate: indexType === 0 || indexType === 1,
+		estimateLabel,
+	}
+}
+
+function PreviewCard({ title, preview, rawValue }) {
 	return (
 		<div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4 space-y-3">
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-2 flex-wrap">
 				<TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-				<span className="text-sm font-medium">Simulação do investimento</span>
+				<span className="text-sm font-medium">{title}</span>
+				{preview?.indexLabel && (
+					<Badge variant="outline" className="text-xs">
+						{preview.indexLabel}
+					</Badge>
+				)}
 				{preview?.isEstimate && (
 					<Badge variant="outline" className="text-xs text-muted-foreground">
-						{preview.estimateLabel} estimado
+						{preview.estimateLabel}
 					</Badge>
 				)}
 			</div>
-			<div className="grid grid-cols-3 gap-4">
+			<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 				<div className="flex flex-col gap-1">
 					<span className="text-xs text-muted-foreground">Rendimento Bruto</span>
 					<span className="text-sm font-medium">
@@ -195,19 +231,127 @@ function InvestmentPreview({ form }) {
 						{preview && (
 							<Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
 								<TrendingUp className="h-3 w-3 mr-0.5" />
-								+{(preview.profitLiq / (parseFloat(String(watchValue).replace(/\./g, "").replace(",", ".")) || 1) * 100).toFixed(1)}%
+								+{(preview.profitLiq / (rawValue || 1) * 100).toFixed(1)}%
 							</Badge>
 						)}
 					</div>
 				</div>
 			</div>
-			<p className="text-xs text-muted-foreground">
-				{preview
-					? <>Estimativa para {preview.days} dias. Valores podem variar. Aqui é considerado que o IPCA ou CDI permanecerão os mesmo até a data de vencimento. <br />A taxa de juros pode variar durante o período conforme os ídices IPCA e CDI variarem. <br />Isso é apenas uma estimativa para enteder o seu investimento.</>
-					: "Preencha os campos acima para ver a simulação do investimento."
+			
+		</div>
+	)
+}
+
+function ComparativesCard({ items }) {
+	return (
+		<div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4 space-y-3">
+			<div className="text-sm font-medium">Comparativos</div>
+			{items?.length ? (
+				<div className="space-y-2 text-sm">
+					{items.map((item) => (
+						<div key={item.label} className="text-muted-foreground">
+							{item.label}
+						</div>
+					))}
+				</div>
+			) : (
+				<p className="text-xs text-muted-foreground">
+					Preencha os campos acima para ver os equivalentes do investimento.
+				</p>
+			)}
+		</div>
+	)
+}
+
+// ── Preview Component ─────────────────────────────────────────────────────────
+
+function InvestmentPreview({ form }) {
+	const watchValue = form.watch("value")
+	const watchIndex = form.watch("index")
+	const watchIndexPercent = form.watch("index_percent")
+	const watchDateBuy = form.watch("date_buy")
+	const watchDueDate = form.watch("due_date")
+	const watchTaxes = form.watch("taxes")
+	const watchLiquidez = form.watch("liquidez_diaria")
+
+	const previews = useMemo(() => {
+		const rawValue = typeof watchValue === "string"
+			? parseFloat(watchValue.replace(/\./g, "").replace(",", "."))
+			: Number(watchValue)
+		if (!rawValue || rawValue <= 0) return null
+
+		const indexType = parseInt(watchIndex, 10)
+		if (isNaN(indexType)) return null
+
+		// Parse index_percent
+		const rawPercent = typeof watchIndexPercent === "string"
+			? parseFloat(watchIndexPercent.replace(/\./g, "").replace(",", "."))
+			: Number(watchIndexPercent)
+		if (Number.isNaN(rawPercent) || rawPercent < 0) return null
+
+		if (!watchDateBuy) return null
+
+		const dateBuy = new Date(watchDateBuy)
+		const selected = buildPreview({
+			rawValue,
+			indexType,
+			rawPercent,
+			dateBuy,
+			watchDueDate,
+			watchLiquidez,
+			watchTaxes,
+		})
+
+		const comparisons = [0, 1, 2]
+			.filter((type) => type !== indexType)
+			.map((type) => {
+				const equivalentPercent = getEquivalentPercent(type, indexType, rawPercent)
+				return {
+					type,
+					label: `Equivale a um ${getIndexLabelByType(type, equivalentPercent)}`,
 				}
+			})
+
+		const lciComparison = (watchTaxes ?? true)
+			? {
+				type: "lci",
+				label: `Equivale a um LCI/LCA de ${Number(
+					getLciEquivalentPercent(indexType, rawPercent, watchTaxes)
+				).toLocaleString("pt-BR", {
+					minimumFractionDigits: 2,
+					maximumFractionDigits: 2,
+				})}% CDI`,
+			}
+			: null
+
+		return { rawValue, selected, comparisons, lciComparison }
+	}, [watchValue, watchIndex, watchIndexPercent, watchDateBuy, watchDueDate, watchTaxes, watchLiquidez])
+
+	return (
+		<div className="space-y-4">
+			<PreviewCard
+				title="Simulação do investimento"
+				preview={previews?.selected ?? null}
+				rawValue={previews?.rawValue ?? 0}
+			/>
+			<ComparativesCard
+				items={[
+					...(previews?.comparisons ?? []),
+					...(previews?.lciComparison ? [previews.lciComparison] : []),
+				]}
+			/>
+			<p className="text-xs text-muted-foreground">
+				Estimativa para o período selecionado. 
+				Aqui é considerado que o IPCA ou CDI permanecerão os mesmo até a data de vencimento.
+				<br />
+				Se usada a liquidez diária, a data de vencimento considerada 365 dias.
+				<br />
+				A taxa de juros pode variar durante o período conforme os ídices IPCA e CDI variarem.
+				<br />
+				Isso é apenas uma estimativa para enteder o seu investimento.<b>Valores podem variar.</b>
 			</p>
 		</div>
+		
 	)
 }
 
@@ -527,7 +671,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 								render={({ field }) => (
 									<FormItem className="w-64">
 										<FormLabel>Indexador (CDI, IPCA+ ou %a.a.)</FormLabel>
-										<Select onValueChange={field.onChange} defaultValue={field.value}>
+										<Select onValueChange={field.onChange} value={field.value}>
 											<FormControl>
 												<SelectTrigger>
 													<SelectValue placeholder="Selecione o index" />
