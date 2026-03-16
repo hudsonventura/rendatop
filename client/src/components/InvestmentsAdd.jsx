@@ -630,8 +630,11 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 								<div className="space-y-1">
 									<p className="text-sm font-medium">Importar comprovante com IA</p>
-									<p className="text-xs text-muted-foreground">
+									<p className="text-xs">
 										Envie `txt`, `html`, imagem ou `pdf` para tentar preencher os campos automaticamente.
+									</p>
+									<p className="text-xs text-muted-foreground">
+										Não armazenamos os arquivos enviados em nosso servidores. Após a adição do seu investimento, o arquivo é deletado imediatamente.
 									</p>
 								</div>
 								<div className="flex items-center gap-2">
