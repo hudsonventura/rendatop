@@ -15,6 +15,7 @@ import ResetPassword from "@/pages/ResetPassword"
 import ForgotPassword from "@/pages/ForgotPassword"
 import ForgotTotp from "@/pages/ForgotTotp"
 import ResetTotp from "@/pages/ResetTotp"
+import NotFound from "@/pages/NotFound"
 
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
                             <Route path="/reset-password" element={<ResetPassword />} />
                             <Route path="/forgot-totp" element={<ForgotTotp />} />
                             <Route path="/reset-totp" element={<ResetTotp />} />
+                            <Route path="*" element={<NotFound />} />
                         </Routes>
                     </Router>
                 </SidebarConfigProvider>
