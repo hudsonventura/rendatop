@@ -238,7 +238,7 @@ function PreviewCard({ title, preview, rawValue }) {
 					</div>
 				</div>
 			</div>
-			
+
 		</div>
 	)
 }
@@ -342,7 +342,7 @@ function InvestmentPreview({ form }) {
 				]}
 			/>
 			<p className="text-xs text-muted-foreground">
-				Estimativa para o período selecionado. 
+				Estimativa para o período selecionado.
 				Aqui é considerado que o IPCA ou CDI permanecerão os mesmo até a data de vencimento.
 				<br />
 				Se usada a liquidez diária, a data de vencimento considerada 365 dias.
@@ -352,7 +352,7 @@ function InvestmentPreview({ form }) {
 				Isso é apenas uma estimativa para enteder o seu investimento.<b>Valores podem variar.</b>
 			</p>
 		</div>
-		
+
 	)
 }
 
@@ -562,7 +562,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 				headers: {
 					"Content-Type": "multipart/form-data",
 				},
-				timeout: 60000,
+				timeout: 4000,
 			});
 
 			applyExtractedValues(response.data ?? {});

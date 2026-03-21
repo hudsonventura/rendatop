@@ -3,7 +3,7 @@ import axios from "axios";
 // Axios instance — cookies (HttpOnly jwt) are sent automatically via withCredentials
 const axiosInstance = axios.create({
 	baseURL: import.meta.env.VITE_API_URL,
-	timeout: 10000,
+	timeout: 60000,
 	withCredentials: true, // required for HttpOnly cookie to be sent cross-origin
 	headers: {
 		"Content-Type": "application/json",

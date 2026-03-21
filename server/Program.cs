@@ -188,6 +188,9 @@ builder.Services.AddRateLimiter(options =>
 
 DepenciesInjection();
 
+// Payment provider
+builder.Services.AddSingleton<server.Payments.IPaymentProvider, server.Payments.MercadoPago.MercadoPagoPaymentProvider>();
+
 AddBackgroundServices();
 
 
@@ -307,6 +310,9 @@ void AddBackgroundServices()
 
     // serviço diário (06:00) para notificar investimentos com vencimento amanhã
     builder.Services.AddHostedService<DueTomorrowNotificationBackgroundService>();
+
+    // serviço que monitora assinaturas a cada 6h (renovação automática, expiração, etc.)
+    builder.Services.AddHostedService<SubscriptionMonitorBackgroundService>();
 }
 
 

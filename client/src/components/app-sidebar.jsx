@@ -8,6 +8,7 @@ import {
     CalendarDays,
     Settings,
     Bell,
+    CreditCard,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
@@ -59,6 +60,11 @@ const navItems = [
         title: "Configurações",
         url: "/settings",
         icon: Settings,
+    },
+    {
+        title: "Assinatura",
+        url: "/subscription",
+        icon: CreditCard,
     },
 ]
 
