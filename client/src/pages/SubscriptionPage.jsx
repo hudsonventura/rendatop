@@ -391,6 +391,9 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
     const [success, setSuccess] = useState(false);
     const [mpReady, setMpReady] = useState(false);
     const [documentCpf, setDocumentCpf] = useState("");
+    const [cardType, setCardType] = useState("credit_card");
+    const [expirationDate, setExpirationDate] = useState("");
+    const [cardNumber, setCardNumber] = useState("");
 
     // Load Mercado Pago JS SDK
     useEffect(() => {
@@ -411,6 +414,57 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
         setDocumentCpf(sanitizeCpf(payerCpf));
     }, [payerCpf]);
 
+    const parseExpirationDate = (value) => {
+        const digits = (value || "").replace(/\D/g, "").slice(0, 4);
+        if (digits.length !== 4) return { month: "", year: "" };
+        return {
+            month: digits.slice(0, 2),
+            year: `20${digits.slice(2, 4)}`
+        };
+    };
+
+    const isValidExpirationDate = (value) => {
+        const digits = (value || "").replace(/\D/g, "").slice(0, 4);
+        if (digits.length !== 4) return false;
+
+        const month = Number(digits.slice(0, 2));
+        const year = Number(`20${digits.slice(2, 4)}`);
+        if (!Number.isInteger(month) || month < 1 || month > 12) return false;
+
+        const currentYear = new Date().getFullYear();
+        return year >= currentYear && year <= currentYear + 8;
+    };
+
+    const handleExpirationDateChange = (value) => {
+        const digits = (value || "").replace(/\D/g, "").slice(0, 4);
+        const month = digits.slice(0, 2);
+        const yearDigits = digits.slice(2, 4);
+        const currentYear = new Date().getFullYear();
+        const minYear = String(currentYear).slice(2);
+        const maxYear = String(currentYear + 8).slice(2);
+
+        if (digits.length >= 2 && Number(month) > 12) {
+            setExpirationDate(digits.slice(0, 1));
+            return;
+        }
+
+        if (yearDigits.length === 2) {
+            const fullYear = Number(`20${yearDigits}`);
+            if (yearDigits < minYear || yearDigits > maxYear || fullYear < currentYear || fullYear > currentYear + 8) {
+                setExpirationDate(`${month}/`);
+                return;
+            }
+        }
+
+        setExpirationDate(digits.length > 2 ? `${month}/${yearDigits}` : digits);
+    };
+
+    const handleCardNumberChange = (value) => {
+        const digits = (value || "").replace(/\D/g, "").slice(0, 16);
+        const formatted = digits.match(/.{1,4}/g)?.join(" ") || "";
+        setCardNumber(formatted);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -428,8 +482,12 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
             const mp = new window.MercadoPago(publicKey);
 
             const cardNumber = form.cardNumber.value.replace(/\s/g, '');
-            const expMonth = form.expMonth.value;
-            const expYear = form.expYear.value;
+            const expirationValue = form.expirationDate.value || expirationDate;
+            if (!isValidExpirationDate(expirationValue)) {
+                setError('Informe a validade no formato MM/YY, com mês entre 01 e 12 e ano dentro da faixa permitida.');
+                return;
+            }
+            const { month: expMonth, year: expYear } = parseExpirationDate(expirationValue);
             const cvv = form.cvv.value;
             const cardholderName = form.cardholderName.value;
 
@@ -463,6 +521,7 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
                 plan_id: plan.id,
                 card_token: tokenResponse.id,
                 payment_method_id: paymentMethodId,
+                card_type: cardType,
                 issuer_id: issuerId,
                 installments: 1,
                 payer_cpf: docNumber
@@ -497,25 +556,56 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
     return (
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-2">
+                <Label>Tipo de cartão</Label>
+                <Tabs value={cardType} onValueChange={setCardType} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="credit_card">Cartão de crédito</TabsTrigger>
+                        <TabsTrigger value="debit_card">Cartão de débito</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+                <p className="text-xs text-muted-foreground">
+                    {cardType === "debit_card"
+                        ? "Você está usando a modalidade Cartão de débito."
+                        : "Você está usando a modalidade Cartão de crédito."}
+                </p>
+            </div>
+
+            <div className="space-y-2">
                 <Label htmlFor="cardNumber">Número do cartão</Label>
-                <Input id="cardNumber" name="cardNumber" placeholder="0000 0000 0000 0000" required disabled={!mpReady} />
+                <Input
+                    id="cardNumber"
+                    name="cardNumber"
+                    value={cardNumber}
+                    onChange={(e) => handleCardNumberChange(e.target.value)}
+                    placeholder="0000 0000 0000 0000"
+                    required
+                    disabled={!mpReady}
+                    inputMode="numeric"
+                    maxLength={19}
+                />
             </div>
             <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2">
-                    <Label htmlFor="expMonth">Mês</Label>
-                    <Input id="expMonth" name="expMonth" placeholder="MM" maxLength={2} required disabled={!mpReady} />
+                <div className="space-y-2 col-span-2">
+                    <Label htmlFor="expirationDate">Validade</Label>
+                    <Input
+                        id="expirationDate"
+                        name="expirationDate"
+                        value={expirationDate}
+                        onChange={(e) => handleExpirationDateChange(e.target.value)}
+                        placeholder="MM/YY"
+                        maxLength={5}
+                        required
+                        disabled={!mpReady}
+                        inputMode="numeric"
+                    />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="expYear">Ano</Label>
-                    <Input id="expYear" name="expYear" placeholder="AAAA" maxLength={4} required disabled={!mpReady} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="cvv">CVV</Label>
+                    <Label htmlFor="cvv">Código de Segurança (CVC)</Label>
                     <Input id="cvv" name="cvv" placeholder="123" maxLength={4} required disabled={!mpReady} />
                 </div>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="cardholderName">Nome no cartão</Label>
+                <Label htmlFor="cardholderName">Nome Impresso no cartão</Label>
                 <Input id="cardholderName" name="cardholderName" placeholder="Nome completo" required disabled={!mpReady} />
             </div>
             <div className="space-y-2">

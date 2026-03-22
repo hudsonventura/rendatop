@@ -51,6 +51,10 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
             Installments = request.installments,
             PaymentMethodId = request.payment_method_id,
             ExternalReference = request.external_reference,
+            PaymentMethod = new PaymentMethodRequest
+            {
+                Type = request.card_type
+            },
             Payer = new PaymentPayerRequest
             {
                 Email = request.payer_email

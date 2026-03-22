@@ -104,6 +104,7 @@ public class SubscriptionController : AuthenticatedController
         {
             card_token = request.card_token,
             payment_method_id = request.payment_method_id,
+            card_type = request.card_type,
             issuer_id = request.issuer_id,
             installments = request.installments,
             amount = plan.price,
@@ -418,6 +419,7 @@ public class CardSubscriptionRequest
     public string plan_id { get; set; } = string.Empty;
     public string card_token { get; set; } = string.Empty;
     public string payment_method_id { get; set; } = string.Empty;
+    public string card_type { get; set; } = "credit_card";
     public string issuer_id { get; set; } = string.Empty;
     public int installments { get; set; } = 1;
     public string payer_cpf { get; set; } = string.Empty;

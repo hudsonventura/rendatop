@@ -74,6 +74,7 @@ public class CardPaymentRequest
 {
     public string card_token { get; set; } = string.Empty;
     public string payment_method_id { get; set; } = string.Empty;
+    public string card_type { get; set; } = "credit_card";
     public string issuer_id { get; set; } = string.Empty;
     public int installments { get; set; } = 1;
     public decimal amount { get; set; }
