@@ -325,7 +325,7 @@ const UserSettings = () => {
                                                 type="password"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
-                                                placeholder="Deixe em branco para manter"
+                                                placeholder="Digite uma nova senha para alterar"
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -480,7 +480,7 @@ const UserSettings = () => {
                                         {!totpEnabled && (
                                             <div className="space-y-2">
                                                 <Button type="button" variant="outline" onClick={handleGenerateTotp}>
-                                                    Gerar QR Code
+                                                    Ativar segundo fator de autenticação (TOTP)
                                                 </Button>
 
                                                 {totpSecret && (
