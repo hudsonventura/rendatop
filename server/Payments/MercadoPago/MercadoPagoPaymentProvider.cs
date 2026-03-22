@@ -4,6 +4,10 @@ using MercadoPago.Client.Payment;
 using MercadoPago.Config;
 using MercadoPago.Resource.Customer;
 using MercadoPago.Resource.Payment;
+using SkiaSharp;
+using ZXing;
+using ZXing.Common;
+using ZXing.SkiaSharp;
 
 namespace server.Payments.MercadoPago;
 
@@ -111,6 +115,7 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
     public async Task<PaymentResult> CreateBoletoPaymentAsync(BoletoPaymentRequest request)
     {
         var client = new PaymentClient();
+        var syntheticAddress = BuildSyntheticBoletoAddress();
 
         var paymentRequest = new PaymentCreateRequest
         {
@@ -127,16 +132,19 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
                 {
                     Type = "CPF",
                     Number = request.payer_cpf
-                }
+                },
+                Address = syntheticAddress
             }
         };
 
         var payment = await client.CreateAsync(paymentRequest);
         _logger.LogInformation("Pagamento boleto criado: {Id} status={Status}", payment.Id, payment.Status);
 
-        // barcode_content via TransactionDetails (Barcode property not available in all SDK versions)
         string? barcodeContent = null;
-        try { barcodeContent = payment.TransactionDetails?.DigitableLine; } catch { }
+        string? digitableLine = null;
+        try { barcodeContent = payment.TransactionDetails?.Barcode?.Content; } catch { }
+        try { digitableLine = payment.TransactionDetails?.DigitableLine; } catch { }
+        var barcodeImageBase64 = GenerateBoletoBarcodeImageBase64FromDigitableLine(digitableLine);
 
         return new PaymentResult
         {
@@ -144,7 +152,101 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
             status = payment.Status ?? "unknown",
             status_detail = payment.StatusDetail ?? "",
             boleto_barcode_content = barcodeContent,
+            boleto_barcode_image_base64 = barcodeImageBase64,
+            boleto_digitable_line = digitableLine,
             boleto_url = payment.TransactionDetails?.ExternalResourceUrl
+        };
+    }
+
+    private string? GenerateBoletoBarcodeImageBase64FromDigitableLine(string? digitableLine)
+    {
+        var barcodeContent = ConvertDigitableLineToBarcode(digitableLine);
+        if (string.IsNullOrWhiteSpace(barcodeContent))
+            return null;
+
+        var writer = new BarcodeWriter
+        {
+            Format = BarcodeFormat.ITF,
+            Options = new EncodingOptions
+            {
+                Width = 2200,
+                Height = 320,
+                Margin = 40,
+                PureBarcode = true
+            }
+        };
+
+        using var bitmap = writer.Write(barcodeContent);
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+
+        return Convert.ToBase64String(data.ToArray());
+    }
+
+    private string? ConvertDigitableLineToBarcode(string? digitableLine)
+    {
+        if (string.IsNullOrWhiteSpace(digitableLine))
+            return null;
+
+        var digits = new string(digitableLine.Where(char.IsDigit).ToArray());
+
+        // Boleto bancario: 47-digit line -> 44-digit barcode representation.
+        if (digits.Length == 47)
+        {
+            return string.Concat(
+                digits[..4],
+                digits[32],
+                digits[33..47],
+                digits[4..9],
+                digits[10..20],
+                digits[21..31]
+            );
+        }
+
+        return digits.Length == 44 ? digits : null;
+    }
+
+    private global::MercadoPago.Client.Payment.PaymentPayerAddressRequest BuildSyntheticBoletoAddress()
+    {
+        var presets = new[]
+        {
+            new
+            {
+                State = "SP",
+                City = "Sao Paulo",
+                Neighborhoods = new[] { "Centro", "Bela Vista", "Pinheiros" },
+                Streets = new[] { "Rua das Flores", "Avenida Brasil", "Rua Augusta" },
+                ZipPrefixes = new[] { "01001", "01310", "05422" }
+            },
+            new
+            {
+                State = "RJ",
+                City = "Rio de Janeiro",
+                Neighborhoods = new[] { "Copacabana", "Botafogo", "Centro" },
+                Streets = new[] { "Avenida Atlantica", "Rua Voluntarios da Patria", "Rua do Catete" },
+                ZipPrefixes = new[] { "22010", "22250", "20031" }
+            },
+            new
+            {
+                State = "MG",
+                City = "Belo Horizonte",
+                Neighborhoods = new[] { "Savassi", "Centro", "Funcionarios" },
+                Streets = new[] { "Avenida Afonso Pena", "Rua da Bahia", "Rua Pernambuco" },
+                ZipPrefixes = new[] { "30130", "30160", "30150" }
+            }
+        };
+
+        var preset = presets[Random.Shared.Next(presets.Length)];
+        var zipPrefix = preset.ZipPrefixes[Random.Shared.Next(preset.ZipPrefixes.Length)];
+
+        return new global::MercadoPago.Client.Payment.PaymentPayerAddressRequest
+        {
+            ZipCode = $"{zipPrefix}{Random.Shared.Next(100, 999)}",
+            StreetName = preset.Streets[Random.Shared.Next(preset.Streets.Length)],
+            StreetNumber = Random.Shared.Next(10, 9999),
+            Neighborhood = preset.Neighborhoods[Random.Shared.Next(preset.Neighborhoods.Length)],
+            City = preset.City,
+            FederalUnit = preset.State
         };
     }
 

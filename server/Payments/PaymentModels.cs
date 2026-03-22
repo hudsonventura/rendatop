@@ -35,9 +35,19 @@ public class PaymentResult
     // --- Boleto ---
 
     /// <summary>
-    /// Código de barras numérico (linha digitável)
+    /// Código de barras numérico do boleto.
     /// </summary>
     public string? boleto_barcode_content { get; set; }
+
+    /// <summary>
+    /// Imagem PNG do código de barras em base64.
+    /// </summary>
+    public string? boleto_barcode_image_base64 { get; set; }
+
+    /// <summary>
+    /// Linha digitável do boleto.
+    /// </summary>
+    public string? boleto_digitable_line { get; set; }
 
     /// <summary>
     /// URL do boleto para download/impressão

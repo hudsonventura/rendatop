@@ -46,7 +46,11 @@ public class SubscriptionController : AuthenticatedController
     {
         return _context.subscriptions
             .Where(s => s.user_id == _user.id)
-            .OrderByDescending(s => s.created_at)
+            .OrderBy(s => s.status == SubscriptionStatus.Active ? 0
+                : s.status == SubscriptionStatus.PendingPayment ? 1
+                : s.status == SubscriptionStatus.Cancelled ? 2
+                : 3)
+            .ThenByDescending(s => s.created_at)
             .FirstOrDefault();
     }
 
@@ -226,17 +230,27 @@ public class SubscriptionController : AuthenticatedController
     public IActionResult CancelSubscription()
     {
         var sub = _context.subscriptions
-            .Where(s => s.user_id == _user.id && s.status == SubscriptionStatus.Active && s.plan_id != "free")
+            .Where(s => s.user_id == _user.id
+                        && s.plan_id != "free"
+                        && (s.status == SubscriptionStatus.Active || s.status == SubscriptionStatus.PendingPayment))
+            .OrderBy(s => s.status == SubscriptionStatus.Active ? 0 : 1)
+            .ThenByDescending(s => s.created_at)
             .FirstOrDefault();
 
         if (sub == null)
             throw new ExpectedException("Nenhuma assinatura ativa para cancelar.");
 
+        var wasPending = sub.status == SubscriptionStatus.PendingPayment;
         sub.status = SubscriptionStatus.Cancelled;
         sub.updated_at = DateTime.UtcNow;
         _context.SaveChanges();
 
-        return Ok(new { message = "Assinatura cancelada. Você voltou ao plano Free." });
+        return Ok(new
+        {
+            message = wasPending
+                ? "Cobrança pendente cancelada."
+                : "Assinatura cancelada. Você voltou ao plano Free."
+        });
     }
 
 

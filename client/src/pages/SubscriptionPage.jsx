@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Check, CreditCard, QrCode, Barcode, Loader2, Crown, Sparkles, Copy, X, ExternalLink } from "lucide-react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -21,6 +21,7 @@ const SubscriptionPage = () => {
     const [loading, setLoading] = useState(true);
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+    const [pendingCancelDialogOpen, setPendingCancelDialogOpen] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -43,6 +44,7 @@ const SubscriptionPage = () => {
     const handleSelectPlan = (plan) => {
         if (plan.price <= 0) return;
         if (currentSub?.plan_id === plan.id && currentSub?.status === 'Active') return;
+        if (currentSub?.plan_id === plan.id && currentSub?.status === 'PendingPayment') return;
         setSelectedPlan(plan);
         setPaymentDialogOpen(true);
     };
@@ -56,9 +58,22 @@ const SubscriptionPage = () => {
         }
     };
 
-    const currentPlanId = (currentSub?.status === 'Active' || currentSub?.status === 'PendingPayment')
-        ? currentSub?.plan_id
-        : 'free';
+    const handleRequestPendingCancel = () => {
+        setPendingCancelDialogOpen(true);
+    };
+
+    const handleConfirmPendingCancel = async () => {
+        try {
+            await axiosInstance.post('/subscription/cancel');
+            setPendingCancelDialogOpen(false);
+            await fetchData();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const currentPlanId = currentSub?.status === 'Active' ? currentSub?.plan_id : 'free';
+    const pendingPlanId = currentSub?.status === 'PendingPayment' ? currentSub?.plan_id : null;
 
     const planIcons = { free: null, plus: Sparkles, pro: Crown };
 
@@ -85,8 +100,24 @@ const SubscriptionPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {plans.map((plan) => {
                                     const isActive = currentPlanId === plan.id;
+                                    const isPending = pendingPlanId === plan.id;
                                     const PlanIcon = planIcons[plan.id];
                                     const isPopular = plan.id === 'plus';
+                                    const cardBadge = isPending
+                                        ? (
+                                            <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 bg-background">
+                                                Pagamento pendente
+                                            </Badge>
+                                        )
+                                        : isActive
+                                            ? (
+                                                <Badge variant="outline" className="text-xs border-primary text-primary bg-background">
+                                                    <Check className="h-3 w-3 mr-1" /> Atual
+                                                </Badge>
+                                            )
+                                            : isPopular
+                                                ? <Badge className="text-xs bg-background text-foreground border border-border">Mais popular</Badge>
+                                                : null;
 
                                     return (
                                         <Card
@@ -94,20 +125,14 @@ const SubscriptionPage = () => {
                                             className={`relative flex flex-col transition-all ${
                                                 isActive
                                                     ? 'border-primary ring-1 ring-primary/20'
+                                                    : isPending
+                                                        ? 'border-amber-500/60 ring-1 ring-amber-500/20'
                                                     : 'hover:border-primary/40'
                                             }`}
                                         >
-                                            {isPopular && !isActive && (
-                                                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                                    <Badge className="text-xs">Mais popular</Badge>
-                                                </div>
-                                            )}
-
-                                            {isActive && (
-                                                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                                    <Badge variant="outline" className="text-xs border-primary text-primary bg-primary/5">
-                                                        <Check className="h-3 w-3 mr-1" /> Atual
-                                                    </Badge>
+                                            {cardBadge && (
+                                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 px-1 bg-background rounded-md">
+                                                    {cardBadge}
                                                 </div>
                                             )}
 
@@ -157,6 +182,14 @@ const SubscriptionPage = () => {
                                                             Plano atual
                                                         </Button>
                                                     )
+                                                ) : isPending ? (
+                                                    <Button
+                                                        variant="outline"
+                                                        className="w-full"
+                                                        onClick={handleRequestPendingCancel}
+                                                    >
+                                                        Cancelar pendência
+                                                    </Button>
                                                 ) : (
                                                     plan.price > 0 ? (
                                                         <Button
@@ -200,6 +233,27 @@ const SubscriptionPage = () => {
                                 </CardContent>
                             </Card>
                         )}
+
+                        {currentSub && currentSub.status === 'PendingPayment' && currentSub.plan_id !== 'free' && (
+                            <Card className="mt-6 border-amber-500/40">
+                                <CardContent className="pt-6">
+                                    <div className="flex items-center justify-between flex-wrap gap-4">
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">Pagamento pendente</p>
+                                            <p className="font-medium">{currentSub.plan?.name || currentSub.plan_id}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">Método de pagamento</p>
+                                            <p className="font-medium capitalize">{currentSub.payment_method?.replace('_', ' ')}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-muted-foreground">Status</p>
+                                            <p className="font-medium">Aguardando confirmação</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
                 </SidebarInset>
             </SidebarProvider>
@@ -210,6 +264,32 @@ const SubscriptionPage = () => {
                 plan={selectedPlan}
                 onSuccess={fetchData}
             />
+
+            <Dialog open={pendingCancelDialogOpen} onOpenChange={setPendingCancelDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Cancelar pendência?</DialogTitle>
+                        <DialogDescription>
+                            Se você continuar, esta pendência será cancelada. Mesmo que o boleto e/ou o PIX
+                            seja compensado depois disso, o seu plano não entrará em vigor.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex gap-2 sm:gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setPendingCancelDialogOpen(false)}
+                        >
+                            Não
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleConfirmPendingCancel}
+                        >
+                            Sim, cancelar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 };
@@ -222,7 +302,7 @@ const PaymentDialog = ({ open, onOpenChange, plan, onSuccess }) => {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-3xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Assinar {plan.name}</DialogTitle>
                     <DialogDescription>R${plan.price?.toFixed(2).replace('.', ',')} /mês</DialogDescription>
@@ -597,8 +677,8 @@ const BoletoPaymentForm = ({ plan, onSuccess, onClose }) => {
         return () => clearInterval(interval);
     }, [polling, boletoData?.payment_id, onSuccess]);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(boletoData?.boleto_barcode_content || '');
+    const handleCopy = (value) => {
+        navigator.clipboard.writeText(value || '');
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -618,12 +698,34 @@ const BoletoPaymentForm = ({ plan, onSuccess, onClose }) => {
     if (boletoData) {
         return (
             <div className="space-y-4 pt-2">
-                {boletoData.boleto_barcode_content && (
+                {boletoData.boleto_barcode_image_base64 && (
                     <div className="space-y-2">
-                        <Label className="text-muted-foreground text-xs">Código de barras</Label>
+                        <Label className="text-muted-foreground text-xs">Código de barras para escaneamento</Label>
+                        <div className="rounded-lg border bg-white p-3 sm:p-4">
+                            <img
+                                src={`data:image/png;base64,${boletoData.boleto_barcode_image_base64}`}
+                                alt="Código de barras do boleto"
+                                className="block w-full h-auto mx-auto"
+                                style={{ imageRendering: 'pixelated' }}
+                            />
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                            Se o banco não reconhecer de primeira, aumente o brilho da tela e mantenha o celular paralelo ao código.
+                        </p>
+                    </div>
+                )}
+
+                {boletoData.boleto_digitable_line && (
+                    <div className="space-y-2">
+                        <Label className="text-muted-foreground text-xs">Linha digitável</Label>
                         <div className="flex gap-2">
-                            <Input value={boletoData.boleto_barcode_content} readOnly className="text-xs font-mono" />
-                            <Button variant="outline" size="icon" onClick={handleCopy} className="shrink-0">
+                            <Input value={boletoData.boleto_digitable_line} readOnly className="text-xs font-mono" />
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleCopy(boletoData.boleto_digitable_line)}
+                                className="shrink-0"
+                            >
                                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </Button>
                         </div>
