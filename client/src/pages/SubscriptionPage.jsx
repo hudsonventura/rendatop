@@ -14,10 +14,29 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import Logged from "@/components/Logged";
 import axiosInstance from "@/utils/axiosConfig";
+import { formatCpf, isValidCpf, sanitizeCpf } from "@/utils/cpf";
+
+function splitFullName(fullName) {
+    const cleaned = (fullName || "").trim().replace(/\s+/g, " ");
+    if (!cleaned) return { firstName: "", lastName: "" };
+
+    const parts = cleaned.split(" ");
+    if (parts.length === 1) {
+        return { firstName: parts[0], lastName: parts[0] };
+    }
+
+    return {
+        firstName: parts[0],
+        lastName: parts.slice(1).join(" ")
+    };
+}
 
 const SubscriptionPage = () => {
     const [plans, setPlans] = useState([]);
-    const [currentSub, setCurrentSub] = useState(null);
+    const [activeSub, setActiveSub] = useState(null);
+    const [pendingSub, setPendingSub] = useState(null);
+    const [payerFullName, setPayerFullName] = useState("");
+    const [payerCpf, setPayerCpf] = useState("");
     const [loading, setLoading] = useState(true);
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -26,12 +45,16 @@ const SubscriptionPage = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [plansRes, subRes] = await Promise.all([
+            const [plansRes, subRes, settingsRes] = await Promise.all([
                 axiosInstance.get('/plans'),
-                axiosInstance.get('/subscription').catch(() => ({ data: null }))
+                axiosInstance.get('/subscription/overview').catch(() => ({ data: null })),
+                axiosInstance.get('/User/Settings').catch(() => ({ data: null }))
             ]);
             setPlans(plansRes.data);
-            setCurrentSub(subRes.data);
+            setActiveSub(subRes.data?.active_subscription || null);
+            setPendingSub(subRes.data?.pending_subscription || null);
+            setPayerFullName(settingsRes?.data?.name || sessionStorage.getItem('name') || "");
+            setPayerCpf(settingsRes?.data?.cpf || "");
         } catch (err) {
             console.error(err);
         } finally {
@@ -43,15 +66,15 @@ const SubscriptionPage = () => {
 
     const handleSelectPlan = (plan) => {
         if (plan.price <= 0) return;
-        if (currentSub?.plan_id === plan.id && currentSub?.status === 'Active') return;
-        if (currentSub?.plan_id === plan.id && currentSub?.status === 'PendingPayment') return;
+        if (activeSub?.plan_id === plan.id) return;
+        if (pendingSub?.plan_id === plan.id) return;
         setSelectedPlan(plan);
         setPaymentDialogOpen(true);
     };
 
     const handleCancelSubscription = async () => {
         try {
-            await axiosInstance.post('/subscription/cancel');
+            await axiosInstance.post('/subscription/cancel-active');
             await fetchData();
         } catch (err) {
             console.error(err);
@@ -64,7 +87,7 @@ const SubscriptionPage = () => {
 
     const handleConfirmPendingCancel = async () => {
         try {
-            await axiosInstance.post('/subscription/cancel');
+            await axiosInstance.post('/subscription/cancel-pending');
             setPendingCancelDialogOpen(false);
             await fetchData();
         } catch (err) {
@@ -72,8 +95,8 @@ const SubscriptionPage = () => {
         }
     };
 
-    const currentPlanId = currentSub?.status === 'Active' ? currentSub?.plan_id : 'free';
-    const pendingPlanId = currentSub?.status === 'PendingPayment' ? currentSub?.plan_id : null;
+    const currentPlanId = activeSub?.plan_id || 'free';
+    const pendingPlanId = pendingSub?.plan_id || null;
 
     const planIcons = { free: null, plus: Sparkles, pro: Crown };
 
@@ -138,7 +161,11 @@ const SubscriptionPage = () => {
 
                                             <CardHeader className="pb-4 pt-6">
                                                 <div className="flex items-center gap-2">
-                                                    {PlanIcon && <PlanIcon className="h-5 w-5 text-primary" />}
+                                                    {PlanIcon && (
+                                                        <PlanIcon
+                                                            className={`h-5 w-5 ${plan.id === "pro" ? "text-yellow-400" : "text-primary"}`}
+                                                        />
+                                                    )}
                                                     <CardTitle className="text-lg">{plan.name}</CardTitle>
                                                 </div>
                                                 <div className="mt-3">
@@ -211,22 +238,22 @@ const SubscriptionPage = () => {
                             </div>
                         )}
 
-                        {currentSub && currentSub.status === 'Active' && currentSub.plan_id !== 'free' && (
+                        {activeSub && activeSub.plan_id !== 'free' && (
                             <Card className="mt-6">
                                 <CardContent className="pt-6">
                                     <div className="flex items-center justify-between flex-wrap gap-4">
                                         <div>
                                             <p className="text-sm text-muted-foreground">Assinatura ativa</p>
-                                            <p className="font-medium">{currentSub.plan?.name || currentSub.plan_id}</p>
+                                            <p className="font-medium">{activeSub.plan?.name || activeSub.plan_id}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-muted-foreground">Método de pagamento</p>
-                                            <p className="font-medium capitalize">{currentSub.payment_method?.replace('_', ' ')}</p>
+                                            <p className="font-medium capitalize">{activeSub.payment_method?.replace('_', ' ')}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-muted-foreground">Próximo vencimento</p>
                                             <p className="font-medium">
-                                                {new Date(currentSub.current_period_end).toLocaleDateString('pt-BR')}
+                                                {new Date(activeSub.current_period_end).toLocaleDateString('pt-BR')}
                                             </p>
                                         </div>
                                     </div>
@@ -234,21 +261,21 @@ const SubscriptionPage = () => {
                             </Card>
                         )}
 
-                        {currentSub && currentSub.status === 'PendingPayment' && currentSub.plan_id !== 'free' && (
+                        {pendingSub && pendingSub.plan_id !== 'free' && (
                             <Card className="mt-6 border-amber-500/40">
                                 <CardContent className="pt-6">
                                     <div className="flex items-center justify-between flex-wrap gap-4">
                                         <div>
-                                            <p className="text-sm text-muted-foreground">Pagamento pendente</p>
-                                            <p className="font-medium">{currentSub.plan?.name || currentSub.plan_id}</p>
+                                            <p className="text-sm text-muted-foreground">Assinatura a ativar</p>
+                                            <p className="font-medium">{pendingSub.plan?.name || pendingSub.plan_id}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-muted-foreground">Método de pagamento</p>
-                                            <p className="font-medium capitalize">{currentSub.payment_method?.replace('_', ' ')}</p>
+                                            <p className="font-medium capitalize">{pendingSub.payment_method?.replace('_', ' ')}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-muted-foreground">Status</p>
-                                            <p className="font-medium">Aguardando confirmação</p>
+                                            <p className="font-medium">Aguardando compensação bancária</p>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -263,6 +290,8 @@ const SubscriptionPage = () => {
                 onOpenChange={setPaymentDialogOpen}
                 plan={selectedPlan}
                 onSuccess={fetchData}
+                payerFullName={payerFullName}
+                payerCpf={payerCpf}
             />
 
             <Dialog open={pendingCancelDialogOpen} onOpenChange={setPendingCancelDialogOpen}>
@@ -297,7 +326,7 @@ const SubscriptionPage = () => {
 
 // ======================== PAYMENT DIALOG ========================
 
-const PaymentDialog = ({ open, onOpenChange, plan, onSuccess }) => {
+const PaymentDialog = ({ open, onOpenChange, plan, onSuccess, payerFullName, payerCpf }) => {
     if (!plan) return null;
 
     return (
@@ -322,13 +351,30 @@ const PaymentDialog = ({ open, onOpenChange, plan, onSuccess }) => {
                     </TabsList>
 
                     <TabsContent value="card">
-                        <CardPaymentForm plan={plan} onSuccess={onSuccess} onClose={() => onOpenChange(false)} />
+                        <CardPaymentForm
+                            plan={plan}
+                            onSuccess={onSuccess}
+                            onClose={() => onOpenChange(false)}
+                            payerCpf={payerCpf}
+                        />
                     </TabsContent>
                     <TabsContent value="pix">
-                        <PixPaymentForm plan={plan} onSuccess={onSuccess} onClose={() => onOpenChange(false)} />
+                        <PixPaymentForm
+                            plan={plan}
+                            onSuccess={onSuccess}
+                            onClose={() => onOpenChange(false)}
+                            payerFullName={payerFullName}
+                            payerCpf={payerCpf}
+                        />
                     </TabsContent>
                     <TabsContent value="boleto">
-                        <BoletoPaymentForm plan={plan} onSuccess={onSuccess} onClose={() => onOpenChange(false)} />
+                        <BoletoPaymentForm
+                            plan={plan}
+                            onSuccess={onSuccess}
+                            onClose={() => onOpenChange(false)}
+                            payerFullName={payerFullName}
+                            payerCpf={payerCpf}
+                        />
                     </TabsContent>
                 </Tabs>
             </DialogContent>
@@ -339,11 +385,12 @@ const PaymentDialog = ({ open, onOpenChange, plan, onSuccess }) => {
 
 // ======================== CARD PAYMENT ========================
 
-const CardPaymentForm = ({ plan, onSuccess, onClose }) => {
+const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [mpReady, setMpReady] = useState(false);
+    const [documentCpf, setDocumentCpf] = useState("");
 
     // Load Mercado Pago JS SDK
     useEffect(() => {
@@ -360,22 +407,31 @@ const CardPaymentForm = ({ plan, onSuccess, onClose }) => {
         return () => { /* script stays loaded */ };
     }, []);
 
+    useEffect(() => {
+        setDocumentCpf(sanitizeCpf(payerCpf));
+    }, [payerCpf]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        const form = e.target;
+        const docNumber = sanitizeCpf(form.docNumber.value || documentCpf);
+        if (!isValidCpf(docNumber)) {
+            setError('CPF inválido. Verifique os 11 dígitos antes de continuar.');
+            return;
+        }
+
         setLoading(true);
 
         try {
             const publicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
             const mp = new window.MercadoPago(publicKey);
 
-            const form = e.target;
             const cardNumber = form.cardNumber.value.replace(/\s/g, '');
             const expMonth = form.expMonth.value;
             const expYear = form.expYear.value;
             const cvv = form.cvv.value;
             const cardholderName = form.cardholderName.value;
-            const docNumber = form.docNumber.value;
 
             // Detectar payment_method_id pelo BIN (primeiros 6 dígitos)
             const bin = cardNumber.substring(0, 6);
@@ -408,7 +464,8 @@ const CardPaymentForm = ({ plan, onSuccess, onClose }) => {
                 card_token: tokenResponse.id,
                 payment_method_id: paymentMethodId,
                 issuer_id: issuerId,
-                installments: 1
+                installments: 1,
+                payer_cpf: docNumber
             });
 
             if (result.data.status === 'approved') {
@@ -463,7 +520,16 @@ const CardPaymentForm = ({ plan, onSuccess, onClose }) => {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="docNumber">CPF</Label>
-                <Input id="docNumber" name="docNumber" placeholder="000.000.000-00" required disabled={!mpReady} />
+                <Input
+                    id="docNumber"
+                    name="docNumber"
+                    value={formatCpf(documentCpf)}
+                    onChange={(e) => setDocumentCpf(sanitizeCpf(e.target.value))}
+                    placeholder="000.000.000-00"
+                    required
+                    disabled={!mpReady}
+                    inputMode="numeric"
+                />
             </div>
 
             {error && (
@@ -484,25 +550,37 @@ const CardPaymentForm = ({ plan, onSuccess, onClose }) => {
 
 // ======================== PIX PAYMENT ========================
 
-const PixPaymentForm = ({ plan, onSuccess, onClose }) => {
+const PixPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [pixData, setPixData] = useState(null);
     const [polling, setPolling] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [documentCpf, setDocumentCpf] = useState("");
+
+    useEffect(() => {
+        setDocumentCpf(sanitizeCpf(payerCpf));
+    }, [payerCpf]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        const form = e.target;
+        const normalizedCpf = sanitizeCpf(form.cpf.value || documentCpf);
+        if (!isValidCpf(normalizedCpf)) {
+            setError('CPF inválido. Verifique os 11 dígitos antes de continuar.');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const form = e.target;
+            const { firstName, lastName } = splitFullName(payerFullName);
             const result = await axiosInstance.post('/subscription/pix', {
                 plan_id: plan.id,
-                payer_first_name: form.firstName.value,
-                payer_last_name: form.lastName.value,
-                payer_cpf: form.cpf.value.replace(/\D/g, '')
+                payer_first_name: firstName,
+                payer_last_name: lastName,
+                payer_cpf: normalizedCpf
             });
 
             setPixData(result.data);
@@ -595,19 +673,17 @@ const PixPaymentForm = ({ plan, onSuccess, onClose }) => {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                    <Label htmlFor="firstName">Nome</Label>
-                    <Input id="firstName" name="firstName" placeholder="Nome" required />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="lastName">Sobrenome</Label>
-                    <Input id="lastName" name="lastName" placeholder="Sobrenome" required />
-                </div>
-            </div>
             <div className="space-y-2">
                 <Label htmlFor="cpf">CPF</Label>
-                <Input id="cpf" name="cpf" placeholder="000.000.000-00" required />
+                <Input
+                    id="cpf"
+                    name="cpf"
+                    value={formatCpf(documentCpf)}
+                    onChange={(e) => setDocumentCpf(sanitizeCpf(e.target.value))}
+                    placeholder="000.000.000-00"
+                    required
+                    inputMode="numeric"
+                />
             </div>
 
             {error && (
@@ -628,25 +704,37 @@ const PixPaymentForm = ({ plan, onSuccess, onClose }) => {
 
 // ======================== BOLETO PAYMENT ========================
 
-const BoletoPaymentForm = ({ plan, onSuccess, onClose }) => {
+const BoletoPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [boletoData, setBoletoData] = useState(null);
     const [polling, setPolling] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [documentCpf, setDocumentCpf] = useState("");
+
+    useEffect(() => {
+        setDocumentCpf(sanitizeCpf(payerCpf));
+    }, [payerCpf]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        const form = e.target;
+        const normalizedCpf = sanitizeCpf(form.cpf.value || documentCpf);
+        if (!isValidCpf(normalizedCpf)) {
+            setError('CPF inválido. Verifique os 11 dígitos antes de continuar.');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const form = e.target;
+            const { firstName, lastName } = splitFullName(payerFullName);
             const result = await axiosInstance.post('/subscription/boleto', {
                 plan_id: plan.id,
-                payer_first_name: form.firstName.value,
-                payer_last_name: form.lastName.value,
-                payer_cpf: form.cpf.value.replace(/\D/g, '')
+                payer_first_name: firstName,
+                payer_last_name: lastName,
+                payer_cpf: normalizedCpf
             });
 
             setBoletoData(result.data);
@@ -754,19 +842,17 @@ const BoletoPaymentForm = ({ plan, onSuccess, onClose }) => {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                    <Label htmlFor="firstName">Nome</Label>
-                    <Input id="firstName" name="firstName" placeholder="Nome" required />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="lastName">Sobrenome</Label>
-                    <Input id="lastName" name="lastName" placeholder="Sobrenome" required />
-                </div>
-            </div>
             <div className="space-y-2">
                 <Label htmlFor="cpf">CPF</Label>
-                <Input id="cpf" name="cpf" placeholder="000.000.000-00" required />
+                <Input
+                    id="cpf"
+                    name="cpf"
+                    value={formatCpf(documentCpf)}
+                    onChange={(e) => setDocumentCpf(sanitizeCpf(e.target.value))}
+                    placeholder="000.000.000-00"
+                    required
+                    inputMode="numeric"
+                />
             </div>
 
             {error && (

@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { formatCpf } from "@/utils/cpf"
 
 const UserSettings = () => {
     const [loading, setLoading] = useState(true)
@@ -21,6 +22,7 @@ const UserSettings = () => {
 
     const [email, setEmail] = useState("")
     const [phone, setPhone] = useState("")
+    const [cpf, setCpf] = useState("")
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
     const [notifyWhatsapp, setNotifyWhatsapp] = useState(false)
@@ -43,6 +45,7 @@ const UserSettings = () => {
                 const data = response.data
                 setEmail(data.email || "")
                 setPhone(data.phone || "")
+                setCpf(data.cpf || "")
                 setNotifyWhatsapp(Boolean(data.notify_whatsapp))
                 setNotifyTelegram(Boolean(data.notify_telegram))
                 setNotifyEmail(Boolean(data.notify_email))
@@ -314,6 +317,19 @@ const UserSettings = () => {
                                         />
                                         <p className="text-xs text-muted-foreground">
                                             Formato: 99999999999
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="cpf">CPF</Label>
+                                        <Input
+                                            id="cpf"
+                                            value={cpf ? formatCpf(cpf) : ""}
+                                            readOnly
+                                            placeholder="CPF não informado"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Preenchido automaticamente após um pagamento válido.
                                         </p>
                                     </div>
 

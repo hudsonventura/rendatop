@@ -54,6 +54,31 @@ public class SubscriptionController : AuthenticatedController
             .FirstOrDefault();
     }
 
+    /// <summary>
+    /// Retorna o resumo das assinaturas do usuário.
+    /// Permite exibir a assinatura ativa e a assinatura a ativar ao mesmo tempo.
+    /// </summary>
+    [HttpGet("subscription/overview")]
+    [ProducesResponseType(typeof(SubscriptionOverviewResponse), StatusCodes.Status200OK)]
+    public SubscriptionOverviewResponse GetSubscriptionOverview()
+    {
+        var active = _context.subscriptions
+            .Where(s => s.user_id == _user.id && s.status == SubscriptionStatus.Active)
+            .OrderByDescending(s => s.created_at)
+            .FirstOrDefault();
+
+        var pending = _context.subscriptions
+            .Where(s => s.user_id == _user.id && s.status == SubscriptionStatus.PendingPayment)
+            .OrderByDescending(s => s.created_at)
+            .FirstOrDefault();
+
+        return new SubscriptionOverviewResponse
+        {
+            active_subscription = active,
+            pending_subscription = pending
+        };
+    }
+
 
     /// <summary>
     /// Cria/atualiza assinatura com pagamento via cartão
@@ -71,6 +96,7 @@ public class SubscriptionController : AuthenticatedController
 
         // Proteção contra cobrança dupla: verifica se já existe pagamento ativo no período
         EnsureNoDuplicateCharge(plan.id);
+        _ = SavePayerCpf(request.payer_cpf);
 
         var externalRef = $"sub_{_user.id}_{plan.id}_{DateTime.UtcNow:yyyyMMdd}";
 
@@ -125,6 +151,7 @@ public class SubscriptionController : AuthenticatedController
             throw new ExpectedException("O plano Free não requer pagamento.");
 
         EnsureNoDuplicateCharge(plan.id);
+        var payerCpf = SavePayerCpf(request.payer_cpf);
 
         var externalRef = $"sub_{_user.id}_{plan.id}_{DateTime.UtcNow:yyyyMMdd}";
 
@@ -135,7 +162,7 @@ public class SubscriptionController : AuthenticatedController
             payer_email = _user.email,
             payer_first_name = request.payer_first_name,
             payer_last_name = request.payer_last_name,
-            payer_cpf = request.payer_cpf,
+            payer_cpf = payerCpf,
             external_reference = externalRef
         });
 
@@ -168,6 +195,7 @@ public class SubscriptionController : AuthenticatedController
             throw new ExpectedException("O plano Free não requer pagamento.");
 
         EnsureNoDuplicateCharge(plan.id);
+        var payerCpf = SavePayerCpf(request.payer_cpf);
 
         var externalRef = $"sub_{_user.id}_{plan.id}_{DateTime.UtcNow:yyyyMMdd}";
 
@@ -178,7 +206,7 @@ public class SubscriptionController : AuthenticatedController
             payer_email = _user.email,
             payer_first_name = request.payer_first_name,
             payer_last_name = request.payer_last_name,
-            payer_cpf = request.payer_cpf,
+            payer_cpf = payerCpf,
             external_reference = externalRef
         });
 
@@ -229,28 +257,51 @@ public class SubscriptionController : AuthenticatedController
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult CancelSubscription()
     {
+        return CancelActiveSubscription();
+    }
+
+    /// <summary>
+    /// Cancela a assinatura ativa.
+    /// </summary>
+    [HttpPost("subscription/cancel-active")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult CancelActiveSubscription()
+    {
         var sub = _context.subscriptions
-            .Where(s => s.user_id == _user.id
-                        && s.plan_id != "free"
-                        && (s.status == SubscriptionStatus.Active || s.status == SubscriptionStatus.PendingPayment))
-            .OrderBy(s => s.status == SubscriptionStatus.Active ? 0 : 1)
-            .ThenByDescending(s => s.created_at)
+            .Where(s => s.user_id == _user.id && s.plan_id != "free" && s.status == SubscriptionStatus.Active)
+            .OrderByDescending(s => s.created_at)
             .FirstOrDefault();
 
         if (sub == null)
             throw new ExpectedException("Nenhuma assinatura ativa para cancelar.");
 
-        var wasPending = sub.status == SubscriptionStatus.PendingPayment;
         sub.status = SubscriptionStatus.Cancelled;
         sub.updated_at = DateTime.UtcNow;
         _context.SaveChanges();
 
-        return Ok(new
-        {
-            message = wasPending
-                ? "Cobrança pendente cancelada."
-                : "Assinatura cancelada. Você voltou ao plano Free."
-        });
+        return Ok(new { message = "Assinatura cancelada. Você voltou ao plano Free." });
+    }
+
+    /// <summary>
+    /// Cancela apenas a assinatura pendente de compensação.
+    /// </summary>
+    [HttpPost("subscription/cancel-pending")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult CancelPendingSubscription()
+    {
+        var sub = _context.subscriptions
+            .Where(s => s.user_id == _user.id && s.plan_id != "free" && s.status == SubscriptionStatus.PendingPayment)
+            .OrderByDescending(s => s.created_at)
+            .FirstOrDefault();
+
+        if (sub == null)
+            throw new ExpectedException("Nenhuma pendência para cancelar.");
+
+        sub.status = SubscriptionStatus.Cancelled;
+        sub.updated_at = DateTime.UtcNow;
+        _context.SaveChanges();
+
+        return Ok(new { message = "Cobrança pendente cancelada." });
     }
 
 
@@ -329,6 +380,21 @@ public class SubscriptionController : AuthenticatedController
         _context.SaveChanges();
     }
 
+    private string SavePayerCpf(string? cpf)
+    {
+        var normalizedCpf = CpfUtility.NormalizeOrThrow(cpf);
+        var user = _context.users.FirstOrDefault(x => x.id == _user.id)
+            ?? throw new ExpectedException("Usuário não encontrado.");
+
+        if (!string.Equals(user.cpf, normalizedCpf, StringComparison.Ordinal))
+        {
+            user.cpf = normalizedCpf;
+            _context.SaveChanges();
+        }
+
+        return normalizedCpf;
+    }
+
     private void CancelOtherSubscriptions(Guid keepId)
     {
         var others = _context.subscriptions
@@ -354,6 +420,7 @@ public class CardSubscriptionRequest
     public string payment_method_id { get; set; } = string.Empty;
     public string issuer_id { get; set; } = string.Empty;
     public int installments { get; set; } = 1;
+    public string payer_cpf { get; set; } = string.Empty;
 }
 
 public class PixSubscriptionRequest
@@ -370,4 +437,10 @@ public class BoletoSubscriptionRequest
     public string payer_first_name { get; set; } = string.Empty;
     public string payer_last_name { get; set; } = string.Empty;
     public string payer_cpf { get; set; } = string.Empty;
+}
+
+public class SubscriptionOverviewResponse
+{
+    public Subscription? active_subscription { get; set; }
+    public Subscription? pending_subscription { get; set; }
 }

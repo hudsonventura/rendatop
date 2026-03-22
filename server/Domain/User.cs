@@ -34,6 +34,11 @@ public class User
     public string phone { get; set; } = string.Empty;
 
     /// <summary>
+    /// CPF do usuário no formato 00000000000
+    /// </summary>
+    public string cpf { get; set; } = string.Empty;
+
+    /// <summary>
     /// Preferência para receber notificações via WhatsApp
     /// </summary>
     public bool notify_whatsapp { get; set; } = false;
