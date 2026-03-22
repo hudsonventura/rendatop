@@ -9,9 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Check, CreditCard, QrCode, Barcode, Loader2, Crown, Sparkles, Copy, X, ExternalLink } from "lucide-react";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
+import { BaseLayout } from "@/components/layouts/base-layout";
 import Logged from "@/components/Logged";
 import axiosInstance from "@/utils/axiosConfig";
 import { formatCpf, isValidCpf, sanitizeCpf } from "@/utils/cpf";
@@ -103,16 +101,9 @@ const SubscriptionPage = () => {
     return (
         <>
             <Logged />
-            <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset>
-                    <SiteHeader />
-                    <div className="flex-1 p-4 md:p-6 max-w-5xl mx-auto w-full">
-                        <div className="mb-8">
-                            <h1 className="text-2xl font-bold tracking-tight">Assinatura</h1>
-                            <p className="text-muted-foreground mt-1">Escolha o plano ideal para você</p>
-                        </div>
-
+            <BaseLayout title="Assinatura" description="Escolha o plano ideal para você">
+                <div className="px-4 lg:px-6">
+                    <div className="mx-auto w-full max-w-5xl">
                         {loading ? (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {[1, 2, 3].map(i => (
@@ -282,8 +273,8 @@ const SubscriptionPage = () => {
                             </Card>
                         )}
                     </div>
-                </SidebarInset>
-            </SidebarProvider>
+                </div>
+            </BaseLayout>
 
             <PaymentDialog
                 open={paymentDialogOpen}
