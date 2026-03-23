@@ -62,13 +62,14 @@ public static class Plans
                 { "calendar_ics", "Calendário de vencimentos" },
                 { "notifications", "Notificações de vencimento (Telegram e E-mail)" },
                 {"stoks", "Controle de ações brasileiras, até 5 posições em aberto (em breve)" },
+                { "priority_support", "Suporte padrão" },
             }
         },
         new Plan
         {
             id = "plus",
             name = "Plus",
-            price = 9.90m,
+            price = 6.9m,
             ai_monthly_limit = 10,
             calendar_ics = true,
             stoks = 30,
@@ -78,32 +79,32 @@ public static class Plans
                 { "ai_usage", "10 leituras de comprovantes por IA por mês" },
                 { "investments", "Controle completo de investimentos" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
-                { "notifications", "Notificações de vencimento (Telegram e E-mail)" },
-                { "whatsapp_notifications", "Notificações de vencimento via WhatsApp" },
+                { "whatsapp_notifications", "Notificações de vencimento (Telegram, E-mail e WhatsApp)" },
                 { "export_export_data", "Importação e Exportação de dados (em breve)" },
+                { "stoks", "Controle de ações brasileiras, até 30 posições em aberto (em breve)" },
+                { "pripto", "Controle de criptomoedas, até 10 posições em aberto (em breve)" },
                 { "priority_support", "Suporte prioritário" },
-                { "stoks", "Controle de ações brasileiras, até 30 ativos (em breve)" },
             }
         },
         new Plan
         {
             id = "pro",
             name = "Pro",
-            price = 16.90m,
+            price = 14.9m,
             ai_monthly_limit = 30,
             calendar_ics = true,
             stoks = 100,
             whatsapp_notifications = true,
             features = new Dictionary<string, string>
             {
-                { "ai_usage", "10 leituras de comprovantes por IA por mês" },
+                { "ai_usage", "30 leituras de comprovantes por IA por mês" },
                 { "investments", "Controle completo de investimentos" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
-                { "notifications", "Notificações de vencimento (Telegram e E-mail)" },
-                { "whatsapp_notifications", "Notificações de vencimento via WhatsApp" },
+                { "whatsapp_notifications", "Notificações de vencimento (Telegram, E-mail e WhatsApp)" },
                 { "export_export_data", "Importação e Exportação de dados (em breve)" },
+                { "stoks", "Controle de ações brasileiras, até 100 posições em aberto (em breve)" },
+                { "pripto", "Controle de criptomoedas, até 20 posições em aberto (em breve)" },
                 { "priority_support", "Suporte prioritário" },
-                { "stoks", "Controle de ações brasileiras, até 100 ativos (em breve)" },
             }
         }
     };
