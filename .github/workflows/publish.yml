@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Git pull
+        working-directory: /rendatop
+        run: git pull
+
+      - name: Docker build
+        working-directory: /rendatop
+        run: docker compose build
+
+      - name: Apply migrations
+        working-directory: /rendatop
+        run: docker compose up migrations-applier
+
+
+      - name: Restart compose
+        working-directory: /rendatop
+        run: docker compose down && docker compose up -d
