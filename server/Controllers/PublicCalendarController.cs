@@ -27,7 +27,7 @@ public class PublicCalendarController : ControllerBase
                 u.calendar_public_enabled &&
                 u.calendar_public_token == token);
 
-        if (user is null)
+        if (user is null || !CanUseCalendarIcs(user.id))
             return NotFound();
 
         var investments = _context.investments
@@ -112,6 +112,19 @@ public class PublicCalendarController : ControllerBase
             .Replace(",", @"\,")
             .Replace("\r\n", @"\n")
             .Replace("\n", @"\n");
+    }
+
+    private bool CanUseCalendarIcs(Guid userId)
+    {
+        var planId = _context.subscriptions
+            .AsNoTracking()
+            .Where(s => s.user_id == userId && s.status == SubscriptionStatus.Active)
+            .OrderByDescending(s => s.created_at)
+            .Select(s => s.plan_id)
+            .FirstOrDefault();
+
+        return !string.IsNullOrWhiteSpace(planId) &&
+            Plans.GetById(planId)?.calendar_ics == true;
     }
 
     private static void AppendLine(StringBuilder builder, string line)
