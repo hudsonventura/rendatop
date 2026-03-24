@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using server.Domain;
@@ -11,9 +12,11 @@ using server.Domain;
 namespace server.Migrations
 {
     [DbContext(typeof(Context))]
-    partial class ContextModelSnapshot : ModelSnapshot
+    [Migration("20260321020252_subscriptions")]
+    partial class subscriptions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -258,10 +261,6 @@ namespace server.Migrations
 
                     b.Property<Guid?>("calendar_public_token")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("cpf")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("email")
                         .IsRequired()

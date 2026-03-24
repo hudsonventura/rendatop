@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Area, AreaChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { useTheme } from "next-themes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -193,6 +194,7 @@ function TimelineSkeleton() {
 }
 
 export default function PortfolioTimelineChart({ investments }) {
+    const { resolvedTheme } = useTheme()
     const { chartData, bankSeries } = React.useMemo(() => {
         const result = buildTimelineData(investments)
         return Array.isArray(result) ? { chartData: result, bankSeries: [] } : result
@@ -225,6 +227,7 @@ export default function PortfolioTimelineChart({ investments }) {
             }
         })
     }, [bankSeries.length, chartData, visibleBankSeries])
+    const totalLineColor = resolvedTheme === "dark" ? "#FFFFFF" : "#6B7280"
 
     if (!investments) {
         return <TimelineSkeleton />
@@ -252,6 +255,8 @@ export default function PortfolioTimelineChart({ investments }) {
                 <CardTitle>Evolução da carteira</CardTitle>
                 <CardDescription>
                     <b>Valor líquido</b> de todos seus investimento <small>(incluindo itens arquivados)</small>
+                    <br />
+                    <small>As linhas de valores no gráfico mostram uma subida linear considerando o valor investido e o valor liquido no vencimento. Não considera os níveis das aliquotas de IR e IOF.</small>
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -298,8 +303,8 @@ export default function PortfolioTimelineChart({ investments }) {
                         <AreaChart data={filteredChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                             <defs>
                                 <linearGradient id="portfolio-total-fill" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.22} />
-                                    <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.04} />
+                                    <stop offset="5%" stopColor={totalLineColor} stopOpacity={0.80} />
+                                    <stop offset="95%" stopColor={totalLineColor} stopOpacity={0.03} />
                                 </linearGradient>
                                 {bankSeries.map((series) => (
                                     <linearGradient key={series.key} id={`fill-${series.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -354,12 +359,12 @@ export default function PortfolioTimelineChart({ investments }) {
                             <Area
                                 type="monotone"
                                 dataKey="liquidValue"
-                                stroke="var(--chart-1)"
-                                strokeWidth={3}
+                                stroke={totalLineColor}
+                                strokeWidth={4}
                                 fill="url(#portfolio-total-fill)"
                                 fillOpacity={1}
                                 dot={false}
-                                activeDot={{ r: 4 }}
+                                activeDot={{ r: 5, stroke: totalLineColor, strokeWidth: 2 }}
                                 name="Total"
                             />
                             {visibleBankSeries.map((series) => (

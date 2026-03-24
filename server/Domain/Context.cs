@@ -51,6 +51,11 @@ public class Context : DbContext
     /// Tabela de notificação
     /// </summary>
     public DbSet<Notification> notifications { get; set; }
+
+    /// <summary>
+    /// Tabela de assinaturas
+    /// </summary>
+    public DbSet<Subscription> subscriptions { get; set; }
     
 
 }

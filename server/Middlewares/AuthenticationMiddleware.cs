@@ -35,7 +35,8 @@ public class AuthenticationMiddleware
             path.StartsWith("/auth/microsoft", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/Auth/login", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/signup", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("/login", StringComparison.OrdinalIgnoreCase))
+            path.StartsWith("/login", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/subscription/webhook", StringComparison.OrdinalIgnoreCase))
         {
             await _next(context);
             return;

@@ -88,6 +88,14 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
             return;
         }
 
+        var activeWhatsAppUserIds = (await context.subscriptions
+                .AsNoTracking()
+                .Where(s => s.status == SubscriptionStatus.Active)
+                .ToListAsync(stoppingToken))
+            .Where(s => Plans.GetById(s.plan_id)?.whatsapp_notifications == true)
+            .Select(s => s.user_id)
+            .ToHashSet();
+
         foreach (var investment in investments)
         {
             var user = investment.owner;
@@ -129,7 +137,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
                 }
             }
 
-            if (user.notify_whatsapp && !string.IsNullOrWhiteSpace(user.phone))
+            if (user.notify_whatsapp && activeWhatsAppUserIds.Contains(user.id) && !string.IsNullOrWhiteSpace(user.phone))
             {
                 try
                 {

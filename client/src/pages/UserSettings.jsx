@@ -3,12 +3,14 @@ import { BaseLayout } from "@/components/layouts/base-layout"
 import Logged from "@/components/Logged"
 import axiosInstance from "@/utils/axiosConfig"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { formatCpf } from "@/utils/cpf"
 
 const UserSettings = () => {
     const [loading, setLoading] = useState(true)
@@ -21,6 +23,7 @@ const UserSettings = () => {
 
     const [email, setEmail] = useState("")
     const [phone, setPhone] = useState("")
+    const [cpf, setCpf] = useState("")
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
     const [notifyWhatsapp, setNotifyWhatsapp] = useState(false)
@@ -28,6 +31,8 @@ const UserSettings = () => {
     const [notifyEmail, setNotifyEmail] = useState(true)
     const [calendarPublicEnabled, setCalendarPublicEnabled] = useState(false)
     const [calendarPublicUrl, setCalendarPublicUrl] = useState("")
+    const [whatsappNotificationsEnabled, setWhatsappNotificationsEnabled] = useState(false)
+    const [calendarIcsEnabled, setCalendarIcsEnabled] = useState(false)
     const [totpEnabled, setTotpEnabled] = useState(false)
     const [totpSecret, setTotpSecret] = useState("")
     const [totpUri, setTotpUri] = useState("")
@@ -41,13 +46,19 @@ const UserSettings = () => {
             .get("/User/Settings")
             .then((response) => {
                 const data = response.data
+                const canUseWhatsAppNotifications = Boolean(data.whatsapp_notifications_enabled)
+                const canUseCalendarIcs = Boolean(data.calendar_ics_enabled)
+
                 setEmail(data.email || "")
                 setPhone(data.phone || "")
-                setNotifyWhatsapp(Boolean(data.notify_whatsapp))
+                setCpf(data.cpf || "")
+                setWhatsappNotificationsEnabled(canUseWhatsAppNotifications)
+                setCalendarIcsEnabled(canUseCalendarIcs)
+                setNotifyWhatsapp(canUseWhatsAppNotifications && Boolean(data.notify_whatsapp))
                 setNotifyTelegram(Boolean(data.notify_telegram))
                 setNotifyEmail(Boolean(data.notify_email))
-                setCalendarPublicEnabled(Boolean(data.calendar_public_enabled))
-                setCalendarPublicUrl(data.calendar_public_url || "")
+                setCalendarPublicEnabled(canUseCalendarIcs && Boolean(data.calendar_public_enabled))
+                setCalendarPublicUrl(canUseCalendarIcs ? data.calendar_public_url || "" : "")
                 setTotpEnabled(Boolean(data.totp_enabled))
             })
             .catch(() => {
@@ -64,6 +75,7 @@ const UserSettings = () => {
     }
 
     const handleToggleWhatsApp = (checked) => {
+        if (!whatsappNotificationsEnabled) return
         if (checked && !phone) {
             setError("Informe o telefone antes de habilitar WhatsApp e Telegram.")
             setSuccess("")
@@ -88,6 +100,9 @@ const UserSettings = () => {
         setError("")
         setSuccess("")
 
+        const effectiveNotifyWhatsapp = whatsappNotificationsEnabled ? notifyWhatsapp : false
+        const effectiveCalendarPublicEnabled = calendarIcsEnabled ? calendarPublicEnabled : false
+
         if (password && password.length < 6) {
             setError("A senha deve ter pelo menos 6 caracteres.")
             return
@@ -103,7 +118,7 @@ const UserSettings = () => {
             return
         }
 
-        if ((notifyWhatsapp || notifyTelegram) && !phone) {
+        if ((effectiveNotifyWhatsapp || notifyTelegram) && !phone) {
             setError("Informe o telefone antes de habilitar WhatsApp e Telegram.")
             return
         }
@@ -114,15 +129,17 @@ const UserSettings = () => {
                 email,
                 password: password || null,
                 phone,
-                notify_whatsapp: notifyWhatsapp,
+                notify_whatsapp: effectiveNotifyWhatsapp,
                 notify_telegram: notifyTelegram,
                 notify_email: notifyEmail,
-                calendar_public_enabled: calendarPublicEnabled,
+                calendar_public_enabled: effectiveCalendarPublicEnabled,
             })
             .then((response) => {
                 const data = response.data
                 sessionStorage.setItem("email", data.email)
                 if (data.name) sessionStorage.setItem("name", data.name)
+                setWhatsappNotificationsEnabled(Boolean(data.whatsapp_notifications_enabled))
+                setCalendarIcsEnabled(Boolean(data.calendar_ics_enabled))
                 setCalendarPublicEnabled(Boolean(data.calendar_public_enabled))
                 setCalendarPublicUrl(data.calendar_public_url || "")
                 setTotpEnabled(Boolean(data.totp_enabled))
@@ -317,6 +334,19 @@ const UserSettings = () => {
                                         </p>
                                     </div>
 
+                                    <div className="space-y-2">
+                                        <Label htmlFor="cpf">CPF</Label>
+                                        <Input
+                                            id="cpf"
+                                            value={cpf ? formatCpf(cpf) : ""}
+                                            readOnly
+                                            placeholder="CPF não informado"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Preenchido automaticamente após um pagamento válido.
+                                        </p>
+                                    </div>
+
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="password">Nova senha</Label>
@@ -325,7 +355,7 @@ const UserSettings = () => {
                                                 type="password"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
-                                                placeholder="Deixe em branco para manter"
+                                                placeholder="Digite uma nova senha para alterar"
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -351,13 +381,25 @@ const UserSettings = () => {
 
                                         <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
                                             <div>
-                                                <p className="text-sm font-medium">WhatsApp</p>
-                                                <p className="text-xs text-muted-foreground">Receber notificações por WhatsApp</p>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <p className="text-sm font-medium">WhatsApp</p>
+                                                    {!whatsappNotificationsEnabled && (
+                                                        <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                                                            Recurso Premium
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {whatsappNotificationsEnabled
+                                                        ? "Receber notificações por WhatsApp"
+                                                        : "Assine um plano para ativar este recurso."}
+                                                </p>
                                             </div>
                                             <div className="md:justify-self-center">
                                                 <Switch
                                                     checked={notifyWhatsapp}
                                                     onCheckedChange={handleToggleWhatsApp}
+                                                    disabled={!whatsappNotificationsEnabled}
                                                 />
                                             </div>
                                             <Button
@@ -366,15 +408,21 @@ const UserSettings = () => {
                                                 size="sm"
                                                 className="md:w-36 md:justify-self-end"
                                                 onClick={handleTestWhatsApp}
-                                                disabled={testingWhatsApp}
+                                                disabled={testingWhatsApp || !whatsappNotificationsEnabled}
                                             >
-                                                {testingWhatsApp ? "Enviando..." : "Test WhatsApp"}
+                                                {!whatsappNotificationsEnabled
+                                                    ? "Recurso Premium"
+                                                    : testingWhatsApp
+                                                        ? "Enviando..."
+                                                        : "Test WhatsApp"}
                                             </Button>
                                         </div>
 
                                         <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
                                             <div>
-                                                <p className="text-sm font-medium">Telegram</p>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <p className="text-sm font-medium">Telegram</p>
+                                                </div>
                                                 <p className="text-xs text-muted-foreground">Receber notificações por Telegram</p>
                                             </div>
                                             <div className="md:justify-self-center">
@@ -429,20 +477,30 @@ const UserSettings = () => {
 
                                         <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                                             <div>
-                                                <p className="text-sm font-medium">Compartilhar calendário</p>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <p className="text-sm font-medium">Compartilhar calendário</p>
+                                                    {!calendarIcsEnabled && (
+                                                        <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                                                            Recurso Premium
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                                 <p className="text-xs text-muted-foreground">
-                                                    
+                                                    {calendarIcsEnabled
+                                                        ? "Gera um link público para assinar no Outlook ou outro app de calendário."
+                                                        : "Assine um plano para ativar este recurso."}
                                                 </p>
                                             </div>
                                             <div className="md:justify-self-end">
                                                 <Switch
                                                     checked={calendarPublicEnabled}
                                                     onCheckedChange={setCalendarPublicEnabled}
+                                                    disabled={!calendarIcsEnabled}
                                                 />
                                             </div>
                                         </div>
 
-                                        {calendarPublicEnabled && (
+                                        {calendarIcsEnabled && calendarPublicEnabled && (
                                             <div className="space-y-2">
                                                 <div className="flex flex-col gap-2 md:flex-row">
                                                     <Input
@@ -480,7 +538,7 @@ const UserSettings = () => {
                                         {!totpEnabled && (
                                             <div className="space-y-2">
                                                 <Button type="button" variant="outline" onClick={handleGenerateTotp}>
-                                                    Gerar QR Code
+                                                    Ativar segundo fator de autenticação (TOTP)
                                                 </Button>
 
                                                 {totpSecret && (

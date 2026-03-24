@@ -72,6 +72,15 @@ public class UserController : AuthenticatedController
         if ((request.notify_whatsapp || request.notify_telegram) && string.IsNullOrWhiteSpace(phone))
             throw new ExpectedException("Informe um telefone com 11 dígitos para habilitar notificações por WhatsApp e Telegram.");
 
+        var canUseWhatsAppNotifications = CanUseWhatsAppNotifications(user.id);
+        var canUseCalendarIcs = CanUseCalendarIcs(user.id);
+
+        if (request.notify_whatsapp && !canUseWhatsAppNotifications)
+            throw new ExpectedException("Notificações por WhatsApp exigem um plano ativo que tenha esse recurso liberado.");
+
+        if (request.calendar_public_enabled && !canUseCalendarIcs)
+            throw new ExpectedException("Compartilhamento público de calendário ICS exige um plano ativo que tenha esse recurso liberado.");
+
         user.email = email;
         user.phone = phone;
         user.notify_whatsapp = request.notify_whatsapp;
@@ -200,6 +209,9 @@ public class UserController : AuthenticatedController
         if (user is null)
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
 
+        if (!CanUseWhatsAppNotifications(user.id))
+            throw new ExpectedException("Notificações por WhatsApp exigem um plano ativo que tenha esse recurso liberado.");
+
         var phone = string.IsNullOrWhiteSpace(request?.phone)
             ? SanitizePhone(user.phone)
             : SanitizePhone(request.phone);
@@ -277,18 +289,49 @@ public class UserController : AuthenticatedController
         return digits;
     }
 
-    private UserSettingsResponse ToResponse(User user) =>
-        new UserSettingsResponse(
+    private UserSettingsResponse ToResponse(User user)
+    {
+        var whatsappNotificationsEnabled = CanUseWhatsAppNotifications(user.id);
+        var calendarIcsEnabled = CanUseCalendarIcs(user.id);
+
+        return new UserSettingsResponse(
             user.name,
             user.email,
             user.phone ?? string.Empty,
-            user.notify_whatsapp,
+            user.cpf ?? string.Empty,
+            whatsappNotificationsEnabled && user.notify_whatsapp,
             user.notify_telegram,
             user.notify_email,
-            user.calendar_public_enabled,
-            user.calendar_public_enabled ? BuildPublicCalendarUrl(user.calendar_public_token) : null,
-            user.totp_enabled
+            calendarIcsEnabled && user.calendar_public_enabled,
+            calendarIcsEnabled && user.calendar_public_enabled
+                ? BuildPublicCalendarUrl(user.calendar_public_token)
+                : null,
+            user.totp_enabled,
+            whatsappNotificationsEnabled,
+            calendarIcsEnabled
         );
+    }
+
+    private Plan? GetActiveSubscriptionPlan(Guid userId)
+    {
+        var planId = _context.subscriptions
+            .AsNoTracking()
+            .Where(s => s.user_id == userId && s.status == SubscriptionStatus.Active)
+            .OrderByDescending(s => s.created_at)
+            .Select(s => s.plan_id)
+            .FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(planId))
+            return null;
+
+        return Plans.GetById(planId);
+    }
+
+    private bool CanUseWhatsAppNotifications(Guid userId) =>
+        GetActiveSubscriptionPlan(userId)?.whatsapp_notifications == true;
+
+    private bool CanUseCalendarIcs(Guid userId) =>
+        GetActiveSubscriptionPlan(userId)?.calendar_ics == true;
 
     private string? BuildPublicCalendarUrl(Guid? token)
     {
@@ -321,12 +364,15 @@ public record UserSettingsResponse(
     string name,
     string email,
     string phone,
+    string cpf,
     bool notify_whatsapp,
     bool notify_telegram,
     bool notify_email,
     bool calendar_public_enabled,
     string? calendar_public_url,
-    bool totp_enabled
+    bool totp_enabled,
+    bool whatsapp_notifications_enabled,
+    bool calendar_ics_enabled
 );
 
 public record TotpSetupResponse(
