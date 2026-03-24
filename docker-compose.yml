@@ -51,15 +51,16 @@ services:
     depends_on:
       db:
         condition: service_started
-      migrations-applier:
+      migrator:
         condition: service_completed_successfully
     ports:
       - "5000:5000"
     
-  migrations-applier:
-    image: mcr.microsoft.com/dotnet/sdk:10.0
-    container_name: rendatop-migrations-applier
-    working_dir: /app
+  migrator:
+    build:
+      context: ./
+      dockerfile: ./migrator/Dockerfile
+    container_name: rendatop-migrator
     env_file:
       - .env
     environment:
@@ -67,9 +68,6 @@ services:
     depends_on:
       db:
         condition: service_started
-    volumes:
-      - ./:/app
-    command: ["dotnet", "run", "--project", "migrations-applier/migrations-applier.csproj"]
     restart: "no"
 
   client:

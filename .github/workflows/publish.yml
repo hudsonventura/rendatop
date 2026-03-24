@@ -24,7 +24,7 @@ jobs:
 
       - name: Apply migrations
         working-directory: /rendatop
-        run: docker compose up migrations-applier
+        run: docker compose up migrator
 
 
       - name: Restart compose
