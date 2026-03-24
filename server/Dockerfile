@@ -1,6 +1,6 @@
 #Compile
 # Use a imagem base do SDK do .NET Core 8.0 para compilar o aplicativo
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 # Defina o diretório de trabalho no container
 WORKDIR /app
@@ -23,7 +23,7 @@ RUN dotnet publish server.csproj -c Release -o out
 
 #Build Release
 # Use a imagem base do runtime do .NET Core 8.0 para executar o aplicativo
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 
 # Defina o diretório de trabalho no container
 WORKDIR /app
