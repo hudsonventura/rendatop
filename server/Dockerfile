@@ -28,14 +28,12 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 # Defina o diretório de trabalho no container
 WORKDIR /app
 
+ENV ASPNETCORE_URLS=http://+:5000
+
 # Copie os arquivos compilados do estágio de build para o diretório de trabalho
 COPY --from=build /app/out .
 
-# Defina a variável de ambiente para a porta 5000
-#ENV ASPNETCORE_URLS=http://+:${ASPNETCORE_PORT}
-
-# Exponha a porta 80 para acessar o aplicativo
-#EXPOSE 5000
+EXPOSE 5000
 
 # Defina o comando de entrada para executar o aplicativo
 ENTRYPOINT ["dotnet", "server.dll"]

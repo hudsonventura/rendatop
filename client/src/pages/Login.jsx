@@ -7,6 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, TrendingUp, Eye, EyeOff } from "lucide-react"
 import axiosInstance from "@/utils/axiosConfig";
 
+const apiBaseUrl = (import.meta.env.VITE_API_URL || "/api").replace(/\/+$/, "") || "/api";
+
 const Login = () => {
 
     const [erro, setErro] = useState(false);
@@ -94,14 +96,12 @@ const Login = () => {
     };
 
     const handleGoogleLogin = () => {
-        const apiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
-        window.location.href = `${apiUrl}/auth/google/login`;
+        window.location.href = `${apiBaseUrl}/auth/google/login`;
     };
 
 
     const handleMicrosoftLogin = () => {
-        const apiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
-        window.location.href = `${apiUrl}/auth/microsoft/login`;
+        window.location.href = `${apiBaseUrl}/auth/microsoft/login`;
     };
 
     return (

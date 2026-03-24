@@ -48,6 +48,7 @@ services:
       - POSTGRES_HOST=db
       - WHATSAPP_EVOLUTION_URL=http://evolution:8080
       - REDIS_HOST=redis:6379
+      - ASPNETCORE_URLS=http://+:5000
     depends_on:
       - db
       - redis
@@ -73,12 +74,22 @@ services:
       dockerfile: Dockerfile
     container_name: rendatop-client
     restart: always
-    env_file:
-      - .env
     depends_on: 
       - server
+    expose:
+      - "4173"
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: rendatop-nginx
+    restart: always
+    depends_on:
+      - client
+      - server
     ports:
-      - "3000:80"
+      - "80:80"
     
 
   landing:

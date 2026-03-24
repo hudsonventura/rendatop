@@ -1,8 +1,10 @@
 import axios from "axios";
 
+const apiBaseUrl = (import.meta.env.VITE_API_URL || "/api").replace(/\/+$/, "") || "/api";
+
 // Axios instance — cookies (HttpOnly jwt) are sent automatically via withCredentials
 const axiosInstance = axios.create({
-	baseURL: import.meta.env.VITE_API_URL,
+	baseURL: apiBaseUrl,
 	timeout: 10000,
 	withCredentials: true, // required for HttpOnly cookie to be sent cross-origin
 	headers: {
