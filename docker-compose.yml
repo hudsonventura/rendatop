@@ -49,10 +49,8 @@ services:
       - WHATSAPP_EVOLUTION_URL=http://evolution:8080
       - REDIS_HOST=redis:6379
     depends_on:
-      db:
-        condition: service_started
-      migrator:
-        condition: service_completed_successfully
+      - db
+      - redis
     ports:
       - "5000:5000"
     
@@ -66,8 +64,7 @@ services:
     environment:
       - POSTGRES_HOST=db
     depends_on:
-      db:
-        condition: service_started
+      - db
     restart: "no"
 
   client:
