@@ -40,6 +40,11 @@ public class Context : DbContext
     /// </summary>
     public DbSet<Investment> investments { get; set; }
 
+    /// <summary>
+    /// Tabela de investimentos recorrentes
+    /// </summary>
+    public DbSet<RecurringInvestment> recurring_investments { get; set; }
+
 
     /// <summary>
     /// Tabela de resgates

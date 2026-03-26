@@ -6,6 +6,7 @@ import { BaseLayout } from "@/components/layouts/base-layout";
 import Logged from "@/components/Logged";
 import InvestmentsAdd from "@/components/InvestmentsAdd";
 import InvestmentsDataTable from "@/components/InvestmentsDataTable";
+import RecurringInvestmentsManager from "@/components/RecurringInvestmentsManager";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,6 +73,7 @@ const MyInvestments = () => {
     const [reinvestOpen, setReinvestOpen] = useState(false);
     const [reinvestInitialValues, setReinvestInitialValues] = useState(null);
     const [showArchived, setShowArchived] = useState(false);
+    const [activeTab, setActiveTab] = useState("available");
 
     useEffect(() => {
         let cancelled = false;
@@ -140,15 +142,19 @@ const MyInvestments = () => {
                 <div className="px-4 lg:px-6 space-y-6">
                     <div className="flex items-center justify-between">
                         <h2 className="text-lg font-semibold tracking-tight">Carteira</h2>
-                        <InvestmentsAdd setReload={setReload} />
+                        {activeTab !== "recurring" && (
+                            <InvestmentsAdd setReload={setReload} />
+                        )}
                     </div>
-                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Checkbox
-                            checked={showArchived}
-                            onCheckedChange={(checked) => setShowArchived(Boolean(checked))}
-                        />
-                        Mostrar investimentos arquivados junto com os ativos
-                    </label>
+                    {activeTab !== "recurring" && (
+                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Checkbox
+                                checked={showArchived}
+                                onCheckedChange={(checked) => setShowArchived(Boolean(checked))}
+                            />
+                            Mostrar investimentos arquivados junto com os ativos
+                        </label>
+                    )}
 
                     {loadingInvestments ? (
                         <div className="space-y-4">
@@ -159,7 +165,7 @@ const MyInvestments = () => {
                             <InvestmentsTableSkeleton />
                         </div>
                     ) : (
-                        <Tabs defaultValue="available" className="w-full">
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                             <TabsList>
                                 <TabsTrigger
                                     value="available"
@@ -177,12 +183,18 @@ const MyInvestments = () => {
                                     Bloqueados até o vencimento
                                     <Badge variant="secondary" className="ml-1.5">{locked.length}</Badge>
                                 </TabsTrigger>
+                                <TabsTrigger value="recurring" className="cursor-pointer">
+                                    Recorrentes
+                                </TabsTrigger>
                             </TabsList>
                             <TabsContent value="available">
                                 <InvestmentsDataTable investments={available} setReload={setReload} onReinvest={handleReinvest} />
                             </TabsContent>
                             <TabsContent value="locked">
                                 <InvestmentsDataTable investments={locked} setReload={setReload} onReinvest={handleReinvest} />
+                            </TabsContent>
+                            <TabsContent value="recurring">
+                                <RecurringInvestmentsManager />
                             </TabsContent>
                         </Tabs>
                     )}
