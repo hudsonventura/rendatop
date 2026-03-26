@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="migrations-applier/migrations-applier.csproj" />
+  <Project Path="migrator/migrator.csproj" />
   <Project Path="server/server.csproj" />
   <Project Path="tests/tests.csproj" />
 </Solution>

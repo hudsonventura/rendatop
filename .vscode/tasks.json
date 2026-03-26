@@ -4,7 +4,7 @@
         {
             "label": "docker compose up db",
             "type": "shell",
-            "command": "docker compose up -d db redis evolution migrations-applier",
+            "command": "docker compose -f docker-compose-dev.yml up -d db redis evolution migrator",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -42,7 +42,7 @@
         {
             "label": "docker compose down",
             "type": "shell",
-            "command": "docker compose down",
+            "command": "docker compose down -f docker-compose-dev.yml",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
