@@ -111,14 +111,27 @@ public class NotificationIntegrationTests
 
         public static async Task EnsureEvolutionStackAsync()
         {
-            var repositoryRoot = GetRepositoryRoot();
-            await RunProcessAsync(
-                "docker",
-                "compose up -d db redis evolution",
-                repositoryRoot);
-
             var baseUrl = GetRequired("WHATSAPP_EVOLUTION_URL").TrimEnd('/');
+            if (!IsManagedByCompose())
+            {
+                var repositoryRoot = GetRepositoryRoot();
+                await RunProcessAsync(
+                    "docker",
+                    "compose up -d db redis evolution",
+                    repositoryRoot);
+            }
+
             await WaitForHttpAsync($"{baseUrl}/");
+        }
+
+        private static bool IsManagedByCompose()
+        {
+            var managedByCompose = Environment.GetEnvironmentVariable("NOTIFICATION_TESTS_MANAGED_BY_COMPOSE");
+            if (string.Equals(managedByCompose, "true", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER");
+            return string.Equals(runningInContainer, "true", StringComparison.OrdinalIgnoreCase);
         }
 
         private static async Task WaitForHttpAsync(string url)
