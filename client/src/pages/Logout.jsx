@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, LogOut as LogOutIcon } from 'lucide-react';
 import axiosInstance from '@/utils/axiosConfig';
+import { appPath } from "@/utils/appPath";
 
 const Logout = () => {
     const [clearing, setClearing] = useState(true);
@@ -13,7 +14,7 @@ const Logout = () => {
                 sessionStorage.clear();
                 const timer = setTimeout(() => {
                     setClearing(false);
-                    window.location.href = '/login';
+                    window.location.href = appPath('/login');
                 }, 800);
             });
     }, []);

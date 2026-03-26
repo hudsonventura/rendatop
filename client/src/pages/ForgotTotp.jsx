@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import axiosInstance from "@/utils/axiosConfig";
+import { appPath } from "@/utils/appPath";
 
 const ForgotTotp = () => {
     const [loading, setLoading] = useState(false);
@@ -81,7 +82,7 @@ const ForgotTotp = () => {
                                 <Alert>
                                     <AlertTitle><b>Email enviado</b></AlertTitle>
                                     <AlertDescription>
-                                        {successMessage} <a href="/login" className="font-medium underline underline-offset-4">Voltar para o login</a>
+                                        {successMessage} <a href={appPath("/login")} className="font-medium underline underline-offset-4">Voltar para o login</a>
                                     </AlertDescription>
                                 </Alert>
                             )}

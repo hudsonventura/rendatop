@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import axiosInstance from "@/utils/axiosConfig";
+import { appPath } from "@/utils/appPath";
 
 const ResetPassword = () => {
     const token = useMemo(() => {
@@ -50,7 +51,7 @@ const ResetPassword = () => {
                 setSuccessMessage(response?.data?.message || "Senha redefinida com sucesso.");
                 event.target.reset();
                 window.setTimeout(() => {
-                    window.location.href = "/login";
+                    window.location.href = appPath("/login");
                 }, 1500);
             })
             .catch((error) => {

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, TrendingUp, Eye, EyeOff } from "lucide-react"
 import axiosInstance from "@/utils/axiosConfig";
+import { appPath } from "@/utils/appPath";
 
 const apiBaseUrl = (import.meta.env.VITE_API_URL || "/api").replace(/\/+$/, "") || "/api";
 
@@ -28,19 +29,19 @@ const Login = () => {
 
             if (name) sessionStorage.setItem("name", name);
             if (email) sessionStorage.setItem("email", email);
-            window.location.href = "/home";
+            window.location.href = appPath("/home");
             return;
         }
 
         if (ssoStatus === "google_error" || ssoStatus === "microsoft_error") {
             setErro(true);
             setErroMessage(params.get("message") || "Não foi possível autenticar com o provedor.");
-            window.history.replaceState({}, "", "/login");
+            window.history.replaceState({}, "", appPath("/login"));
         }
 
         // If a valid session cookie already exists, skip login page
         axiosInstance.get('/Authenticated')
-            .then(() => { window.location.href = '/home'; })
+            .then(() => { window.location.href = appPath('/home'); })
             .catch(() => { /* not logged in, stay on login page */ });
     }, []);
 
@@ -77,7 +78,7 @@ const Login = () => {
                 const { name, email: userEmail } = data;
                 sessionStorage.setItem('name', name);
                 sessionStorage.setItem('email', userEmail);
-                window.location.href = '/home';
+                window.location.href = appPath('/home');
             })
             .catch((error) => {
                 setErro(true);
@@ -218,7 +219,7 @@ const Login = () => {
                                                 required
                                             />
                                             <div className="pt-1 text-right">
-                                                <a href="/forgot-totp" className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors">
+                                                <a href={appPath("/forgot-totp")} className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors">
                                                     Não tenho acesso ao app Authenticator
                                                 </a>
                                             </div>
@@ -265,12 +266,12 @@ const Login = () => {
                                     )}
 
                                     <div className="pt-2 space-y-2 text-center">
-                                        <a href="/forgot-password" className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors">
+                                        <a href={appPath("/forgot-password")} className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors">
                                             Esqueceu sua senha?
                                         </a>
                                         <p className="text-sm text-muted-foreground">
                                             Não tem uma conta?{" "}
-                                            <a href="/signup" className="text-foreground hover:underline underline-offset-4 font-medium">
+                                            <a href={appPath("/signup")} className="text-foreground hover:underline underline-offset-4 font-medium">
                                                 Criar conta
                                             </a>
                                         </p>

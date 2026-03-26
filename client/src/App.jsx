@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarConfigProvider } from '@/contexts/sidebar-context'
+import { ROUTER_BASENAME } from '@/utils/appPath'
 
 import Login from "@/pages/Login"
 import Signup from "@/pages/Signup"
@@ -24,7 +25,7 @@ function App() {
         <div className="font-sans antialiased" style={{ fontFamily: 'var(--font-inter)' }}>
             <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
                 <SidebarConfigProvider>
-                    <Router>
+                    <Router basename={ROUTER_BASENAME}>
                         <Routes>
                             <Route path="/" element={<Login />} />
                             <Route path="/login" element={<Login />} />

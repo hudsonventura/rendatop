@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import axiosInstance from "@/utils/axiosConfig";
+import { appPath } from "@/utils/appPath";
 
 const ResetTotp = () => {
     const token = useMemo(() => {
@@ -19,7 +20,7 @@ const ResetTotp = () => {
         if (!successMessage) return;
 
         const timerId = window.setTimeout(() => {
-            window.location.href = "/login";
+            window.location.href = appPath("/login");
         }, 1500);
 
         return () => window.clearTimeout(timerId);

@@ -86,6 +86,7 @@ services:
     container_name: rendatop-nginx
     restart: always
     depends_on:
+      - landing
       - client
       - server
     ports:
@@ -94,7 +95,7 @@ services:
 
   landing:
     build:
-      context: ./landing/nextjs-version
+      context: ./landing
       dockerfile: Dockerfile
     container_name: rendatop-landing
     restart: always
