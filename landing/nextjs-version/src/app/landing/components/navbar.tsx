@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, Github, LayoutDashboard, ChevronDown, X, Moon, Sun } from 'lucide-react'
+import { Menu, ChevronDown, X, Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
     NavigationMenu,
@@ -30,31 +30,25 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { useTheme } from '@/hooks/use-theme'
 
 const navigationItems = [
-    { name: 'Home', href: '#hero' },
-    { name: 'Características', href: '#features', hasMegaMenu: true },
-    { name: 'Team', href: '#team' },
-    //{ name: 'Pricing', href: '#pricing' },
+    { name: 'Inicio', href: '#hero' },
+    { name: 'Recursos', href: '#features', hasMegaMenu: true },
+    { name: 'Capturas', href: '#screenshots' },
+    { name: 'Planos', href: '#pricing' },
     { name: 'FAQ', href: '#faq' },
     { name: 'Contato', href: '#contact' },
 ]
 
-// Solutions menu items for mobile
 const solutionsItems = [
-    { title: 'Browse ssss' },
-    { name: 'Free Blocks', href: '#free-blocks' },
-    { name: 'Premium Templates', href: '#premium-templates' },
-    { name: 'Admin Dashboards', href: '#admin-dashboards' },
-    { name: 'Landing Pages', href: '#landing-pages' },
-    { title: 'Categories' },
-    { name: 'E-commerce', href: '#ecommerce' },
-    { name: 'SaaS Dashboards', href: '#saas-dashboards' },
-    { name: 'Analytics', href: '#analytics' },
-    { name: 'Authentication', href: '#authentication' },
-    { title: 'Resources' },
-    { name: 'Documentation', href: '#docs' },
-    { name: 'Component Showcase', href: '#showcase' },
-    { name: 'GitHub Repository', href: '#github' },
-    { name: 'Design System', href: '#design-system' }
+    { title: 'Visao geral' },
+    { name: 'Dashboard', href: '#features' },
+    { name: 'Carteira', href: '#features' },
+    { name: 'Calendario', href: '#features' },
+    { name: 'Notificacoes', href: '#features' },
+    { title: 'Aprofundar' },
+    { name: 'Capturas do app', href: '#screenshots' },
+    { name: 'Planos', href: '#pricing' },
+    { name: 'Perguntas frequentes', href: '#faq' },
+    { name: 'Contato', href: '#contact' }
 ]
 
 // Smooth scroll function
@@ -233,10 +227,10 @@ export function LandingNavbar() {
                                 <div className="space-y-3">
                                     <div className="grid grid-cols-2 gap-3">
                                         <Button variant="outline" size="lg" asChild className="cursor-pointer">
-                                            <Link href="/auth/sign-in">Entrar</Link>
+                                            <Link href="/app/login">Entrar</Link>
                                         </Button>
                                         <Button asChild size="lg" className="cursor-pointer" >
-                                            <Link href="/auth/sign-up">Crie uma conta</Link>
+                                            <Link href="/app/signup">Crie uma conta</Link>
                                         </Button>
                                     </div>
                                 </div>

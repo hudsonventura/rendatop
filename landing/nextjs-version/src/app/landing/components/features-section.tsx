@@ -3,96 +3,91 @@
 import {
   BarChart3,
   Zap,
-  Users,
+  Bell,
   ArrowRight,
-  Database,
-  Package,
-  Crown,
-  Layout,
-  Palette
+  CalendarDays,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Image3D } from '@/components/image-3d'
+import { ScreenshotPlaceholder } from '@/components/screenshot-placeholder'
 
 const mainFeatures = [
   {
-    icon: Package,
-    title: 'Curated Component Library',
-    description: 'Hand-picked blocks and templates for quality and reliability.'
-  },
-  {
-    icon: Crown,
-    title: 'Free & Premium Options',
-    description: 'Start free, upgrade to premium collections when you need more.'
-  },
-  {
-    icon: Layout,
-    title: 'Ready-to-Use Templates',
-    description: 'Copy-paste components that just work out of the box.'
+    icon: BarChart3,
+    title: 'Dashboard com contexto',
+    description: 'Veja vencimentos proximos, distribuicao por banco e evolucao da carteira.',
   },
   {
     icon: Zap,
-    title: 'Regular Updates',
-    description: 'New blocks and templates added weekly to keep you current.'
-  }
+    title: 'Simulacao no cadastro',
+    description: 'Visualize estimativas de rendimento e comparativos durante o registro do investimento.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Configuracoes centralizadas',
+    description: 'Ajuste canais de alerta, calendario publico, seguranca e dados de contato.',
+  },
+  {
+    icon: Sparkles,
+    title: 'Leitura por IA',
+    description: 'Importe comprovantes para preencher campos do investimento com apoio de IA.',
+  },
 ]
 
 const secondaryFeatures = [
   {
-    icon: BarChart3,
-    title: 'Multiple Frameworks',
-    description: 'React, Next.js, and Vite compatibility for flexible development.'
+    icon: CalendarDays,
+    title: 'Calendario financeiro',
+    description: 'Acompanhe aplicacoes e vencimentos em uma visao mensal clara.',
   },
   {
-    icon: Palette,
-    title: 'Modern Tech Stack',
-    description: 'Built with shadcn/ui, Tailwind CSS, and TypeScript.'
+    icon: Bell,
+    title: 'Notificacoes e historico',
+    description: 'Receba alertas e acompanhe o que ainda esta pendente de leitura.',
   },
   {
-    icon: Users,
-    title: 'Responsive Design',
-    description: 'Mobile-first components for all screen sizes and devices.'
+    icon: Zap,
+    title: 'Separacao por disponibilidade',
+    description: 'Diferencie rapidamente o que ja pode ser resgatado do que segue bloqueado ate o vencimento.',
   },
   {
-    icon: Database,
-    title: 'Developer-Friendly',
-    description: 'Clean code, well-documented, easy integration and customization.'
-  }
+    icon: ShieldCheck,
+    title: 'Planos que acompanham o uso',
+    description: 'Amplie limites de IA, calendario ICS e notificacoes conforme sua necessidade.',
+  },
 ]
 
 export function FeaturesSection() {
   return (
     <section id="features" className="py-24 sm:py-32 bg-muted/30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
         <div className="mx-auto max-w-2xl text-center mb-16">
-          <Badge variant="outline" className="mb-4">Marketplace Features</Badge>
+          <Badge variant="outline" className="mb-4">Recursos principais</Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            Everything you need to build amazing web applications
+            Tudo o que voce precisa para acompanhar seus investimentos no dia-a-dia
           </h2>
           <p className="text-lg text-muted-foreground">
-            Our marketplace provides curated blocks, templates, landing pages, and admin dashboards to help you build professional applications faster than ever.
+            A landing foi ajustada para refletir o produto real: dashboard, carteira, calendario, notificacoes, configuracoes e assinatura.
           </p>
         </div>
 
-        {/* First Feature Section */}
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16 mb-24">
-          {/* Left Image */}
-          <Image3D
-            lightSrc="/feature-1-light.png"
-            darkSrc="/feature-1-dark.png"
-            alt="Analytics dashboard"
-            direction="left"
+          <ScreenshotPlaceholder
+            title="Screenshot do dashboard"
+            subtitle="Espaco para a visao principal do app"
+            caption="Use esta area para inserir a captura do painel com vencimentos, grafico por banco e evolucao da carteira."
+            badges={['Dashboard', 'Vencimentos', 'Graficos']}
           />
-          {/* Right Content */}
           <div className="space-y-6">
             <div className="space-y-4">
               <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-                Components that accelerate development
+                Acompanhamento claro desde a primeira tela
               </h3>
               <p className="text-muted-foreground text-base text-pretty">
-                Our curated marketplace offers premium blocks and templates designed to save time and ensure consistency across your admin projects.
+                O dashboard concentra o que costuma gerar mais consulta ao longo da semana:
+                vencimentos proximos, distribuicao da carteira e visao consolidada do patrimonio investido.
               </p>
             </div>
 
@@ -111,31 +106,30 @@ export function FeaturesSection() {
             </ul>
 
             <div className="flex flex-col sm:flex-row gap-4 pe-4 pt-2">
-              <Button size="lg" className="cursor-pointer">
-                <a href="https://shadcnstore.com/templates" className='flex items-center'>
-                  Browse Templates
+              <Button size="lg" className="cursor-pointer" asChild>
+                <a href="/app/signup" className='flex items-center'>
+                  Criar conta
                   <ArrowRight className="ms-2 size-4" aria-hidden="true" />
                 </a>
               </Button>
-              <Button size="lg" variant="outline" className="cursor-pointer">
-                <a href="https://shadcnstore.com/blocks">
-                  View Components
+              <Button size="lg" variant="outline" className="cursor-pointer" asChild>
+                <a href="#screenshots">
+                  Ver capturas
                 </a>
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Second Feature Section - Flipped Layout */}
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16">
-          {/* Left Content */}
           <div className="space-y-6 order-2 lg:order-1">
             <div className="space-y-4">
               <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-                Built for modern development workflows
+                Operacao da carteira com mais previsibilidade
               </h3>
               <p className="text-muted-foreground text-base text-pretty">
-                Every component follows best practices with TypeScript, responsive design, and clean code architecture that integrates seamlessly into your projects.
+                A carteira foi dividida para facilitar a leitura do que esta disponivel para resgate,
+                do que ainda aguarda vencimento e do que precisa de atencao por notificacao ou calendario.
               </p>
             </div>
 
@@ -154,26 +148,25 @@ export function FeaturesSection() {
             </ul>
 
             <div className="flex flex-col sm:flex-row gap-4 pe-4 pt-2">
-              <Button size="lg" className="cursor-pointer">
-                <a href="#" className='flex items-center'>
-                  View Documentation
+              <Button size="lg" className="cursor-pointer" asChild>
+                <a href="#pricing" className='flex items-center'>
+                  Ver planos
                   <ArrowRight className="ms-2 size-4" aria-hidden="true" />
                 </a>
               </Button>
-              <Button size="lg" variant="outline" className="cursor-pointer">
-                <a href="https://github.com/silicondeck/shadcn-dashboard-landing-template" target="_blank" rel="noopener noreferrer">
-                  GitHub Repository
+              <Button size="lg" variant="outline" className="cursor-pointer" asChild>
+                <a href="#contact">
+                  Entrar em contato
                 </a>
               </Button>
             </div>
           </div>
 
-          {/* Right Image */}
-          <Image3D
-            lightSrc="/feature-2-light.png"
-            darkSrc="/feature-2-dark.png"
-            alt="Performance dashboard"
-            direction="right"
+          <ScreenshotPlaceholder
+            title="Screenshot da carteira e agenda"
+            subtitle="Espaco para tela de operacao"
+            caption="Aqui cabem capturas de Meus Investimentos, Calendario ou Notificacoes, mantendo a landing pronta para apresentar o fluxo real do app."
+            badges={['Carteira', 'Calendario', 'Notificacoes']}
             className="order-1 lg:order-2"
           />
         </div>

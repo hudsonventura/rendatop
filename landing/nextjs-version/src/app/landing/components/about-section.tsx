@@ -4,50 +4,49 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { CardDecorator } from '@/components/ui/card-decorator'
-import { Github, Code, Palette, Layout, Crown } from 'lucide-react'
+import { LayoutDashboard, Wallet, BellRing, ShieldCheck } from 'lucide-react'
 
 const values = [
   {
-    icon: Code,
-    title: 'Developer First',
-    description: 'Every component is built with the developer experience in mind, ensuring clean code and easy integration.'
+    icon: LayoutDashboard,
+    title: 'Painel objetivo',
+    description: 'Visualize os próximos vencimentos, distribuićão por banco e evolućão da carteira ao longo do tempo.',
   },
   {
-    icon: Palette,
-    title: 'Design Excellence',
-    description: 'We maintain the highest design standards, following shadcn/ui principles and modern UI patterns.'
+    icon: Wallet,
+    title: 'Carteira organizada',
+    description: 'Cadastre investimentos, acompanhe o que ja pode ser resgatado e mantenha historico com arquivamento.',
   },
   {
-    icon: Layout,
-    title: 'Production Ready',
-    description: 'Battle-tested components used in real applications with proven performance and reliability across different environments.'
+    icon: BellRing,
+    title: 'Rotina acompanhada',
+    description: 'Use calendario, centro de notificacoes e canais externos para nao perder datas de resgates.',
   },
   {
-    icon: Crown,
-    title: 'Premium Quality',
-    description: 'Hand-crafted with attention to detail and performance optimization, ensuring exceptional user experience and accessibility.'
-  }
+    icon: ShieldCheck,
+    title: 'Graficos',
+    description: 'Veja a distribuićão do seu patrimonio entre os bancos e acompanhe o crescimento da carteira.',
+  },
 ]
 
 export function AboutSection() {
   return (
     <section id="about" className="py-24 sm:py-32">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
         <div className="mx-auto max-w-4xl text-center mb-16">
           <Badge variant="outline" className="mb-4">
-            About ShadcnStore
+            Por que o RendaTop?
           </Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-            Built for developers, by developers
+            Uma visao mais organizada para a sua rotina de investimentos
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            We&apos;re passionate about creating the best marketplace for shadcn/ui components and templates.
-            Our mission is to accelerate development and help developers build beautiful admin interfaces faster.
+            O app foi estruturado para concentrar o acompanhamento da carteira em poucas telas bem definidas,
+            com linguagem direta e foco no que precisa ser acompanhado ao longo do mes.<br />
+            Muitos investimentos espalhados entre vários banco? Aqui você pode acompanhar tudo em um so lugar.
           </p>
         </div>
 
-        {/* Modern Values Grid with Enhanced Design */}
         <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 xl:grid-cols-4 mb-12">
           {values.map((value, index) => (
             <Card key={index} className='group shadow-xs py-2'>
@@ -64,21 +63,19 @@ export function AboutSection() {
           ))}
         </div>
 
-        {/* Call to Action */}
         <div className="mt-16 text-center">
           <div className="flex items-center justify-center gap-2 mb-6">
-            <span className="text-muted-foreground">❤️ Made with love for the developer community</span>
+            <span className="text-muted-foreground">Pensado para quem quer acompanhar melhor o proprio dinheiro.</span>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="cursor-pointer" asChild>
-              <a href="https://github.com/silicondeck/shadcn-dashboard-landing-template" target="_blank" rel="noopener noreferrer">
-                <Github className="mr-2 h-4 w-4" />
-                Star on GitHub
+              <a href="/app/signup">
+                Criar conta
               </a>
             </Button>
             <Button size="lg" variant="outline" className="cursor-pointer" asChild>
-              <a href="https://discord.com/invite/XEQhPc9a6p" target="_blank" rel="noopener noreferrer">
-                Join Discord Community
+              <a href="#pricing">
+                Ver planos
               </a>
             </Button>
           </div>
