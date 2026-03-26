@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, TrendingUp, Eye, EyeOff, UserPlus } from "lucide-react"
 import axiosInstance from "@/utils/axiosConfig";
+import { appPath } from "@/utils/appPath";
 
 const Signup = () => {
 
@@ -16,7 +17,7 @@ const Signup = () => {
 
     useEffect(() => {
         axiosInstance.get('/Authenticated')
-            .then(() => { window.location.href = '/home'; })
+            .then(() => { window.location.href = appPath('/home'); })
             .catch(() => { });
     }, []);
 
@@ -45,7 +46,7 @@ const Signup = () => {
                 const { name: userName, email: userEmail } = response.data;
                 sessionStorage.setItem('name', userName);
                 sessionStorage.setItem('email', userEmail);
-                window.location.href = '/home';
+                window.location.href = appPath('/home');
             })
             .catch((error) => {
                 setErro(true);
@@ -182,7 +183,7 @@ const Signup = () => {
 
                                     <p className="text-sm text-muted-foreground text-center">
                                         Já tem uma conta?{" "}
-                                        <a href="/login" className="text-foreground hover:underline underline-offset-4 font-medium">
+                                        <a href={appPath("/login")} className="text-foreground hover:underline underline-offset-4 font-medium">
                                             Entrar
                                         </a>
                                     </p>
