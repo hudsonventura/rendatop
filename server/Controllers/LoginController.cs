@@ -17,6 +17,11 @@ namespace server.Controllers;
 [ApiController]
 public class LoginController : ControllerBase
 {
+    private const int EmailVerificationDigits = 6;
+    private const int EmailVerificationPeriodSeconds = 300;
+    private const int EmailVerificationAllowedDriftSteps = 1;
+    private static readonly TimeSpan EmailVerificationResendInterval = TimeSpan.FromSeconds(60);
+
     private readonly Context _context;
     private readonly IDatabase _redis;
     private readonly IWebHostEnvironment _env;
@@ -49,6 +54,9 @@ public class LoginController : ControllerBase
         var user = _context.users.AsNoTracking().FirstOrDefault(x => x.email == email);
         if (user is null || !user.CheckPass(credentials.password))
             throw new ExpectedException("Usuário nao encontrado ou senha incorreta", HttpStatusCode.Unauthorized);
+
+        if (!user.email_verified)
+            throw new ExpectedException("Sua conta ainda não foi ativada. Verifique o código enviado para seu email antes de entrar.", HttpStatusCode.Forbidden);
 
         if (user.totp_enabled)
         {
@@ -107,13 +115,13 @@ public class LoginController : ControllerBase
     }
 
     /// <summary>
-    /// Cria uma nova conta e define o cookie JWT HttpOnly
+    /// Cria uma nova conta pendente e envia o código de verificação por email
     /// </summary>
     [HttpPost("signup")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(SignupPendingResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
-    public IActionResult Signup([FromBody] SignUpRequest request)
+    public async Task<IActionResult> Signup([FromBody] SignUpRequest request)
     {
         var name = request.name?.Trim() ?? string.Empty;
         var email = request.email?.Trim().ToLowerInvariant() ?? string.Empty;
@@ -125,25 +133,129 @@ public class LoginController : ControllerBase
         if (string.IsNullOrWhiteSpace(email))
             throw new ExpectedException("Email é obrigatório.");
 
+        ValidateEmail(email);
+
         if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
             throw new ExpectedException("A senha deve ter pelo menos 6 caracteres.");
 
-        bool alreadyExists = _context.users.AsNoTracking().Any(x => x.email == email);
-        if (alreadyExists)
-            throw new ExpectedException("Já existe uma conta com esse email.", HttpStatusCode.Conflict);
+        var existingUser = _context.users.FirstOrDefault(x => x.email == email);
+        if (existingUser is not null)
+        {
+            if (existingUser.email_verified)
+                throw new ExpectedException("Já existe uma conta com esse email.", HttpStatusCode.Conflict);
+
+            throw new ExpectedException("Já existe um cadastro pendente para esse email. Informe o código recebido ou solicite um novo envio.", HttpStatusCode.Conflict);
+        }
 
         User user = new User
         {
             id = SnowflakeGuid.NewGuid(),
             name = name,
             email = email,
-            password = password
+            password = password,
+            email_verified = false,
+            email_verification_secret = TotpUtility.GenerateBase32Secret(),
+            email_verification_sent_at = DateTime.UtcNow
         };
 
         _context.users.Add(user);
         _context.SaveChanges();
 
+        try
+        {
+            await SendSignupVerificationEmail(user);
+            return Ok(new SignupPendingResponse(
+                "Enviamos um código de verificação para seu email. Informe-o para ativar a conta.",
+                user.email,
+                true));
+        }
+        catch
+        {
+            return Ok(new SignupPendingResponse(
+                "Sua conta foi criada, mas não conseguimos enviar o código agora. Solicite um novo envio para ativá-la.",
+                user.email,
+                false));
+        }
+    }
+
+    [HttpPost("signup/verify")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult VerifySignup([FromBody] SignupVerificationRequest request)
+    {
+        var email = (request.email ?? string.Empty).Trim().ToLowerInvariant();
+        var code = request.code?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ExpectedException("Email é obrigatório.");
+
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ExpectedException("Código de verificação é obrigatório.");
+
+        var user = _context.users.FirstOrDefault(x => x.email == email);
+        if (user is null || user.email_verified)
+            throw new ExpectedException("Cadastro pendente não encontrado para esse email.", HttpStatusCode.BadRequest);
+
+        if (string.IsNullOrWhiteSpace(user.email_verification_secret) ||
+            !TotpUtility.ValidateCode(
+                user.email_verification_secret,
+                code,
+                allowedDriftSteps: EmailVerificationAllowedDriftSteps,
+                periodSeconds: EmailVerificationPeriodSeconds,
+                digits: EmailVerificationDigits))
+        {
+            throw new ExpectedException("Código de verificação inválido ou expirado.", HttpStatusCode.Unauthorized);
+        }
+
+        user.email_verified = true;
+        user.email_verification_secret = null;
+        user.email_verification_sent_at = null;
+        _context.SaveChanges();
+
         return CreateSession(user);
+    }
+
+    [HttpPost("signup/verification/resend")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PasswordResetRequestResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResendSignupVerification([FromBody] SignupVerificationResendRequest request)
+    {
+        var email = (request.email ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ExpectedException("Email é obrigatório.");
+
+        ValidateEmail(email);
+
+        var user = _context.users.FirstOrDefault(x => x.email == email);
+        if (user is null)
+            throw new ExpectedException("Cadastro pendente não encontrado para esse email.", HttpStatusCode.NotFound);
+
+        if (user.email_verified)
+            throw new ExpectedException("Esta conta já está ativa. Faça login normalmente.", HttpStatusCode.Conflict);
+
+        if (user.email_verification_sent_at.HasValue &&
+            DateTime.UtcNow - user.email_verification_sent_at.Value < EmailVerificationResendInterval)
+        {
+            throw new ExpectedException("Aguarde 60 segundos antes de solicitar um novo código.");
+        }
+
+        user.email_verification_secret = TotpUtility.GenerateBase32Secret();
+        user.email_verification_sent_at = DateTime.UtcNow;
+        _context.SaveChanges();
+
+        try
+        {
+            await SendSignupVerificationEmail(user);
+        }
+        catch (Exception ex)
+        {
+            throw new ExpectedException($"Falha ao enviar email de verificação: {ex.Message}", HttpStatusCode.BadGateway);
+        }
+
+        return Ok(new PasswordResetRequestResponse("Novo código de verificação enviado para seu email."));
     }
 
     [HttpPost("password-reset/request")]
@@ -431,9 +543,17 @@ Se você não solicitou essa alteração, ignore este email.";
                 id = SnowflakeGuid.NewGuid(),
                 name = name,
                 email = email,
-                password = Guid.NewGuid().ToString("N")
+                password = Guid.NewGuid().ToString("N"),
+                email_verified = true
             };
             _context.users.Add(user);
+            _context.SaveChanges();
+        }
+        else if (!user.email_verified || !string.IsNullOrWhiteSpace(user.email_verification_secret))
+        {
+            user.email_verified = true;
+            user.email_verification_secret = null;
+            user.email_verification_sent_at = null;
             _context.SaveChanges();
         }
 
@@ -549,6 +669,30 @@ Se você não solicitou essa alteração, ignore este email.";
             : $"{loginUrl.TrimEnd('/')}{path}";
 
         return $"{actionUrl}?token={Uri.EscapeDataString(token)}";
+    }
+
+    private async Task SendSignupVerificationEmail(User user)
+    {
+        if (string.IsNullOrWhiteSpace(user.email_verification_secret))
+            throw new ExpectedException("Código de verificação indisponível para esta conta.", HttpStatusCode.BadRequest);
+
+        var code = TotpUtility.GenerateCode(
+            user.email_verification_secret,
+            periodSeconds: EmailVerificationPeriodSeconds,
+            digits: EmailVerificationDigits);
+
+        var message =
+$@"Olá, {user.name}.
+
+Use o código abaixo para ativar sua conta no RendaTop:
+
+{code}
+
+Esse código é temporário e deve ser informado na tela de cadastro para concluir a ativação.
+
+Se você não solicitou esse cadastro, ignore este email.";
+
+        await _email.Notify(user.email, "RendaTop | Verificação de email", message);
     }
 
     private static void ValidateEmail(string email)
@@ -811,6 +955,9 @@ public record LoginResponse(string name, string email);
 public record LoginStartResponse(bool requires_totp, string? challenge_id, string? name, string? email);
 public record TotpLoginRequest(string challenge_id, string code);
 public record SignUpRequest(string name, string email, string password);
+public record SignupPendingResponse(string message, string email, bool email_sent);
+public record SignupVerificationRequest(string email, string code);
+public record SignupVerificationResendRequest(string email);
 public record PasswordResetRequest(string email);
 public record PasswordResetConfirmRequest(string token, string password);
 public record TotpResetRequest(string email);

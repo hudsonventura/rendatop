@@ -40,6 +40,17 @@ public static class TotpUtility
         return false;
     }
 
+    public static string GenerateCode(string base32Secret, DateTimeOffset? timestamp = null, int periodSeconds = 30, int digits = 6)
+    {
+        if (string.IsNullOrWhiteSpace(base32Secret))
+            throw new ArgumentException("Secret TOTP é obrigatório.", nameof(base32Secret));
+
+        var secret = FromBase32(base32Secret);
+        var unixTime = (timestamp ?? DateTimeOffset.UtcNow).ToUnixTimeSeconds();
+        var timeStep = unixTime / periodSeconds;
+        return ComputeTotp(secret, timeStep, digits);
+    }
+
     public static string BuildOtpAuthUri(string issuer, string accountName, string base32Secret)
     {
         var escapedIssuer = Uri.EscapeDataString(issuer);
