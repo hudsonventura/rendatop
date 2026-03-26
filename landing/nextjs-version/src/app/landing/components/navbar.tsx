@@ -126,10 +126,10 @@ export function LandingNavbar() {
                 <div className="hidden xl:flex items-center space-x-2">
                     <ModeToggle variant="ghost" />
                     <Button variant="ghost" asChild className="cursor-pointer">
-                        <Link href="/auth/sign-in">Crie uma conta</Link>
+                        <Link href="/app/signup">Crie uma conta</Link>
                     </Button>
                     <Button asChild className="cursor-pointer">
-                        <Link href="/auth/sign-up">Entrar</Link>
+                        <Link href="/app/login">Entrar</Link>
                     </Button>
                 </div>
 
