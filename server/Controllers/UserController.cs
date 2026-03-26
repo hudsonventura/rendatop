@@ -56,7 +56,11 @@ public class UserController : AuthenticatedController
         if (user is null)
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
 
+        var name = (request.name ?? string.Empty).Trim();
         var email = (request.email ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ExpectedException("Nome é obrigatório.");
+
         if (string.IsNullOrWhiteSpace(email))
             throw new ExpectedException("Email é obrigatório.");
 
@@ -81,6 +85,7 @@ public class UserController : AuthenticatedController
         if (request.calendar_public_enabled && !canUseCalendarIcs)
             throw new ExpectedException("Compartilhamento público de calendário ICS exige um plano ativo que tenha esse recurso liberado.");
 
+        user.name = name;
         user.email = email;
         user.phone = phone;
         user.notify_whatsapp = request.notify_whatsapp;
@@ -346,6 +351,7 @@ public class UserController : AuthenticatedController
 }
 
 public record UserSettingsRequest(
+    string name,
     string email,
     string? password,
     string? phone,

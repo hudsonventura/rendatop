@@ -75,6 +75,22 @@ public class User
     public string? totp_secret { get; set; }
 
     /// <summary>
+    /// Define se o email da conta já foi verificado
+    /// </summary>
+    public bool email_verified { get; set; } = true;
+
+    /// <summary>
+    /// Chave secreta temporária usada para validar o código enviado por email
+    /// </summary>
+    [JsonIgnore]
+    public string? email_verification_secret { get; set; }
+
+    /// <summary>
+    /// Data e hora do último envio do código de verificação por email
+    /// </summary>
+    public DateTime? email_verification_sent_at { get; set; }
+
+    /// <summary>
     /// Salt para encriptação da senha
     /// </summary>
     public string salt { get; private set; } = Guid.NewGuid().ToString();

@@ -12,10 +12,28 @@ const Signup = () => {
 
     const [erro, setErro] = useState(false);
     const [erroMessage, setErroMessage] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
     const [loading, setLoading] = useState(false);
+    const [verifying, setVerifying] = useState(false);
+    const [resending, setResending] = useState(false);
+    const [verificationPending, setVerificationPending] = useState(false);
+    const [pendingEmail, setPendingEmail] = useState("");
+    const [verificationCode, setVerificationCode] = useState("");
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const mode = params.get("mode");
+        const email = params.get("email");
+        const message = params.get("message");
+
+        if (mode === "verify") {
+            setVerificationPending(true);
+            setPendingEmail(email || "");
+            setSuccessMessage(message || "Informe o código enviado por email para ativar sua conta.");
+            window.history.replaceState({}, "", appPath("/signup"));
+        }
+
         axiosInstance.get('/Authenticated')
             .then(() => { window.location.href = appPath('/home'); })
             .catch(() => { });
@@ -25,6 +43,7 @@ const Signup = () => {
         event.preventDefault();
         setErro(false);
         setErroMessage("");
+        setSuccessMessage("");
         setLoading(true);
 
         const formData = new FormData(event.target);
@@ -43,6 +62,40 @@ const Signup = () => {
         axiosInstance
             .post("/signup", { name, email, password })
             .then((response) => {
+                const data = response?.data || {};
+                setVerificationPending(true);
+                setPendingEmail(data.email || String(email || ""));
+                setVerificationCode("");
+                setSuccessMessage(data.message || "Enviamos um código de verificação para seu email.")
+                setLoading(false);
+            })
+            .catch((error) => {
+                const message = typeof error?.response?.data === "string"
+                    ? error.response.data
+                    : "Não foi possível criar sua conta.";
+
+                if ((message || "").toLowerCase().includes("cadastro pendente")) {
+                    setVerificationPending(true);
+                    setPendingEmail(String(email || ""));
+                    setVerificationCode("");
+                }
+
+                setErro(true);
+                setErroMessage(message);
+                setLoading(false);
+            });
+    };
+
+    const handleVerifySignup = async (event) => {
+        event.preventDefault();
+        setErro(false);
+        setErroMessage("");
+        setSuccessMessage("");
+        setVerifying(true);
+
+        axiosInstance
+            .post("/signup/verify", { email: pendingEmail, code: verificationCode })
+            .then((response) => {
                 const { name: userName, email: userEmail } = response.data;
                 sessionStorage.setItem('name', userName);
                 sessionStorage.setItem('email', userEmail);
@@ -52,8 +105,30 @@ const Signup = () => {
                 setErro(true);
                 setErroMessage(typeof error?.response?.data === "string"
                     ? error.response.data
-                    : "Não foi possível criar sua conta.");
-                setLoading(false);
+                    : "Não foi possível ativar sua conta.");
+                setVerifying(false);
+            });
+    };
+
+    const handleResendCode = () => {
+        setErro(false);
+        setErroMessage("");
+        setSuccessMessage("");
+        setResending(true);
+
+        axiosInstance
+            .post("/signup/verification/resend", { email: pendingEmail })
+            .then((response) => {
+                setSuccessMessage(response?.data?.message || "Novo código enviado para seu email.")
+            })
+            .catch((error) => {
+                setErro(true);
+                setErroMessage(typeof error?.response?.data === "string"
+                    ? error.response.data
+                    : "Não foi possível reenviar o código.");
+            })
+            .finally(() => {
+                setResending(false);
             });
     };
 
@@ -89,108 +164,179 @@ const Signup = () => {
                         <span className="text-xl font-bold">RendaTop</span>
                     </div>
 
-                    <form onSubmit={handleSignup}>
-                        <Card className="border-0 shadow-xl bg-card">
-                            <CardHeader className="space-y-2 pb-6">
-                                <CardTitle className="text-2xl font-bold tracking-tight">Criar conta</CardTitle>
-                                <CardDescription className="text-muted-foreground">
-                                    Preencha seus dados para começar
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-5">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="name" className="text-sm font-medium">Nome</Label>
-                                        <Input
-                                            id="name"
-                                            type="text"
-                                            name="name"
-                                            placeholder="Seu nome completo"
-                                            required
-                                            className="h-11"
-                                        />
-                                    </div>
+                    <Card className="border-0 shadow-xl bg-card">
+                        <CardHeader className="space-y-2 pb-6">
+                            <CardTitle className="text-2xl font-bold tracking-tight">
+                                {verificationPending ? "Verificar email" : "Criar conta"}
+                            </CardTitle>
+                            <CardDescription className="text-muted-foreground">
+                                {verificationPending
+                                    ? "Informe o código enviado por email para ativar sua conta"
+                                    : "Preencha seus dados para começar"}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-5">
+                                {!verificationPending ? (
+                                    <form onSubmit={handleSignup} className="space-y-5">
+                                        <>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="name" className="text-sm font-medium">Nome</Label>
+                                                <Input
+                                                    id="name"
+                                                    type="text"
+                                                    name="name"
+                                                    placeholder="Seu nome completo"
+                                                    required
+                                                    className="h-11"
+                                                />
+                                            </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            name="email"
-                                            placeholder="seu@email.com"
-                                            required
-                                            className="h-11"
-                                        />
-                                    </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                                                <Input
+                                                    id="email"
+                                                    type="email"
+                                                    name="email"
+                                                    placeholder="seu@email.com"
+                                                    required
+                                                    className="h-11"
+                                                />
+                                            </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
-                                        <div className="relative">
-                                            <Input
-                                                id="password"
-                                                type={showPassword ? "text" : "password"}
-                                                name="password"
-                                                required
-                                                minLength={6}
-                                                className="h-11 pr-10"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                            <div className="space-y-2">
+                                                <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
+                                                <div className="relative">
+                                                    <Input
+                                                        id="password"
+                                                        type={showPassword ? "text" : "password"}
+                                                        name="password"
+                                                        required
+                                                        minLength={6}
+                                                        className="h-11 pr-10"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                                    >
+                                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar senha</Label>
+                                                <Input
+                                                    id="confirmPassword"
+                                                    type={showPassword ? "text" : "password"}
+                                                    name="confirmPassword"
+                                                    required
+                                                    minLength={6}
+                                                    className="h-11"
+                                                />
+                                            </div>
+
+                                            <Button
+                                                type="submit"
+                                                className="w-full h-11 font-medium"
+                                                disabled={loading}
                                             >
-                                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                            </button>
+                                                {loading ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                        Criando conta...
+                                                    </span>
+                                                ) : (
+                                                    "Criar conta"
+                                                )}
+                                            </Button>
+                                        </>
+                                    </form>
+                                ) : (
+                                    <form onSubmit={handleVerifySignup} className="space-y-5">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="pendingEmail" className="text-sm font-medium">Email</Label>
+                                            <Input
+                                                id="pendingEmail"
+                                                type="email"
+                                                value={pendingEmail}
+                                                readOnly
+                                                className="h-11"
+                                            />
                                         </div>
-                                    </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar senha</Label>
-                                        <Input
-                                            id="confirmPassword"
-                                            type={showPassword ? "text" : "password"}
-                                            name="confirmPassword"
-                                            required
-                                            minLength={6}
-                                            className="h-11"
-                                        />
-                                    </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="verificationCode" className="text-sm font-medium">Código de verificação</Label>
+                                            <Input
+                                                id="verificationCode"
+                                                type="text"
+                                                inputMode="numeric"
+                                                maxLength={6}
+                                                value={verificationCode}
+                                                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                                placeholder="000000"
+                                                required
+                                                className="h-11"
+                                            />
+                                        </div>
 
-                                    <Button
-                                        type="submit"
-                                        className="w-full h-11 font-medium"
-                                        disabled={loading}
-                                    >
-                                        {loading ? (
-                                            <span className="flex items-center gap-2">
-                                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                Criando conta...
-                                            </span>
-                                        ) : (
-                                            "Criar conta"
-                                        )}
-                                    </Button>
+                                        <Button
+                                            type="submit"
+                                            className="w-full h-11 font-medium"
+                                            disabled={verifying}
+                                        >
+                                            {verifying ? (
+                                                <span className="flex items-center gap-2">
+                                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                    Ativando conta...
+                                                </span>
+                                            ) : (
+                                                "Ativar conta"
+                                            )}
+                                        </Button>
 
-                                    {erro && (
-                                        <Alert variant="destructive">
-                                            <AlertCircle className="h-4 w-4" />
-                                            <AlertTitle><b>Erro</b></AlertTitle>
-                                            <AlertDescription>
-                                                {erroMessage}
-                                            </AlertDescription>
-                                        </Alert>
-                                    )}
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="w-full h-11 font-medium"
+                                            onClick={handleResendCode}
+                                            disabled={resending}
+                                        >
+                                            {resending ? "Reenviando código..." : "Reenviar código"}
+                                        </Button>
+                                    </form>
+                                )}
 
-                                    <p className="text-sm text-muted-foreground text-center">
-                                        Já tem uma conta?{" "}
-                                        <a href={appPath("/login")} className="text-foreground hover:underline underline-offset-4 font-medium">
-                                            Entrar
-                                        </a>
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </form>
+                                {erro && (
+                                    <Alert variant="destructive">
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle><b>Erro</b></AlertTitle>
+                                        <AlertDescription>
+                                            {erroMessage}
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {successMessage && (
+                                    <Alert>
+                                        <UserPlus className="h-4 w-4" />
+                                        <AlertTitle><b>Verificação</b></AlertTitle>
+                                        <AlertDescription>
+                                            {successMessage}
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+
+                                <p className="text-sm text-muted-foreground text-center">
+                                    Já tem uma conta?{" "}
+                                    <a href={appPath("/login")} className="text-foreground hover:underline underline-offset-4 font-medium">
+                                        Entrar
+                                    </a>
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>

@@ -1,68 +1,63 @@
 "use client"
 
 import {
-  Shield,
-  BarChart3,
-  Database,
   Building2,
   Rocket,
   Settings,
-  Zap,
-  Package,
-  Layout,
-  Crown,
-  Palette
+  Bell,
+  Wallet,
+  CalendarDays
 } from 'lucide-react'
 
 const menuSections = [
   {
-    title: 'Controle Financeiro',
+    title: 'Carteira',
     items: [
       {
-        title: 'Controle de juros',
-        description: 'Saiba exatamente quanto você receberá de juros',
-        icon: Package,
-        href: '#free-blocks'
-      },
-      {
-        title: 'Taxas e impostos',
-        description: 'Controle as taxas e impostos para minimizar os custos',
-        icon: Crown,
-        href: '#premium-templates'
-      }
-    ]
-  },
-  {
-    title: 'Controle de Tempo',
-    items: [
-      {
-        title: 'Notificações',
-        description: 'Seja notificado antes do vencimento do investimento',
-        icon: Building2,
-        href: '#ecommerce'
-      },
-      {
-        title: 'Próximos vencimentos',
-        description: 'Sabas quais serão os próximos investimentos a serem liquidados',
+        title: 'Dashboard',
+        description: 'Visualize vencimentos, distribuicao por banco e evolucao da carteira.',
         icon: Rocket,
-        href: '#saas-dashboards'
+        href: '#features'
+      },
+      {
+        title: 'Meus investimentos',
+        description: 'Cadastre, acompanhe, resgate e arquive investimentos com mais contexto.',
+        icon: Wallet,
+        href: '#features'
       }
     ]
   },
   {
-    title: 'Controle Gráfico',
+    title: 'Rotina',
     items: [
       {
-        title: 'Graficos e Indicadores',
-        description: 'Acompanhe a evolução do seu patrimonio',
-        icon: Database,
-        href: '#docs'
+        title: 'Calendario',
+        description: 'Acompanhe datas de aplicacao e vencimento em uma visao mensal clara.',
+        icon: CalendarDays,
+        href: '#features'
       },
       {
-        title: 'Relatórios',
-        description: 'Liste e exporte para TXT, PDF ou Excel todos os seus investimento',
-        icon: Palette,
-        href: '#showcase'
+        title: 'Notificacoes',
+        description: 'Receba alertas no app e acompanhe o historico de leitura.',
+        icon: Bell,
+        href: '#features'
+      }
+    ]
+  },
+  {
+    title: 'Conta',
+    items: [
+      {
+        title: 'Configuracoes',
+        description: 'Ajuste email, telefone, canais de alerta, calendario e TOTP.',
+        icon: Settings,
+        href: '#features'
+      },
+      {
+        title: 'Assinatura',
+        description: 'Escolha entre os planos Free, Plus e Pro conforme sua rotina.',
+        icon: Building2,
+        href: '#pricing'
       }
     ]
   }

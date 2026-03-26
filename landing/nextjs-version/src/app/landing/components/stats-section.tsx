@@ -1,51 +1,44 @@
 "use client"
 
 import {
-  Package,
-  Download,
-  Users,
-  Star
+  CalendarClock,
+  Bell,
+  LineChart,
+  Layers3,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { DotPattern } from '@/components/dot-pattern'
 
-
 const stats = [
   {
-    icon: Package,
-    value: '3k+',
-    label: 'Clientes',
-    description: 'Mais de 3 mil clientes ativos na plataforma'
+    icon: CalendarClock,
+    label: 'Investimentos a vencer',
+    description: 'Acompanhe os vencimentos previstos para os proximos dias.',
   },
   {
-    icon: Download,
-    value: '700M+',
-    label: 'Em investimento',
-    description: 'Mais de R$ 700 milhões controlados'
+    icon: LineChart,
+    label: 'Indexadores principais',
+    description: 'CDI, IPCA+ e %a.a para acompanhar a renda fixa.',
   },
   {
-    icon: Users,
-    value: '100K+',
-    label: 'Economia',
-    description: 'Mais de R$ 100 mil economizados em taxas e impostos'
+    icon: Bell,
+    label: 'Notificações',
+    description: 'Seja avisado sobre vencimentos, via app, e-mail, Telegram e WhatsApp.',
   },
   {
-    icon: Star,
-    value: '4.8',
-    label: 'Nota',
-    description: 'Nota excelente em satisfação do cliente'
-  }
+    icon: Layers3,
+    label: 'Planos',
+    description: 'Free, Plus e Pro para adaptar notificacoes, IA e calendário ao seu uso.',
+  },
 ]
 
 export function StatsSection() {
   return (
     <section className="py-12 sm:py-16 relative">
-      {/* Background with transparency */}
       <div className="absolute inset-0 bg-gradient-to-r from-primary/8 via-transparent to-secondary/20" />
       <DotPattern className="opacity-75" size="md" fadeStyle="circle" />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
           {stats.map((stat, index) => (
             <Card

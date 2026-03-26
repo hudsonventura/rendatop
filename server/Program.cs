@@ -313,6 +313,9 @@ void AddBackgroundServices()
 
     // serviço que monitora assinaturas a cada 6h (renovação automática, expiração, etc.)
     builder.Services.AddHostedService<SubscriptionMonitorBackgroundService>();
+
+    // serviço diário (06:00 UTC) para gerar investimentos recorrentes
+    builder.Services.AddHostedService<RecurringInvestmentsBackgroundService>();
 }
 
 

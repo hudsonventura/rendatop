@@ -22,6 +22,24 @@ jobs:
         working-directory: /rendatop
         run: docker compose build
 
+      - name: Docker build tests
+        working-directory: /rendatop
+        run: docker compose -f docker-compose-teste.yml build tests
+
+      - name: Run pipeline tests
+        working-directory: /rendatop
+        run: docker compose -f docker-compose-teste.yml up --abort-on-container-exit --exit-code-from tests --no-color tests
+
+      - name: Show test logs on failure
+        if: failure()
+        working-directory: /rendatop
+        run: docker compose -f docker-compose-teste.yml logs --no-color
+
+      - name: Shutdown test stack
+        if: always()
+        working-directory: /rendatop
+        run: docker compose -f docker-compose-teste.yml down -v
+
       - name: Apply migrations
         working-directory: /rendatop
         run: docker compose up migrator

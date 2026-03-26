@@ -19,6 +19,21 @@ const Login = () => {
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpChallengeId, setTotpChallengeId] = useState("");
 
+    const redirectToSignupVerification = (email, message) => {
+        const params = new URLSearchParams();
+        params.set("mode", "verify");
+
+        if (email) {
+            params.set("email", String(email));
+        }
+
+        if (message) {
+            params.set("message", message);
+        }
+
+        window.location.href = `${appPath("/signup")}?${params.toString()}`;
+    };
+
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const ssoStatus = params.get("sso");
@@ -81,10 +96,16 @@ const Login = () => {
                 window.location.href = appPath('/home');
             })
             .catch((error) => {
-                setErro(true);
                 const message = typeof error?.response?.data === "string"
                     ? error.response.data
                     : "Email ou senha inválidos. Tente novamente.";
+
+                if ((message || "").toLowerCase().includes("ainda não foi ativada")) {
+                    redirectToSignupVerification(email, message);
+                    return;
+                }
+
+                setErro(true);
                 setErroMessage(message);
                 if (!totpRequired) {
                     setTotpChallengeId("");

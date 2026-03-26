@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using server.Domain;
@@ -11,9 +12,11 @@ using server.Domain;
 namespace server.Migrations
 {
     [DbContext(typeof(Context))]
-    partial class ContextModelSnapshot : ModelSnapshot
+    [Migration("20260326151633_add_user_email_verification")]
+    partial class add_user_email_verification
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -158,78 +161,6 @@ namespace server.Migrations
                     b.HasIndex("user_id");
 
                     b.ToTable("notifications");
-                });
-
-            modelBuilder.Entity("server.Domain.RecurringInvestment", b =>
-                {
-                    b.Property<Guid>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("active")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("bank_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("day_of_month")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("duration_days")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("frequency")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("index")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("index_percent")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("index_value")
-                        .HasColumnType("numeric");
-
-                    b.Property<DateTime?>("last_generated_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("liquidity_daily")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("months_csv")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("owner_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("taxes")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("title")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("updated_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("value")
-                        .HasColumnType("numeric");
-
-                    b.Property<List<short>>("weekdays")
-                        .IsRequired()
-                        .HasColumnType("smallint[]");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("bank_id");
-
-                    b.HasIndex("owner_id");
-
-                    b.ToTable("recurring_investments");
                 });
 
             modelBuilder.Entity("server.Domain.Redemption", b =>
@@ -412,25 +343,6 @@ namespace server.Migrations
                         .IsRequired();
 
                     b.Navigation("user");
-                });
-
-            modelBuilder.Entity("server.Domain.RecurringInvestment", b =>
-                {
-                    b.HasOne("server.Domain.Bank", "bank")
-                        .WithMany()
-                        .HasForeignKey("bank_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("server.Domain.User", "owner")
-                        .WithMany()
-                        .HasForeignKey("owner_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("bank");
-
-                    b.Navigation("owner");
                 });
 
             modelBuilder.Entity("server.Domain.Redemption", b =>
