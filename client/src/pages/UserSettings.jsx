@@ -21,6 +21,7 @@ const UserSettings = () => {
     const [success, setSuccess] = useState("")
     const [error, setError] = useState("")
 
+    const [name, setName] = useState("")
     const [email, setEmail] = useState("")
     const [phone, setPhone] = useState("")
     const [cpf, setCpf] = useState("")
@@ -49,6 +50,7 @@ const UserSettings = () => {
                 const canUseWhatsAppNotifications = Boolean(data.whatsapp_notifications_enabled)
                 const canUseCalendarIcs = Boolean(data.calendar_ics_enabled)
 
+                setName(data.name || "")
                 setEmail(data.email || "")
                 setPhone(data.phone || "")
                 setCpf(data.cpf || "")
@@ -103,6 +105,11 @@ const UserSettings = () => {
         const effectiveNotifyWhatsapp = whatsappNotificationsEnabled ? notifyWhatsapp : false
         const effectiveCalendarPublicEnabled = calendarIcsEnabled ? calendarPublicEnabled : false
 
+        if (!name.trim()) {
+            setError("Nome é obrigatório.")
+            return
+        }
+
         if (password && password.length < 6) {
             setError("A senha deve ter pelo menos 6 caracteres.")
             return
@@ -126,6 +133,7 @@ const UserSettings = () => {
         setSaving(true)
         axiosInstance
             .patch("/User/Settings", {
+                name,
                 email,
                 password: password || null,
                 phone,
@@ -136,6 +144,7 @@ const UserSettings = () => {
             })
             .then((response) => {
                 const data = response.data
+                setName(data.name || "")
                 sessionStorage.setItem("email", data.email)
                 if (data.name) sessionStorage.setItem("name", data.name)
                 setWhatsappNotificationsEnabled(Boolean(data.whatsapp_notifications_enabled))
@@ -298,7 +307,7 @@ const UserSettings = () => {
                         <CardHeader>
                             <CardTitle>Dados da conta</CardTitle>
                             <CardDescription>
-                                Você pode alterar email, senha, telefone e preferências de notificação.
+                                Você pode alterar nome, email, senha, telefone e preferências de notificação.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -306,6 +315,18 @@ const UserSettings = () => {
                                 <p className="text-sm text-muted-foreground">Carregando configurações...</p>
                             ) : (
                                 <form onSubmit={handleSubmit} className="space-y-5">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name">Nome</Label>
+                                        <Input
+                                            id="name"
+                                            type="text"
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            placeholder="Seu nome completo"
+                                            required
+                                        />
+                                    </div>
+
                                     <div className="space-y-2">
                                         <Label htmlFor="email">Email</Label>
                                         <Input
