@@ -1,6 +1,6 @@
 services:
 
-  db:
+  db-test:
     image: postgres:18
     container_name: rendatop-test-db
     restart: unless-stopped
@@ -12,7 +12,7 @@ services:
       timeout: 5s
       retries: 12
 
-  redis:
+  redis-test:
     image: redis:7
     container_name: rendatop-test-redis
     restart: unless-stopped
@@ -30,11 +30,9 @@ services:
     env_file:
       - .env
     environment:
-      - POSTGRES_HOST=db
-      - REDIS_HOST=redis:6379
-      - WHATSAPP_EVOLUTION_URL=${WHATSAPP_EVOLUTION_URL_PROD}
-      - WHATSAPP_EVOLUTION_INSTANCE=${WHATSAPP_EVOLUTION_INSTANCE_PROD}
-      - WHATSAPP_EVOLUTION_API_KEY=${WHATSAPP_EVOLUTION_API_KEY_PROD}
+      - POSTGRES_HOST=db-test
+      - REDIS_HOST=redis-test:6379
+      - WHATSAPP_EVOLUTION_URL=10.10.1.202:8080
       - NOTIFICATION_TESTS_MANAGED_BY_COMPOSE=true
     depends_on:
       db:
