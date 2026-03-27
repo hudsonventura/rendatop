@@ -35,8 +35,8 @@ services:
       - WHATSAPP_EVOLUTION_URL=10.10.1.202:8080
       - NOTIFICATION_TESTS_MANAGED_BY_COMPOSE=true
     depends_on:
-      db:
+      db-test:
         condition: service_healthy
-      redis:
+      redis-test:
         condition: service_healthy
     restart: "no"
