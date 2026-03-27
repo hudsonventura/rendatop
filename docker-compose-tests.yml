@@ -32,7 +32,7 @@ services:
     environment:
       - POSTGRES_HOST=db-test
       - REDIS_HOST=redis-test:6379
-      - WHATSAPP_EVOLUTION_URL=10.10.1.202:8080
+      - WHATSAPP_EVOLUTION_URL=http://10.10.1.202:8080
       - NOTIFICATION_TESTS_MANAGED_BY_COMPOSE=true
     depends_on:
       db-test:
