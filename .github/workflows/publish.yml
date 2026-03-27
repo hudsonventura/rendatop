@@ -34,7 +34,7 @@ jobs:
         working-directory: /rendatop
         run: docker compose -f docker-compose-teste.yml logs
 
-            - name: Shutdown test stack
+      - name: Shutdown test stack
         if: always()
         working-directory: /rendatop
         run: docker compose -f docker-compose-teste.yml down -v
