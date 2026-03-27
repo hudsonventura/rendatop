@@ -1,8 +1,8 @@
 .git
 .gitignore
 .data
-**/bin
-**/obj
-client/node_modules
-landing/node_modules
-landing/nextjs-version/node_modules
+client/*
+landing/*
+migrator/*
+nginx/*
+model-front/*
