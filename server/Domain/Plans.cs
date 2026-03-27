@@ -33,11 +33,18 @@ public class Plan
     internal bool whatsapp_notifications { get; set; } = false;
 
     /// <summary>
+    /// Usuario tem permissao para criar investimentos recorrentes?
+    /// </summary>
+    internal bool recurring_investments { get; set; } = false;
+
+    /// <summary>
     /// Dicionário de features do plano.
     /// Key = identificador da feature (ex: "ai_usage", "export_data").
     /// Value = texto explicativo para exibição ao usuário.
     /// </summary>
     public Dictionary<string, string> features { get; set; } = new();
+
+    
 }
 
 
@@ -55,6 +62,7 @@ public static class Plans
             calendar_ics = false,
             stoks = 5,
             whatsapp_notifications = false,
+            recurring_investments = false,
             features = new Dictionary<string, string>
             {
                 { "ai_usage", "2 leituras de comprovantes por IA por mês" },
@@ -74,6 +82,7 @@ public static class Plans
             calendar_ics = true,
             stoks = 30,
             whatsapp_notifications = true,
+            recurring_investments = true,
             features = new Dictionary<string, string>
             {
                 { "ai_usage", "10 leituras de comprovantes por IA por mês" },
@@ -95,6 +104,7 @@ public static class Plans
             calendar_ics = true,
             stoks = 100,
             whatsapp_notifications = true,
+            recurring_investments = true,
             features = new Dictionary<string, string>
             {
                 { "ai_usage", "30 leituras de comprovantes por IA por mês" },
