@@ -34,6 +34,7 @@ services:
       - REDIS_HOST=redis-test:6379
       - WHATSAPP_EVOLUTION_URL=http://10.10.1.202:8080
       - NOTIFICATION_TESTS_MANAGED_BY_COMPOSE=true
+      - WHATSAPP_TEST_PHONE=+5565992327494
     depends_on:
       db-test:
         condition: service_healthy
