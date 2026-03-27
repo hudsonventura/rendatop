@@ -22,21 +22,6 @@ services:
       timeout: 5s
       retries: 12
 
-  evolution:
-    image: atendai/evolution-api:v2.2.3
-    container_name: rendatop-test-evolution
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - DATABASE_CONNECTION_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/evolution?schema=public
-      - CACHE_REDIS_URI=redis://redis:6379/6
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   tests:
     build:
       context: ./
@@ -47,13 +32,13 @@ services:
     environment:
       - POSTGRES_HOST=db
       - REDIS_HOST=redis:6379
-      - WHATSAPP_EVOLUTION_URL=http://evolution:8080
+      - WHATSAPP_EVOLUTION_URL=${WHATSAPP_EVOLUTION_URL_PROD}
+      - WHATSAPP_EVOLUTION_INSTANCE=${WHATSAPP_EVOLUTION_INSTANCE_PROD}
+      - WHATSAPP_EVOLUTION_API_KEY=${WHATSAPP_EVOLUTION_API_KEY_PROD}
       - NOTIFICATION_TESTS_MANAGED_BY_COMPOSE=true
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-      evolution:
-        condition: service_started
     restart: "no"
