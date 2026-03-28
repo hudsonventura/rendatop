@@ -34,6 +34,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
     Select,
     SelectContent,
@@ -434,14 +435,42 @@ function ArchiveDialog({ investment, open, onOpenChange, onConfirm }) {
     )
 }
 
+const archiveReinvestHint = "Você só poderá reinvestir o valor deste investimento ou arquivá-lo quando chegar a data de resgate"
+
+function ActionMenuItemWithHint({ disabled, onClick, className, children }) {
+    const item = (
+        <button
+            className={className}
+            disabled={disabled}
+            onClick={onClick}
+        >
+            {children}
+        </button>
+    )
+
+    if (!disabled) return item
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="block w-full cursor-not-allowed">{item}</span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-xs">
+                {archiveReinvestHint}
+            </TooltipContent>
+        </Tooltip>
+    )
+}
+
 // ── Actions Cell ──────────────────────────────────────────────────────────────
 
-function ActionsCell({ investment, onView, onEdit, onRedeem, onReinvest, onDelete }) {
+function ActionsCell({ investment, onView, onEdit, onRedeem, onReinvest, onArchive, onDelete }) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
     const btnRef = React.useRef(null)
     const menuRef = React.useRef(null)
     const showReinvest = canShowReinvest(investment.due_date)
+    const canArchive = showReinvest
 
     // Close menu when clicking outside or scrolling
     React.useEffect(() => {
@@ -515,7 +544,7 @@ function ActionsCell({ investment, onView, onEdit, onRedeem, onReinvest, onDelet
                         <HandCoins className="h-4 w-4" />
                         Resgatar
                     </button>
-                    <button
+                    <ActionMenuItemWithHint
                         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={!showReinvest}
                         onClick={() => {
@@ -526,7 +555,19 @@ function ActionsCell({ investment, onView, onEdit, onRedeem, onReinvest, onDelet
                     >
                         <CopyPlus className="h-4 w-4" />
                         Reinvestir
-                    </button>
+                    </ActionMenuItemWithHint>
+                    <ActionMenuItemWithHint
+                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={!canArchive}
+                        onClick={() => {
+                            if (!canArchive) return
+                            setMenuOpen(false)
+                            onArchive(investment)
+                        }}
+                    >
+                        <Archive className="h-4 w-4" />
+                        Arquivar
+                    </ActionMenuItemWithHint>
                     <div className="my-1 h-px bg-border" />
                     <button
                         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 cursor-pointer"
@@ -544,7 +585,7 @@ function ActionsCell({ investment, onView, onEdit, onRedeem, onReinvest, onDelet
 
 // ── Column definitions ────────────────────────────────────────────────────────
 
-function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
+function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onArchive, onDelete) {
     return [
         {
             accessorKey: "title",
@@ -756,6 +797,7 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onDelete) {
                     onEdit={onEdit}
                     onRedeem={onRedeem}
                     onReinvest={onReinvest}
+                    onArchive={onArchive}
                     onDelete={onDelete}
                 />
             ),
@@ -833,7 +875,7 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
     }
 
     const columns = React.useMemo(
-        () => getColumns(setReload, openView, openEdit, openRedeem, handleReinvest, openDelete),
+        () => getColumns(setReload, openView, openEdit, openRedeem, handleReinvest, openArchive, openDelete),
         [setReload, onReinvest]
     )
 
