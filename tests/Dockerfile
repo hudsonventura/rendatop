@@ -1,14 +1,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0
 
-WORKDIR /src
+WORKDIR /app
 
-COPY rendatop.slnx ./
-COPY tests/tests.csproj tests/
-COPY server/server.csproj server/
+COPY . .
 
-RUN dotnet restore tests/tests.csproj
+RUN dotnet restore ./tests/tests.csproj
+RUN dotnet build ./tests/tests.csproj -c Release --no-restore
 
-COPY tests/ tests/
-COPY server/ server/
-
-ENTRYPOINT ["dotnet", "test", "tests/tests.csproj", "-c", "Release", "--no-restore", "--logger", "console;verbosity=normal"]
+ENTRYPOINT ["dotnet", "test", "./tests/tests.csproj", "-c", "Release", "--no-build"]

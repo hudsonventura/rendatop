@@ -1,5 +1,13 @@
-import React from "react"
+import { Archive, CopyPlus, EllipsisVertical } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatIrPercent, getIrBadgeClass } from "@/utils/ir-level"
 import {
     Table,
@@ -28,7 +36,45 @@ function getDueSnapshot(investment) {
     return investment.calculated?.[1] ?? investment.calculated?.[0]
 }
 
-export default function InvestmentsDueSoon({ investments }) {
+function canShowReinvest(dateStr) {
+    if (!dateStr) return false
+
+    const due = new Date(dateStr)
+    due.setHours(0, 0, 0, 0)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    return due <= today
+}
+
+const archiveReinvestHint = "Você só poderá reinvestir o valor deste investimento ou arquivá-lo quando chegar a data de resgate"
+
+function DropdownActionItemWithHint({ disabled, onClick, children }) {
+    const item = (
+        <DropdownMenuItem
+            disabled={disabled}
+            onClick={onClick}
+        >
+            {children}
+        </DropdownMenuItem>
+    )
+
+    if (!disabled) return item
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="block w-full cursor-not-allowed">{item}</span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-xs">
+                {archiveReinvestHint}
+            </TooltipContent>
+        </Tooltip>
+    )
+}
+
+export default function InvestmentsDueSoon({ investments, onArchive, onReinvest }) {
     if (!investments?.length) {
         return (
             <div className="rounded-lg border p-4 text-sm text-muted-foreground">
@@ -46,11 +92,15 @@ export default function InvestmentsDueSoon({ investments }) {
                         <TableHead>Valor</TableHead>
                         <TableHead>Valor líquido</TableHead>
                         <TableHead>IR</TableHead>
+                        <TableHead className="w-[52px]" />
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {investments.map((investment) => {
                         const dueSnapshot = getDueSnapshot(investment)
+                        const showReinvest = canShowReinvest(investment.due_date)
+                        const canArchive = showReinvest
+
                         return (
                             <TableRow key={investment.id}>
                                 <TableCell>
@@ -74,6 +124,42 @@ export default function InvestmentsDueSoon({ investments }) {
                                     >
                                         {formatIrPercent(dueSnapshot?.IR ?? 0)}% · R$ {formatCurrency(dueSnapshot?.IR_value ?? 0)}
                                     </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-8 cursor-pointer text-muted-foreground"
+                                            >
+                                                <EllipsisVertical className="h-4 w-4" />
+                                                <span className="sr-only">Abrir menu</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-40">
+                                            <DropdownActionItemWithHint
+                                                disabled={!showReinvest}
+                                                onClick={() => {
+                                                    if (!showReinvest) return
+                                                    onReinvest?.(investment)
+                                                }}
+                                            >
+                                                <CopyPlus className="mr-2 h-4 w-4" />
+                                                Reinvestir
+                                            </DropdownActionItemWithHint>
+                                            <DropdownActionItemWithHint
+                                                disabled={!canArchive}
+                                                onClick={() => {
+                                                    if (!canArchive) return
+                                                    onArchive?.(investment)
+                                                }}
+                                            >
+                                                <Archive className="mr-2 h-4 w-4" />
+                                                Arquivar
+                                            </DropdownActionItemWithHint>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </TableCell>
                             </TableRow>
                         )

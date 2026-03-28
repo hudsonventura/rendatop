@@ -1,6 +1,6 @@
 services:
 
-  db:
+  db-test:
     image: postgres:18
     container_name: rendatop-test-db
     restart: unless-stopped
@@ -12,7 +12,7 @@ services:
       timeout: 5s
       retries: 12
 
-  redis:
+  redis-test:
     image: redis:7
     container_name: rendatop-test-redis
     restart: unless-stopped
@@ -22,21 +22,6 @@ services:
       timeout: 5s
       retries: 12
 
-  evolution:
-    image: atendai/evolution-api:v2.2.3
-    container_name: rendatop-test-evolution
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - DATABASE_CONNECTION_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/evolution?schema=public
-      - CACHE_REDIS_URI=redis://redis:6379/6
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   tests:
     build:
       context: ./
@@ -45,15 +30,14 @@ services:
     env_file:
       - .env
     environment:
-      - POSTGRES_HOST=db
-      - REDIS_HOST=redis:6379
-      - WHATSAPP_EVOLUTION_URL=http://evolution:8080
+      - POSTGRES_HOST=db-test
+      - REDIS_HOST=redis-test:6379
+      - WHATSAPP_EVOLUTION_URL=http://10.10.1.202:8080
       - NOTIFICATION_TESTS_MANAGED_BY_COMPOSE=true
+      - WHATSAPP_TEST_PHONE=65992327494
     depends_on:
-      db:
+      db-test:
         condition: service_healthy
-      redis:
+      redis-test:
         condition: service_healthy
-      evolution:
-        condition: service_started
     restart: "no"
