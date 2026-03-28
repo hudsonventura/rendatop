@@ -3,6 +3,5 @@
 .data
 client/*
 landing/*
-migrator/*
 nginx/*
 model-front/*
