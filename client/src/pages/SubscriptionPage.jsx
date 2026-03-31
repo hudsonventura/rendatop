@@ -29,16 +29,94 @@ function splitFullName(fullName) {
     };
 }
 
+function joinErrorParts(parts) {
+    return parts
+        .map((part) => (typeof part === "string" ? part.trim() : ""))
+        .filter(Boolean)
+        .join(" | ");
+}
+
+function extractErrorMessage(error, fallbackMessage) {
+    if (!error) return fallbackMessage;
+
+    const candidates = [
+        error?.response?.data,
+        error?.response?.data?.Message,
+        error?.response?.data?.message,
+        error?.response?.data?.error,
+        error?.message
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim()) {
+            return candidate.trim();
+        }
+    }
+
+    const responseData = error?.response?.data;
+    if (responseData && typeof responseData === "object") {
+        const fromCauses = Array.isArray(responseData.cause)
+            ? responseData.cause
+                .map((cause) => joinErrorParts([
+                    cause?.code ? `code=${cause.code}` : "",
+                    cause?.description,
+                    cause?.message,
+                    cause?.details
+                ]))
+                .filter(Boolean)
+            : [];
+
+        const nestedMessage = joinErrorParts([
+            responseData.title,
+            responseData.detail,
+            responseData.error,
+            responseData.message,
+            responseData.Message,
+            fromCauses.length > 0 ? `causas: ${fromCauses.join(" | ")}` : ""
+        ]);
+
+        if (nestedMessage) {
+            return nestedMessage;
+        }
+    }
+
+    if (Array.isArray(error?.cause)) {
+        const sdkCauseMessage = error.cause
+            .map((cause) => joinErrorParts([
+                cause?.code ? `code=${cause.code}` : "",
+                cause?.description,
+                cause?.message,
+                cause?.details
+            ]))
+            .filter(Boolean)
+            .join(" | ");
+
+        if (sdkCauseMessage) {
+            return sdkCauseMessage;
+        }
+    }
+
+    return fallbackMessage;
+}
+
 const SubscriptionPage = () => {
     const [plans, setPlans] = useState([]);
     const [activeSub, setActiveSub] = useState(null);
     const [pendingSub, setPendingSub] = useState(null);
+    const [pendingCharge, setPendingCharge] = useState(null);
     const [payerFullName, setPayerFullName] = useState("");
     const [payerCpf, setPayerCpf] = useState("");
     const [loading, setLoading] = useState(true);
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
     const [pendingCancelDialogOpen, setPendingCancelDialogOpen] = useState(false);
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [cancelLoading, setCancelLoading] = useState(false);
+    const [cancelError, setCancelError] = useState('');
+    const [revertCancelDialogOpen, setRevertCancelDialogOpen] = useState(false);
+    const [revertCancelLoading, setRevertCancelLoading] = useState(false);
+    const [revertCancelError, setRevertCancelError] = useState('');
+    const [cancelNotice, setCancelNotice] = useState('');
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -51,6 +129,7 @@ const SubscriptionPage = () => {
             setPlans(plansRes.data);
             setActiveSub(subRes.data?.active_subscription || null);
             setPendingSub(subRes.data?.pending_subscription || null);
+            setPendingCharge(subRes.data?.pending_charge || null);
             setPayerFullName(settingsRes?.data?.name || sessionStorage.getItem('name') || "");
             setPayerCpf(settingsRes?.data?.cpf || "");
         } catch (err) {
@@ -71,11 +150,25 @@ const SubscriptionPage = () => {
     };
 
     const handleCancelSubscription = async () => {
+        setCancelError('');
+        setCancelDialogOpen(true);
+    };
+
+    const handleConfirmCancellation = async (mode) => {
         try {
-            await axiosInstance.post('/subscription/cancel-active');
+            setCancelLoading(true);
+            setCancelError('');
+            const result = await axiosInstance.post('/subscription/cancel-active', {
+                confirm: true,
+                mode
+            });
+            setCancelNotice(result?.data?.message || '');
+            setCancelDialogOpen(false);
             await fetchData();
         } catch (err) {
-            console.error(err);
+            setCancelError(extractErrorMessage(err, 'Erro ao cancelar assinatura.'));
+        } finally {
+            setCancelLoading(false);
         }
     };
 
@@ -93,8 +186,31 @@ const SubscriptionPage = () => {
         }
     };
 
+    const handleRequestRevertCancellation = () => {
+        setRevertCancelError('');
+        setRevertCancelDialogOpen(true);
+    };
+
+    const handleConfirmRevertCancellation = async () => {
+        try {
+            setRevertCancelLoading(true);
+            setRevertCancelError('');
+            const result = await axiosInstance.post('/subscription/cancel-scheduled/revert', {
+                confirm: true
+            });
+            setCancelNotice(result?.data?.message || '');
+            setRevertCancelDialogOpen(false);
+            await fetchData();
+        } catch (err) {
+            setRevertCancelError(extractErrorMessage(err, 'Erro ao reverter o cancelamento agendado.'));
+        } finally {
+            setRevertCancelLoading(false);
+        }
+    };
+
     const currentPlanId = activeSub?.plan_id || 'free';
     const pendingPlanId = pendingSub?.plan_id || null;
+    const isCardSubscription = activeSub?.payment_method?.includes('card');
 
     const planIcons = { free: null, plus: Sparkles, pro: Crown };
 
@@ -191,9 +307,10 @@ const SubscriptionPage = () => {
                                                         <Button
                                                             variant="outline"
                                                             className="w-full"
+                                                            disabled={Boolean(activeSub?.cancel_at_period_end)}
                                                             onClick={handleCancelSubscription}
                                                         >
-                                                            Cancelar assinatura
+                                                            {activeSub?.cancel_at_period_end ? 'Cancelamento agendado' : 'Cancelar assinatura'}
                                                         </Button>
                                                     ) : (
                                                         <Button variant="outline" className="w-full" disabled>
@@ -248,6 +365,30 @@ const SubscriptionPage = () => {
                                             </p>
                                         </div>
                                     </div>
+
+                                    {activeSub.cancel_at_period_end && (
+                                        <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                                <span>
+                                                    Seu cancelamento já está programado para o fim do período atual. Nenhuma nova cobrança será enviada.
+                                                </span>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="border-amber-500/40 bg-white text-amber-900 hover:bg-amber-100"
+                                                    onClick={handleRequestRevertCancellation}
+                                                >
+                                                    Cancelar solicitação
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {!activeSub.cancel_at_period_end && cancelNotice && (
+                                        <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
+                                            {cancelNotice}
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         )}
@@ -271,6 +412,14 @@ const SubscriptionPage = () => {
                                     </div>
                                 </CardContent>
                             </Card>
+                        )}
+
+                        {pendingCharge && (
+                            <PendingChargeCard
+                                charge={pendingCharge}
+                                planName={pendingSub?.plan?.name || pendingSub?.plan_id || pendingCharge.plan_id}
+                                onRefresh={fetchData}
+                            />
                         )}
                     </div>
                 </div>
@@ -310,7 +459,282 @@ const SubscriptionPage = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <Dialog
+                open={cancelDialogOpen}
+                onOpenChange={(open) => {
+                    if (!cancelLoading) {
+                        setCancelDialogOpen(open);
+                        if (!open) setCancelError('');
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Cancelar assinatura?</DialogTitle>
+                        <DialogDescription>
+                            {isCardSubscription
+                                ? 'Escolha como deseja encerrar sua assinatura paga com cartão.'
+                                : 'Como o pagamento foi feito via PIX ou boleto, o cancelamento só pode acontecer ao final do período atual.'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {isCardSubscription ? (
+                        <div className="space-y-3 text-sm text-muted-foreground">
+                            <p>
+                                Se você escolher receber o valor proporcional, a assinatura será encerrada agora e o sistema solicitará um estorno proporcional do período restante.
+                            </p>
+                            <p>
+                                Se preferir permanecer ativo até o fim do período, vamos apenas programar o cancelamento e não enviaremos novas cobranças.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3 text-sm text-muted-foreground">
+                            <p>
+                                Vamos programar o cancelamento para o final do período já pago e nenhuma cobrança futura será enviada.
+                            </p>
+                            <p>
+                                Até lá, sua assinatura continuará ativa normalmente.
+                            </p>
+                        </div>
+                    )}
+
+                    {cancelError && (
+                        <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                            {cancelError}
+                        </div>
+                    )}
+
+                    <DialogFooter className="flex gap-2 sm:gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setCancelDialogOpen(false)}
+                            disabled={cancelLoading}
+                        >
+                            Não
+                        </Button>
+
+                        {isCardSubscription ? (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => handleConfirmCancellation('end_of_period')}
+                                    disabled={cancelLoading}
+                                >
+                                    {cancelLoading ? 'Processando...' : 'Manter até o fim'}
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={() => handleConfirmCancellation('refund_prorated')}
+                                    disabled={cancelLoading}
+                                >
+                                    {cancelLoading ? 'Processando...' : 'Receber proporcional'}
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                variant="destructive"
+                                onClick={() => handleConfirmCancellation('end_of_period')}
+                                disabled={cancelLoading}
+                            >
+                                {cancelLoading ? 'Processando...' : 'Sim, programar cancelamento'}
+                            </Button>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={revertCancelDialogOpen}
+                onOpenChange={(open) => {
+                    if (!revertCancelLoading) {
+                        setRevertCancelDialogOpen(open);
+                        if (!open) setRevertCancelError('');
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Cancelar a solicitação de cancelamento?</DialogTitle>
+                        <DialogDescription>
+                            Se você continuar, a programação de cancelamento será revertida e a sua assinatura poderá renovar normalmente.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {revertCancelError && (
+                        <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                            {revertCancelError}
+                        </div>
+                    )}
+
+                    <DialogFooter className="flex gap-2 sm:gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setRevertCancelDialogOpen(false)}
+                            disabled={revertCancelLoading}
+                        >
+                            Não
+                        </Button>
+                        <Button
+                            onClick={handleConfirmRevertCancellation}
+                            disabled={revertCancelLoading}
+                        >
+                            {revertCancelLoading ? 'Processando...' : 'Sim'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
+    );
+};
+
+const formatDateTime = (value) => {
+    if (!value) return "—";
+    return new Date(value).toLocaleString('pt-BR');
+};
+
+const PendingChargeCard = ({ charge, planName, onRefresh }) => {
+    const [chargeState, setChargeState] = useState(charge);
+    const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        setChargeState(charge);
+    }, [charge]);
+
+    useEffect(() => {
+        if (!chargeState?.provider_payment_id) return;
+        if (String(chargeState.status).toLowerCase() !== 'pending') return;
+
+        const interval = setInterval(async () => {
+            try {
+                const res = await axiosInstance.get(`/subscription/payment-status/${chargeState.provider_payment_id}`);
+                const nextStatus = String(res.data?.status || '').toLowerCase();
+                if (nextStatus === 'approved') {
+                    await onRefresh();
+                }
+            } catch {
+                // ignore transient polling errors
+            }
+        }, chargeState.payment_method === 'boleto' ? 10000 : 5000);
+
+        return () => clearInterval(interval);
+    }, [chargeState?.provider_payment_id, chargeState?.status, chargeState?.payment_method, onRefresh]);
+
+    const handleCopy = (value) => {
+        navigator.clipboard.writeText(value || '');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const title = chargeState?.charge_kind === 'Renewal'
+        ? 'Cobrança pendente de renovação'
+        : 'Cobrança pendente da assinatura';
+
+    return (
+        <Card className="mt-6 border-amber-500/40">
+            <CardHeader>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                        <CardTitle className="text-base">{title}</CardTitle>
+                        <CardDescription>{planName}</CardDescription>
+                    </div>
+                    <Badge variant="outline" className="border-amber-500 text-amber-700">
+                        {String(chargeState?.payment_method || '').replace('_', ' ')}
+                    </Badge>
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <p className="font-medium">{chargeState?.status}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-muted-foreground">Valor</p>
+                        <p className="font-medium">
+                            {typeof chargeState?.amount === 'number'
+                                ? `R$ ${chargeState.amount.toFixed(2).replace('.', ',')}`
+                                : '—'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-muted-foreground">Vencimento</p>
+                        <p className="font-medium">{formatDateTime(chargeState?.due_at)}</p>
+                    </div>
+                </div>
+
+                {chargeState?.pix_qr_code_base64 && (
+                    <div className="space-y-3">
+                        <div className="flex justify-center">
+                            <img
+                                src={`data:image/png;base64,${chargeState.pix_qr_code_base64}`}
+                                alt="QR Code PIX"
+                                className="w-52 h-52 rounded-lg border"
+                            />
+                        </div>
+                        {chargeState?.pix_qr_code && (
+                            <div className="space-y-2">
+                                <Label className="text-muted-foreground text-xs">PIX Copia e Cola</Label>
+                                <div className="flex gap-2">
+                                    <Input value={chargeState.pix_qr_code} readOnly className="text-xs font-mono" />
+                                    <Button variant="outline" size="icon" onClick={() => handleCopy(chargeState.pix_qr_code)} className="shrink-0">
+                                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {chargeState?.boleto_barcode_image_base64 && (
+                    <div className="space-y-3">
+                        <Label className="text-muted-foreground text-xs">Código de barras para escaneamento</Label>
+                        <div className="rounded-lg border bg-white p-3 sm:p-4">
+                            <img
+                                src={`data:image/png;base64,${chargeState.boleto_barcode_image_base64}`}
+                                alt="Código de barras do boleto"
+                                className="block w-full h-auto mx-auto"
+                                style={{ imageRendering: 'pixelated' }}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {chargeState?.boleto_digitable_line && (
+                    <div className="space-y-2">
+                        <Label className="text-muted-foreground text-xs">Linha digitável</Label>
+                        <div className="flex gap-2">
+                            <Input value={chargeState.boleto_digitable_line} readOnly className="text-xs font-mono" />
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleCopy(chargeState.boleto_digitable_line)}
+                                className="shrink-0"
+                            >
+                                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {chargeState?.boleto_url && (
+                    <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => window.open(chargeState.boleto_url, '_blank')}
+                    >
+                        <ExternalLink className="h-4 w-4 mr-2" /> Abrir boleto
+                    </Button>
+                )}
+
+                {String(chargeState?.status).toLowerCase() === 'pending' && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Aguardando pagamento...
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     );
 };
 
@@ -498,6 +922,11 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
                 console.warn('Não foi possível detectar payment method pelo BIN, tentando sem:', pmErr);
             }
 
+            if (!paymentMethodId) {
+                setError('Não foi possível identificar a bandeira do cartão pelos primeiros dígitos informados. Confira o número do cartão e tente novamente.');
+                return;
+            }
+
             const tokenResponse = await mp.createCardToken({
                 cardNumber,
                 cardholderName,
@@ -522,11 +951,12 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
                 setSuccess(true);
                 await onSuccess();
             } else {
-                setError(`Pagamento ${result.data.status}: ${result.data.status_detail}`);
+                const status = result.data?.status || 'desconhecido';
+                const detail = result.data?.status_detail || 'sem detalhe retornado pelo provedor';
+                setError(`Pagamento ${status}: ${detail}`);
             }
         } catch (err) {
-            const msg = err?.response?.data?.Message || err?.response?.data || err.message || 'Erro ao processar pagamento.';
-            setError(typeof msg === 'string' ? msg : 'Erro ao processar pagamento.');
+            setError(extractErrorMessage(err, 'Erro ao processar pagamento.'));
         } finally {
             setLoading(false);
         }
@@ -672,8 +1102,7 @@ const PixPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }) =
                 setPolling(true);
             }
         } catch (err) {
-            const msg = err?.response?.data?.Message || err?.response?.data || err.message || 'Erro ao gerar PIX.';
-            setError(typeof msg === 'string' ? msg : 'Erro ao gerar PIX.');
+            setError(extractErrorMessage(err, 'Erro ao gerar PIX.'));
         } finally {
             setLoading(false);
         }
@@ -821,8 +1250,7 @@ const BoletoPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }
             setBoletoData(result.data);
             setPolling(true);
         } catch (err) {
-            const msg = err?.response?.data?.Message || err?.response?.data || err.message || 'Erro ao gerar boleto.';
-            setError(typeof msg === 'string' ? msg : 'Erro ao gerar boleto.');
+            setError(extractErrorMessage(err, 'Erro ao gerar boleto.'));
         } finally {
             setLoading(false);
         }

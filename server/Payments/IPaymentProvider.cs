@@ -37,4 +37,9 @@ public interface IPaymentProvider
     /// Cria um pagamento usando um cartão previamente salvo (renovação automática)
     /// </summary>
     Task<PaymentResult> CreateSavedCardPaymentAsync(SavedCardPaymentRequest request);
+
+    /// <summary>
+    /// Solicita estorno total ou parcial de um pagamento.
+    /// </summary>
+    Task<PaymentRefundResult> RefundPaymentAsync(string paymentId, decimal? amount = null, CancellationToken cancellationToken = default);
 }

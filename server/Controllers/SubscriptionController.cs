@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using server.Domain;
 using server.Payments;
+using server.Services;
 using server.Utils;
 
 namespace server.Controllers;
@@ -13,18 +15,18 @@ namespace server.Controllers;
 public class SubscriptionController : AuthenticatedController
 {
     private readonly Context _context;
-    private readonly IPaymentProvider _payment;
+    private readonly SubscriptionBillingService _billing;
     private readonly ILogger<SubscriptionController> _logger;
 
     public SubscriptionController(
         ILogger<SubscriptionController> logger,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<Context> contextFactory,
-        IPaymentProvider payment
+        SubscriptionBillingService billing
     ) : base(httpContextAccessor)
     {
         _context = contextFactory.CreateDbContext();
-        _payment = payment;
+        _billing = billing;
         _logger = logger;
     }
 
@@ -72,10 +74,26 @@ public class SubscriptionController : AuthenticatedController
             .OrderByDescending(s => s.created_at)
             .FirstOrDefault();
 
+        SubscriptionCharge? pendingCharge = null;
+        try
+        {
+            pendingCharge = _context.subscription_charges
+                .Where(c => c.user_id == _user.id && c.status == SubscriptionChargeStatus.Pending)
+                .OrderByDescending(c => c.created_at)
+                .FirstOrDefault();
+        }
+        catch (PostgresException ex) when (
+            ex.SqlState == PostgresErrorCodes.UndefinedColumn ||
+            ex.SqlState == PostgresErrorCodes.UndefinedTable)
+        {
+            _logger.LogWarning(ex, "Schema de subscription_charges desatualizado. O pending_charge será omitido até a migration ser aplicada.");
+        }
+
         return new SubscriptionOverviewResponse
         {
             active_subscription = active,
-            pending_subscription = pending
+            pending_subscription = pending,
+            pending_charge = pendingCharge
         };
     }
 
@@ -94,46 +112,16 @@ public class SubscriptionController : AuthenticatedController
         if (plan.price <= 0)
             throw new ExpectedException("O plano Free não requer pagamento.");
 
-        // Proteção contra cobrança dupla: verifica se já existe pagamento ativo no período
-        EnsureNoDuplicateCharge(plan.id);
-        _ = SavePayerCpf(request.payer_cpf);
+        await _billing.SavePayerCpfAsync(_user.id, request.payer_cpf);
 
-        var externalRef = $"sub_{_user.id}_{plan.id}_{DateTime.UtcNow:yyyyMMdd}";
-
-        var result = await _payment.CreateCardPaymentAsync(new CardPaymentRequest
-        {
-            card_token = request.card_token,
-            payment_method_id = request.payment_method_id,
-            card_type = request.card_type,
-            issuer_id = request.issuer_id,
-            installments = request.installments,
-            amount = plan.price,
-            description = $"RendaTop - Plano {plan.name}",
-            payer_email = _user.email,
-            external_reference = externalRef
-        });
-
-        if (result.status == "approved")
-        {
-            // Salvar cartão para renovação automática
-            string? customerId = null;
-            string? cardId = null;
-            try
-            {
-                var saved = await _payment.SaveCardAsync(request.card_token, _user.email);
-                customerId = saved.customerId;
-                cardId = saved.cardId;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Não foi possível salvar cartão para renovação automática");
-            }
-
-            ActivateSubscription(plan.id, request.payment_method_id.Contains("debit") ? "debit_card" : "credit_card",
-                result.payment_id, customerId, cardId);
-        }
-
-        return result;
+        return await _billing.CreateInitialCardSubscriptionAsync(
+            _user.id,
+            plan,
+            request.card_token,
+            request.payment_method_id,
+            request.card_type,
+            request.issuer_id,
+            request.installments);
     }
 
 
@@ -151,33 +139,13 @@ public class SubscriptionController : AuthenticatedController
         if (plan.price <= 0)
             throw new ExpectedException("O plano Free não requer pagamento.");
 
-        EnsureNoDuplicateCharge(plan.id);
-        var payerCpf = SavePayerCpf(request.payer_cpf);
+        await _billing.SavePayerCpfAsync(_user.id, request.payer_cpf);
 
-        var externalRef = $"sub_{_user.id}_{plan.id}_{DateTime.UtcNow:yyyyMMdd}";
-
-        var result = await _payment.CreatePixPaymentAsync(new PixPaymentRequest
-        {
-            amount = plan.price,
-            description = $"RendaTop - Plano {plan.name}",
-            payer_email = _user.email,
-            payer_first_name = request.payer_first_name,
-            payer_last_name = request.payer_last_name,
-            payer_cpf = payerCpf,
-            external_reference = externalRef
-        });
-
-        if (result.status == "approved")
-        {
-            ActivateSubscription(plan.id, "pix", result.payment_id, null, null);
-        }
-        else
-        {
-            // PIX pendente — cria subscription com status PendingPayment
-            CreatePendingSubscription(plan.id, "pix", result.payment_id);
-        }
-
-        return result;
+        return await _billing.CreateInitialPixSubscriptionAsync(
+            _user.id,
+            plan,
+            request.payer_first_name,
+            request.payer_last_name);
     }
 
 
@@ -195,25 +163,13 @@ public class SubscriptionController : AuthenticatedController
         if (plan.price <= 0)
             throw new ExpectedException("O plano Free não requer pagamento.");
 
-        EnsureNoDuplicateCharge(plan.id);
-        var payerCpf = SavePayerCpf(request.payer_cpf);
+        await _billing.SavePayerCpfAsync(_user.id, request.payer_cpf);
 
-        var externalRef = $"sub_{_user.id}_{plan.id}_{DateTime.UtcNow:yyyyMMdd}";
-
-        var result = await _payment.CreateBoletoPaymentAsync(new BoletoPaymentRequest
-        {
-            amount = plan.price,
-            description = $"RendaTop - Plano {plan.name}",
-            payer_email = _user.email,
-            payer_first_name = request.payer_first_name,
-            payer_last_name = request.payer_last_name,
-            payer_cpf = payerCpf,
-            external_reference = externalRef
-        });
-
-        CreatePendingSubscription(plan.id, "boleto", result.payment_id);
-
-        return result;
+        return await _billing.CreateInitialBoletoSubscriptionAsync(
+            _user.id,
+            plan,
+            request.payer_first_name,
+            request.payer_last_name);
     }
 
 
@@ -224,30 +180,7 @@ public class SubscriptionController : AuthenticatedController
     [ProducesResponseType(typeof(PaymentResult), StatusCodes.Status200OK)]
     public async Task<PaymentResult> CheckPaymentStatus(string paymentId)
     {
-        var result = await _payment.GetPaymentStatusAsync(paymentId);
-
-        // Se pagamento agora aprovado, ativar subscription pendente
-        if (result.status == "approved")
-        {
-            var pending = _context.subscriptions
-                .Where(s => s.user_id == _user.id && s.mp_payment_id == paymentId
-                            && s.status == SubscriptionStatus.PendingPayment)
-                .FirstOrDefault();
-
-            if (pending != null)
-            {
-                pending.status = SubscriptionStatus.Active;
-                pending.current_period_start = DateTime.UtcNow;
-                pending.current_period_end = DateTime.UtcNow.AddMonths(1);
-                pending.updated_at = DateTime.UtcNow;
-
-                // Cancelar outras assinaturas ativas
-                CancelOtherSubscriptions(pending.id);
-                _context.SaveChanges();
-            }
-        }
-
-        return result;
+        return await _billing.RefreshPaymentStatusAsync(_user.id, paymentId);
     }
 
 
@@ -256,9 +189,9 @@ public class SubscriptionController : AuthenticatedController
     /// </summary>
     [HttpPost("subscription/cancel")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public IActionResult CancelSubscription()
+    public Task<IActionResult> CancelSubscription([FromBody] CancelActiveSubscriptionRequest? request)
     {
-        return CancelActiveSubscription();
+        return CancelActiveSubscription(request);
     }
 
     /// <summary>
@@ -266,21 +199,29 @@ public class SubscriptionController : AuthenticatedController
     /// </summary>
     [HttpPost("subscription/cancel-active")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public IActionResult CancelActiveSubscription()
+    public async Task<IActionResult> CancelActiveSubscription([FromBody] CancelActiveSubscriptionRequest? request)
     {
-        var sub = _context.subscriptions
-            .Where(s => s.user_id == _user.id && s.plan_id != "free" && s.status == SubscriptionStatus.Active)
-            .OrderByDescending(s => s.created_at)
-            .FirstOrDefault();
+        request ??= new CancelActiveSubscriptionRequest();
 
-        if (sub == null)
-            throw new ExpectedException("Nenhuma assinatura ativa para cancelar.");
+        var mode = request.mode?.Equals("refund_prorated", StringComparison.OrdinalIgnoreCase) == true
+            ? SubscriptionCancellationMode.RefundProrated
+            : SubscriptionCancellationMode.EndOfPeriod;
 
-        sub.status = SubscriptionStatus.Cancelled;
-        sub.updated_at = DateTime.UtcNow;
-        _context.SaveChanges();
+        var result = await _billing.CancelActiveSubscriptionAsync(_user.id, request.confirm, mode);
+        return Ok(result);
+    }
 
-        return Ok(new { message = "Assinatura cancelada. Você voltou ao plano Free." });
+    /// <summary>
+    /// Reverte uma programação de cancelamento da assinatura ativa.
+    /// </summary>
+    [HttpPost("subscription/cancel-scheduled/revert")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RevertScheduledCancellation([FromBody] RevertScheduledCancellationRequest? request)
+    {
+        request ??= new RevertScheduledCancellationRequest();
+
+        var result = await _billing.RevertScheduledCancellationAsync(_user.id, request.confirm);
+        return Ok(result);
     }
 
     /// <summary>
@@ -288,126 +229,11 @@ public class SubscriptionController : AuthenticatedController
     /// </summary>
     [HttpPost("subscription/cancel-pending")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public IActionResult CancelPendingSubscription()
+    public async Task<IActionResult> CancelPendingSubscription()
     {
-        var sub = _context.subscriptions
-            .Where(s => s.user_id == _user.id && s.plan_id != "free" && s.status == SubscriptionStatus.PendingPayment)
-            .OrderByDescending(s => s.created_at)
-            .FirstOrDefault();
-
-        if (sub == null)
-            throw new ExpectedException("Nenhuma pendência para cancelar.");
-
-        sub.status = SubscriptionStatus.Cancelled;
-        sub.updated_at = DateTime.UtcNow;
-        _context.SaveChanges();
+        await _billing.CancelPendingSubscriptionAsync(_user.id);
 
         return Ok(new { message = "Cobrança pendente cancelada." });
-    }
-
-
-    // ======================== HELPERS ========================
-
-    /// <summary>
-    /// LEI: Garante que não exista cobrança duplicada no mesmo mês para o mesmo plano.
-    /// Verifica se já existe um pagamento approved/pending para este período.
-    /// </summary>
-    private void EnsureNoDuplicateCharge(string planId)
-    {
-        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var endOfMonth = startOfMonth.AddMonths(1);
-
-        bool alreadyCharged = _context.subscriptions.Any(s =>
-            s.user_id == _user.id
-            && s.plan_id == planId
-            && (s.status == SubscriptionStatus.Active || s.status == SubscriptionStatus.PendingPayment)
-            && s.current_period_start >= startOfMonth
-            && s.current_period_start < endOfMonth
-        );
-
-        if (alreadyCharged)
-        {
-            throw new ExpectedException("Você já possui uma assinatura ativa ou pagamento pendente para este plano neste mês. Nenhuma cobrança adicional será realizada.");
-        }
-    }
-
-    private void ActivateSubscription(string planId, string paymentMethod, string paymentId, string? customerId, string? cardId)
-    {
-        // Cancelar assinaturas anteriores
-        var oldSubs = _context.subscriptions
-            .Where(s => s.user_id == _user.id && (s.status == SubscriptionStatus.Active || s.status == SubscriptionStatus.PendingPayment))
-            .ToList();
-        foreach (var old in oldSubs)
-        {
-            old.status = SubscriptionStatus.Cancelled;
-            old.updated_at = DateTime.UtcNow;
-        }
-
-        var sub = new Subscription
-        {
-            user_id = _user.id,
-            plan_id = planId,
-            status = SubscriptionStatus.Active,
-            payment_method = paymentMethod,
-            mp_payment_id = paymentId,
-            mp_customer_id = customerId,
-            mp_card_id = cardId,
-            current_period_start = DateTime.UtcNow,
-            current_period_end = DateTime.UtcNow.AddMonths(1),
-            created_at = DateTime.UtcNow,
-            updated_at = DateTime.UtcNow
-        };
-
-        _context.subscriptions.Add(sub);
-        _context.SaveChanges();
-    }
-
-    private void CreatePendingSubscription(string planId, string paymentMethod, string paymentId)
-    {
-        var sub = new Subscription
-        {
-            user_id = _user.id,
-            plan_id = planId,
-            status = SubscriptionStatus.PendingPayment,
-            payment_method = paymentMethod,
-            mp_payment_id = paymentId,
-            current_period_start = DateTime.UtcNow,
-            current_period_end = DateTime.UtcNow.AddMonths(1),
-            created_at = DateTime.UtcNow,
-            updated_at = DateTime.UtcNow
-        };
-
-        _context.subscriptions.Add(sub);
-        _context.SaveChanges();
-    }
-
-    private string SavePayerCpf(string? cpf)
-    {
-        var normalizedCpf = CpfUtility.NormalizeOrThrow(cpf);
-        var user = _context.users.FirstOrDefault(x => x.id == _user.id)
-            ?? throw new ExpectedException("Usuário não encontrado.");
-
-        if (!string.Equals(user.cpf, normalizedCpf, StringComparison.Ordinal))
-        {
-            user.cpf = normalizedCpf;
-            _context.SaveChanges();
-        }
-
-        return normalizedCpf;
-    }
-
-    private void CancelOtherSubscriptions(Guid keepId)
-    {
-        var others = _context.subscriptions
-            .Where(s => s.user_id == _user.id && s.id != keepId
-                        && (s.status == SubscriptionStatus.Active || s.status == SubscriptionStatus.PendingPayment))
-            .ToList();
-
-        foreach (var s in others)
-        {
-            s.status = SubscriptionStatus.Cancelled;
-            s.updated_at = DateTime.UtcNow;
-        }
     }
 }
 
@@ -445,4 +271,16 @@ public class SubscriptionOverviewResponse
 {
     public Subscription? active_subscription { get; set; }
     public Subscription? pending_subscription { get; set; }
+    public SubscriptionCharge? pending_charge { get; set; }
+}
+
+public class CancelActiveSubscriptionRequest
+{
+    public bool confirm { get; set; }
+    public string? mode { get; set; }
+}
+
+public class RevertScheduledCancellationRequest
+{
+    public bool confirm { get; set; }
 }

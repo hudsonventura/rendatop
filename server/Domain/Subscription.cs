@@ -72,6 +72,16 @@ public class Subscription
     public DateTime current_period_end { get; set; } = DateTime.UtcNow.AddMonths(1);
 
     /// <summary>
+    /// Indica se a assinatura deve ser encerrada automaticamente no fim do período atual.
+    /// </summary>
+    public bool cancel_at_period_end { get; set; }
+
+    /// <summary>
+    /// Data em que o cancelamento foi solicitado pelo usuário.
+    /// </summary>
+    public DateTime? cancellation_requested_at { get; set; }
+
+    /// <summary>
     /// Data de criação
     /// </summary>
     public DateTime created_at { get; set; } = DateTime.UtcNow;
@@ -86,4 +96,7 @@ public class Subscription
     /// </summary>
     [NotMapped]
     public Plan? plan => Plans.GetById(plan_id);
+
+    [JsonIgnore]
+    public ICollection<SubscriptionCharge>? subscription_charges { get; set; }
 }

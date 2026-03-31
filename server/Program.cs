@@ -12,6 +12,7 @@ using Serilog;
 using server.BackgroundServices;
 using server.Domain;
 using server.Middlewares;
+using server.Services;
 using server.Utils;
 using StackExchange.Redis;
 
@@ -65,6 +66,7 @@ builder.Services.AddHttpContextAccessor(); //usado para injetar o IHttpContextAc
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<OpenAiInvestmentDocumentExtractor>();
 builder.Services.AddScoped<IInvestmentDocumentExtractor, InvestmentDocumentExtractorRouter>();
+builder.Services.AddScoped<SubscriptionBillingService>();
 
 
 // Add services to the container.
@@ -333,7 +335,8 @@ void MigrateDatabase(){
         }
         catch (System.Exception error)
         {
-                //log.Error($"Não foi possível aplicar as migrations de forma automática. Erro: {error.Message}");
+            Log.Error(error, "Não foi possível aplicar as migrations de forma automática.");
+            throw;
         }
 
         
@@ -463,6 +466,7 @@ void MigrateDatabase(){
         }
     }
 }
+
 static bool IsLoginOrSignupEndpoint(PathString path)
 {
     return path.Equals("/login", StringComparison.OrdinalIgnoreCase) ||
