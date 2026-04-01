@@ -64,3 +64,4 @@ client/node_modules/*
 client/dist/*
 server/bin/*
 server/obj/*
+.codex

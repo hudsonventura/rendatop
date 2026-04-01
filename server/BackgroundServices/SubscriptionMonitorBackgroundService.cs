@@ -1,6 +1,4 @@
-using Microsoft.EntityFrameworkCore;
-using server.Domain;
-using server.Payments;
+using server.Services;
 
 namespace server.BackgroundServices;
 
@@ -8,11 +6,10 @@ namespace server.BackgroundServices;
 /// Serviço que monitora assinaturas periodicamente (a cada 6 horas).
 /// 
 /// Responsabilidades:
-/// 1. Renovar automaticamente assinaturas com cartão salvo quando o período vence
-/// 2. Marcar como expiradas assinaturas PIX/boleto cujo período venceu sem renovação
-/// 3. Verificar no Mercado Pago se pagamentos pendentes foram aprovados
-///
-/// LEI: Apenas UMA cobrança por mês por assinatura. Verificação rigorosa antes de cobrar.
+/// 1. Reconciliar cobranças pendentes
+/// 2. Enviar avisos de renovação um dia antes do vencimento
+/// 3. Renovar assinaturas com cartão salvo no vencimento
+/// 4. Expirar assinaturas cujo pagamento de renovação não foi identificado
 /// </summary>
 public class SubscriptionMonitorBackgroundService : IHostedService
 {
@@ -46,164 +43,17 @@ public class SubscriptionMonitorBackgroundService : IHostedService
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<Context>>();
-            using var context = contextFactory.CreateDbContext();
-            var payment = scope.ServiceProvider.GetRequiredService<IPaymentProvider>();
+            var billing = scope.ServiceProvider.GetRequiredService<SubscriptionBillingService>();
 
-            await CheckPendingPayments(context, payment);
-            await RenewExpiredCardSubscriptions(context, payment);
-            ExpireNonCardSubscriptions(context);
+            await billing.ProcessPendingChargesAsync();
+            await billing.ProcessScheduledCancellationsAsync();
+            await billing.ProcessDueTomorrowRenewalNotificationsAsync();
+            await billing.ProcessDueCardRenewalsAsync();
+            await billing.ExpireUnpaidRenewalsAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro no SubscriptionMonitor");
         }
-    }
-
-
-    /// <summary>
-    /// Verifica pagamentos PIX/boleto pendentes e ativa se aprovados
-    /// </summary>
-    private async Task CheckPendingPayments(Context context, IPaymentProvider payment)
-    {
-        var pendingSubs = context.subscriptions
-            .Where(s => s.status == SubscriptionStatus.PendingPayment && s.mp_payment_id != null)
-            .ToList();
-
-        foreach (var sub in pendingSubs)
-        {
-            try
-            {
-                var result = await payment.GetPaymentStatusAsync(sub.mp_payment_id!);
-
-                if (result.status == "approved")
-                {
-                    sub.status = SubscriptionStatus.Active;
-                    sub.current_period_start = DateTime.UtcNow;
-                    sub.current_period_end = DateTime.UtcNow.AddMonths(1);
-                    sub.updated_at = DateTime.UtcNow;
-                    _logger.LogInformation("Assinatura {Id} ativada via pagamento pendente", sub.id);
-                }
-                else if (result.status == "rejected" || result.status == "cancelled")
-                {
-                    sub.status = SubscriptionStatus.Cancelled;
-                    sub.updated_at = DateTime.UtcNow;
-                    _logger.LogInformation("Assinatura {Id} cancelada — pagamento {Status}", sub.id, result.status);
-                }
-                // Se ainda pending, mantém como está
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Erro ao verificar pagamento pendente {PaymentId}", sub.mp_payment_id);
-            }
-        }
-
-        context.SaveChanges();
-    }
-
-
-    /// <summary>
-    /// Renova automaticamente assinaturas com cartão salvo cujo período expirou.
-    /// LEI: Verifica rigorosamente se já houve cobrança neste mês antes de cobrar.
-    /// </summary>
-    private async Task RenewExpiredCardSubscriptions(Context context, IPaymentProvider payment)
-    {
-        var now = DateTime.UtcNow;
-        var expiredCardSubs = context.subscriptions
-            .Where(s => s.status == SubscriptionStatus.Active
-                        && s.current_period_end < now
-                        && s.mp_customer_id != null
-                        && s.mp_card_id != null)
-            .ToList();
-
-        foreach (var sub in expiredCardSubs)
-        {
-            try
-            {
-                var plan = Plans.GetById(sub.plan_id);
-                if (plan == null || plan.price <= 0)
-                {
-                    sub.status = SubscriptionStatus.Expired;
-                    sub.updated_at = now;
-                    continue;
-                }
-
-                // LEI: Verificar se NÃO existe nenhuma outra cobrança ativa neste mês
-                var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-                var endOfMonth = startOfMonth.AddMonths(1);
-
-                bool alreadyChargedThisMonth = context.subscriptions.Any(s =>
-                    s.user_id == sub.user_id
-                    && s.plan_id == sub.plan_id
-                    && s.id != sub.id
-                    && (s.status == SubscriptionStatus.Active || s.status == SubscriptionStatus.PendingPayment)
-                    && s.current_period_start >= startOfMonth
-                    && s.current_period_start < endOfMonth
-                );
-
-                if (alreadyChargedThisMonth)
-                {
-                    _logger.LogWarning("LEI: Cobrança duplicada prevenida para user={UserId} plan={PlanId}", sub.user_id, sub.plan_id);
-                    continue;
-                }
-
-                var externalRef = $"renewal_{sub.user_id}_{sub.plan_id}_{now:yyyyMMdd}";
-
-                var result = await payment.CreateSavedCardPaymentAsync(new SavedCardPaymentRequest
-                {
-                    customer_id = sub.mp_customer_id!,
-                    card_id = sub.mp_card_id!,
-                    amount = plan.price,
-                    description = $"RendaTop - Renovação {plan.name}",
-                    external_reference = externalRef
-                });
-
-                if (result.status == "approved")
-                {
-                    sub.mp_payment_id = result.payment_id;
-                    sub.current_period_start = now;
-                    sub.current_period_end = now.AddMonths(1);
-                    sub.updated_at = now;
-                    _logger.LogInformation("Assinatura {Id} renovada automaticamente", sub.id);
-                }
-                else
-                {
-                    sub.status = SubscriptionStatus.Expired;
-                    sub.updated_at = now;
-                    _logger.LogWarning("Renovação falhou para assinatura {Id}: {Status}", sub.id, result.status);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro na renovação automática da assinatura {Id}", sub.id);
-                sub.status = SubscriptionStatus.Expired;
-                sub.updated_at = now;
-            }
-        }
-
-        context.SaveChanges();
-    }
-
-
-    /// <summary>
-    /// Expira assinaturas PIX/boleto cujo período venceu sem renovação
-    /// </summary>
-    private void ExpireNonCardSubscriptions(Context context)
-    {
-        var now = DateTime.UtcNow;
-        var expiredNonCard = context.subscriptions
-            .Where(s => s.status == SubscriptionStatus.Active
-                        && s.current_period_end < now
-                        && (s.mp_customer_id == null || s.mp_card_id == null))
-            .ToList();
-
-        foreach (var sub in expiredNonCard)
-        {
-            sub.status = SubscriptionStatus.Expired;
-            sub.updated_at = now;
-            _logger.LogInformation("Assinatura {Id} expirada (PIX/boleto sem renovação)", sub.id);
-        }
-
-        context.SaveChanges();
     }
 }

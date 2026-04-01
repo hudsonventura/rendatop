@@ -20,6 +20,26 @@ public class PaymentResult
     /// </summary>
     public string payment_id { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Método de pagamento retornado pelo provedor
+    /// </summary>
+    public string? payment_method { get; set; }
+
+    /// <summary>
+    /// Valor da cobrança retornado pelo provedor
+    /// </summary>
+    public decimal? amount { get; set; }
+
+    /// <summary>
+    /// Data de aprovação da cobrança
+    /// </summary>
+    public DateTime? approved_at { get; set; }
+
+    /// <summary>
+    /// Data de vencimento/expiração da cobrança
+    /// </summary>
+    public DateTime? date_of_expiration { get; set; }
+
     // --- PIX ---
 
     /// <summary>
@@ -67,6 +87,14 @@ public class PaymentResult
     public string? card_id { get; set; }
 }
 
+public class PaymentRefundResult
+{
+    public string refund_id { get; set; } = string.Empty;
+    public string status { get; set; } = string.Empty;
+    public decimal? amount { get; set; }
+    public DateTime? created_at { get; set; }
+}
+
 /// <summary>
 /// Dados para pagamento com cartão
 /// </summary>
@@ -95,6 +123,7 @@ public class PixPaymentRequest
     public string payer_last_name { get; set; } = string.Empty;
     public string payer_cpf { get; set; } = string.Empty;
     public string external_reference { get; set; } = string.Empty;
+    public DateTime? date_of_expiration { get; set; }
 }
 
 /// <summary>
@@ -109,6 +138,7 @@ public class BoletoPaymentRequest
     public string payer_last_name { get; set; } = string.Empty;
     public string payer_cpf { get; set; } = string.Empty;
     public string external_reference { get; set; } = string.Empty;
+    public DateTime? date_of_expiration { get; set; }
 }
 
 /// <summary>

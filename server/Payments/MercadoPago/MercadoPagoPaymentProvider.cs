@@ -1,13 +1,16 @@
+using System.Net;
 using MercadoPago.Client;
 using MercadoPago.Client.Customer;
 using MercadoPago.Client.Payment;
 using MercadoPago.Config;
+using MercadoPago.Error;
 using MercadoPago.Resource.Customer;
 using MercadoPago.Resource.Payment;
 using SkiaSharp;
 using ZXing;
 using ZXing.Common;
 using ZXing.SkiaSharp;
+using server.Utils;
 
 namespace server.Payments.MercadoPago;
 
@@ -41,125 +44,151 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
 
     public async Task<PaymentResult> CreateCardPaymentAsync(CardPaymentRequest request)
     {
-        var client = new PaymentClient();
+        if (string.IsNullOrWhiteSpace(request.payment_method_id))
+            throw new ExpectedException("Não foi possível identificar a bandeira do cartão. Confira o número informado e tente novamente.");
 
-        var paymentRequest = new PaymentCreateRequest
+        return await ExecuteWithMercadoPagoHandlingAsync("processar o pagamento com cartão", async () =>
         {
-            TransactionAmount = request.amount,
-            Token = request.card_token,
-            Description = request.description,
-            Installments = request.installments,
-            PaymentMethodId = request.payment_method_id,
-            ExternalReference = request.external_reference,
-            PaymentMethod = new PaymentMethodRequest
+            var client = new PaymentClient();
+
+            var paymentRequest = new PaymentCreateRequest
             {
-                Type = request.card_type
-            },
-            Payer = new PaymentPayerRequest
+                TransactionAmount = request.amount,
+                Token = request.card_token,
+                Description = request.description,
+                Installments = request.installments,
+                PaymentMethodId = request.payment_method_id,
+                ExternalReference = request.external_reference,
+                PaymentMethod = new PaymentMethodRequest
+                {
+                    Type = request.card_type
+                },
+                Payer = new PaymentPayerRequest
+                {
+                    Email = request.payer_email
+                }
+            };
+
+            if (!string.IsNullOrEmpty(request.issuer_id))
+                paymentRequest.IssuerId = request.issuer_id;
+
+            var payment = await client.CreateAsync(paymentRequest);
+            _logger.LogInformation("Pagamento cartão criado: {Id} status={Status}", payment.Id, payment.Status);
+
+            return new PaymentResult
             {
-                Email = request.payer_email
-            }
-        };
-
-        if (!string.IsNullOrEmpty(request.issuer_id))
-            paymentRequest.IssuerId = request.issuer_id;
-
-        var payment = await client.CreateAsync(paymentRequest);
-        _logger.LogInformation("Pagamento cartão criado: {Id} status={Status}", payment.Id, payment.Status);
-
-        return new PaymentResult
-        {
-            payment_id = payment.Id?.ToString() ?? "",
-            status = payment.Status ?? "unknown",
-            status_detail = payment.StatusDetail ?? ""
-        };
+                payment_id = payment.Id?.ToString() ?? "",
+                status = payment.Status ?? "unknown",
+                status_detail = payment.StatusDetail ?? "",
+                payment_method = payment.PaymentMethodId,
+                amount = payment.TransactionAmount,
+                approved_at = UtcDateTime.EnsureUtc(payment.DateApproved),
+                date_of_expiration = UtcDateTime.EnsureUtc(payment.DateOfExpiration)
+            };
+        });
     }
 
 
     public async Task<PaymentResult> CreatePixPaymentAsync(PixPaymentRequest request)
     {
-        var client = new PaymentClient();
-
-        var paymentRequest = new PaymentCreateRequest
+        return await ExecuteWithMercadoPagoHandlingAsync("gerar o pagamento PIX", async () =>
         {
-            TransactionAmount = request.amount,
-            Description = request.description,
-            PaymentMethodId = "pix",
-            ExternalReference = request.external_reference,
-            Payer = new PaymentPayerRequest
+            var client = new PaymentClient();
+
+            var paymentRequest = new PaymentCreateRequest
             {
-                Email = request.payer_email,
-                FirstName = request.payer_first_name,
-                LastName = request.payer_last_name,
-                Identification = new global::MercadoPago.Client.Common.IdentificationRequest
+                TransactionAmount = request.amount,
+                Description = request.description,
+                PaymentMethodId = "pix",
+                ExternalReference = request.external_reference,
+                DateOfExpiration = request.date_of_expiration,
+                Payer = new PaymentPayerRequest
                 {
-                    Type = "CPF",
-                    Number = request.payer_cpf
+                    Email = request.payer_email,
+                    FirstName = request.payer_first_name,
+                    LastName = request.payer_last_name,
+                    Identification = new global::MercadoPago.Client.Common.IdentificationRequest
+                    {
+                        Type = "CPF",
+                        Number = request.payer_cpf
+                    }
                 }
-            }
-        };
+            };
 
-        var payment = await client.CreateAsync(paymentRequest);
-        _logger.LogInformation("Pagamento PIX criado: {Id} status={Status}", payment.Id, payment.Status);
+            var payment = await client.CreateAsync(paymentRequest);
+            _logger.LogInformation("Pagamento PIX criado: {Id} status={Status}", payment.Id, payment.Status);
 
-        var pointOfInteraction = payment.PointOfInteraction;
-        var transactionData = pointOfInteraction?.TransactionData;
+            var pointOfInteraction = payment.PointOfInteraction;
+            var transactionData = pointOfInteraction?.TransactionData;
 
-        return new PaymentResult
-        {
-            payment_id = payment.Id?.ToString() ?? "",
-            status = payment.Status ?? "unknown",
-            status_detail = payment.StatusDetail ?? "",
-            pix_qr_code = transactionData?.QrCode,
-            pix_qr_code_base64 = transactionData?.QrCodeBase64
-        };
+            return new PaymentResult
+            {
+                payment_id = payment.Id?.ToString() ?? "",
+                status = payment.Status ?? "unknown",
+                status_detail = payment.StatusDetail ?? "",
+                payment_method = payment.PaymentMethodId,
+                amount = payment.TransactionAmount,
+                approved_at = UtcDateTime.EnsureUtc(payment.DateApproved),
+                date_of_expiration = UtcDateTime.EnsureUtc(payment.DateOfExpiration),
+                pix_qr_code = transactionData?.QrCode,
+                pix_qr_code_base64 = transactionData?.QrCodeBase64
+            };
+        });
     }
 
 
     public async Task<PaymentResult> CreateBoletoPaymentAsync(BoletoPaymentRequest request)
     {
-        var client = new PaymentClient();
-        var syntheticAddress = BuildSyntheticBoletoAddress();
-
-        var paymentRequest = new PaymentCreateRequest
+        return await ExecuteWithMercadoPagoHandlingAsync("gerar o boleto", async () =>
         {
-            TransactionAmount = request.amount,
-            Description = request.description,
-            PaymentMethodId = "bolbradesco",
-            ExternalReference = request.external_reference,
-            Payer = new PaymentPayerRequest
+            var client = new PaymentClient();
+            var syntheticAddress = BuildSyntheticBoletoAddress();
+
+            var paymentRequest = new PaymentCreateRequest
             {
-                Email = request.payer_email,
-                FirstName = request.payer_first_name,
-                LastName = request.payer_last_name,
-                Identification = new global::MercadoPago.Client.Common.IdentificationRequest
+                TransactionAmount = request.amount,
+                Description = request.description,
+                PaymentMethodId = "bolbradesco",
+                ExternalReference = request.external_reference,
+                DateOfExpiration = request.date_of_expiration,
+                Payer = new PaymentPayerRequest
                 {
-                    Type = "CPF",
-                    Number = request.payer_cpf
-                },
-                Address = syntheticAddress
-            }
-        };
+                    Email = request.payer_email,
+                    FirstName = request.payer_first_name,
+                    LastName = request.payer_last_name,
+                    Identification = new global::MercadoPago.Client.Common.IdentificationRequest
+                    {
+                        Type = "CPF",
+                        Number = request.payer_cpf
+                    },
+                    Address = syntheticAddress
+                }
+            };
 
-        var payment = await client.CreateAsync(paymentRequest);
-        _logger.LogInformation("Pagamento boleto criado: {Id} status={Status}", payment.Id, payment.Status);
+            var payment = await client.CreateAsync(paymentRequest);
+            _logger.LogInformation("Pagamento boleto criado: {Id} status={Status}", payment.Id, payment.Status);
 
-        string? barcodeContent = null;
-        string? digitableLine = null;
-        try { barcodeContent = payment.TransactionDetails?.Barcode?.Content; } catch { }
-        try { digitableLine = payment.TransactionDetails?.DigitableLine; } catch { }
-        var barcodeImageBase64 = GenerateBoletoBarcodeImageBase64FromDigitableLine(digitableLine);
+            string? barcodeContent = null;
+            string? digitableLine = null;
+            try { barcodeContent = payment.TransactionDetails?.Barcode?.Content; } catch { }
+            try { digitableLine = payment.TransactionDetails?.DigitableLine; } catch { }
+            var barcodeImageBase64 = GenerateBoletoBarcodeImageBase64FromDigitableLine(digitableLine);
 
-        return new PaymentResult
-        {
-            payment_id = payment.Id?.ToString() ?? "",
-            status = payment.Status ?? "unknown",
-            status_detail = payment.StatusDetail ?? "",
-            boleto_barcode_content = barcodeContent,
-            boleto_barcode_image_base64 = barcodeImageBase64,
-            boleto_digitable_line = digitableLine,
-            boleto_url = payment.TransactionDetails?.ExternalResourceUrl
-        };
+            return new PaymentResult
+            {
+                payment_id = payment.Id?.ToString() ?? "",
+                status = payment.Status ?? "unknown",
+                status_detail = payment.StatusDetail ?? "",
+                payment_method = payment.PaymentMethodId,
+                amount = payment.TransactionAmount,
+                approved_at = UtcDateTime.EnsureUtc(payment.DateApproved),
+                date_of_expiration = UtcDateTime.EnsureUtc(payment.DateOfExpiration),
+                boleto_barcode_content = barcodeContent,
+                boleto_barcode_image_base64 = barcodeImageBase64,
+                boleto_digitable_line = digitableLine,
+                boleto_url = payment.TransactionDetails?.ExternalResourceUrl
+            };
+        });
     }
 
     private string? GenerateBoletoBarcodeImageBase64FromDigitableLine(string? digitableLine)
@@ -257,73 +286,234 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
 
     public async Task<PaymentResult> GetPaymentStatusAsync(string paymentId)
     {
-        var client = new PaymentClient();
-        var payment = await client.GetAsync(long.Parse(paymentId));
-
-        return new PaymentResult
+        return await ExecuteWithMercadoPagoHandlingAsync("consultar o status do pagamento", async () =>
         {
-            payment_id = payment.Id?.ToString() ?? "",
-            status = payment.Status ?? "unknown",
-            status_detail = payment.StatusDetail ?? ""
-        };
+            var client = new PaymentClient();
+            var payment = await client.GetAsync(long.Parse(paymentId));
+
+            return new PaymentResult
+            {
+                payment_id = payment.Id?.ToString() ?? "",
+                status = payment.Status ?? "unknown",
+                status_detail = payment.StatusDetail ?? "",
+                payment_method = payment.PaymentMethodId,
+                amount = payment.TransactionAmount,
+                approved_at = UtcDateTime.EnsureUtc(payment.DateApproved),
+                date_of_expiration = UtcDateTime.EnsureUtc(payment.DateOfExpiration),
+                pix_qr_code = payment.PointOfInteraction?.TransactionData?.QrCode,
+                pix_qr_code_base64 = payment.PointOfInteraction?.TransactionData?.QrCodeBase64,
+                boleto_barcode_content = payment.TransactionDetails?.Barcode?.Content,
+                boleto_digitable_line = payment.TransactionDetails?.DigitableLine,
+                boleto_url = payment.TransactionDetails?.ExternalResourceUrl
+            };
+        });
     }
 
 
     public async Task<(string customerId, string cardId)> SaveCardAsync(string cardToken, string email)
     {
-        var customerClient = new CustomerClient();
-
-        // Buscar ou criar customer
-        var searchRequest = new SearchRequest { Filters = new Dictionary<string, object> { { "email", email } } };
-        var searchResult = await customerClient.SearchAsync(searchRequest);
-        Customer customer;
-
-        if (searchResult.Results.Count > 0)
+        return await ExecuteWithMercadoPagoHandlingAsync("salvar o cartão para cobranças futuras", async () =>
         {
-            customer = searchResult.Results[0];
-        }
-        else
-        {
-            customer = await customerClient.CreateAsync(new CustomerRequest { Email = email });
-        }
+            var customerClient = new CustomerClient();
 
-        // Salvar cartão no customer
-        var cardResult = await customerClient.CreateCardAsync(customer.Id, new CustomerCardCreateRequest
-        {
-            Token = cardToken
+            // Buscar ou criar customer
+            var searchRequest = new SearchRequest { Filters = new Dictionary<string, object> { { "email", email } } };
+            var searchResult = await customerClient.SearchAsync(searchRequest);
+            Customer customer;
+
+            if (searchResult.Results.Count > 0)
+            {
+                customer = searchResult.Results[0];
+            }
+            else
+            {
+                customer = await customerClient.CreateAsync(new CustomerRequest { Email = email });
+            }
+
+            // Salvar cartão no customer
+            var cardResult = await customerClient.CreateCardAsync(customer.Id, new CustomerCardCreateRequest
+            {
+                Token = cardToken
+            });
+
+            _logger.LogInformation("Cartão salvo: customer={CustomerId} card={CardId}", customer.Id, cardResult.Id);
+            return (customer.Id, cardResult.Id);
         });
-
-        _logger.LogInformation("Cartão salvo: customer={CustomerId} card={CardId}", customer.Id, cardResult.Id);
-        return (customer.Id, cardResult.Id);
     }
 
 
     public async Task<PaymentResult> CreateSavedCardPaymentAsync(SavedCardPaymentRequest request)
     {
-        var client = new PaymentClient();
-
-        var paymentRequest = new PaymentCreateRequest
+        return await ExecuteWithMercadoPagoHandlingAsync("processar a renovação automática no cartão", async () =>
         {
-            TransactionAmount = request.amount,
-            Description = request.description,
-            ExternalReference = request.external_reference,
-            Installments = 1,
-            Payer = new PaymentPayerRequest
+            var client = new PaymentClient();
+
+            var paymentRequest = new PaymentCreateRequest
             {
-                Type = "customer",
-                Id = request.customer_id
-            },
-            Token = request.card_id
-        };
+                TransactionAmount = request.amount,
+                Description = request.description,
+                ExternalReference = request.external_reference,
+                Installments = 1,
+                Payer = new PaymentPayerRequest
+                {
+                    Type = "customer",
+                    Id = request.customer_id
+                },
+                Token = request.card_id
+            };
 
-        var payment = await client.CreateAsync(paymentRequest);
-        _logger.LogInformation("Pagamento com cartão salvo: {Id} status={Status}", payment.Id, payment.Status);
+            var payment = await client.CreateAsync(paymentRequest);
+            _logger.LogInformation("Pagamento com cartão salvo: {Id} status={Status}", payment.Id, payment.Status);
 
-        return new PaymentResult
+            return new PaymentResult
+            {
+                payment_id = payment.Id?.ToString() ?? "",
+                status = payment.Status ?? "unknown",
+                status_detail = payment.StatusDetail ?? "",
+                payment_method = payment.PaymentMethodId,
+                amount = payment.TransactionAmount,
+                approved_at = UtcDateTime.EnsureUtc(payment.DateApproved),
+                date_of_expiration = UtcDateTime.EnsureUtc(payment.DateOfExpiration)
+            };
+        });
+    }
+
+    public async Task<PaymentRefundResult> RefundPaymentAsync(string paymentId, decimal? amount = null, CancellationToken cancellationToken = default)
+    {
+        return await ExecuteWithMercadoPagoHandlingAsync("solicitar o estorno do pagamento", async () =>
         {
-            payment_id = payment.Id?.ToString() ?? "",
-            status = payment.Status ?? "unknown",
-            status_detail = payment.StatusDetail ?? ""
-        };
+            var client = new PaymentClient();
+            var refund = await client.RefundAsync(long.Parse(paymentId), amount, cancellationToken: cancellationToken);
+
+            return new PaymentRefundResult
+            {
+                refund_id = refund.Id?.ToString() ?? string.Empty,
+                status = refund.Status ?? string.Empty,
+                amount = refund.Amount,
+                created_at = UtcDateTime.EnsureUtc(refund.DateCreated)
+            };
+        });
+    }
+
+    private async Task<T> ExecuteWithMercadoPagoHandlingAsync<T>(string operation, Func<Task<T>> action)
+    {
+        try
+        {
+            return await action();
+        }
+        catch (MercadoPagoApiException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Erro da API do Mercado Pago ao {Operation}. StatusCode={StatusCode}",
+                operation,
+                ex.StatusCode);
+            throw new ExpectedException(FormatMercadoPagoApiException(operation, ex));
+        }
+        catch (MercadoPagoException ex)
+        {
+            _logger.LogError(ex, "Erro do SDK do Mercado Pago ao {Operation}", operation);
+            throw new ExpectedException(
+                $"Falha ao comunicar com o Mercado Pago ao {operation}. {SanitizeProviderText(ex.Message)}",
+                HttpStatusCode.BadGateway);
+        }
+    }
+
+    private static string FormatMercadoPagoApiException(string operation, MercadoPagoApiException exception)
+    {
+        var parts = new List<string>();
+        var apiError = exception.ApiError;
+
+        var apiMessage = SanitizeProviderText(apiError?.Message);
+        if (!string.IsNullOrWhiteSpace(apiMessage))
+            parts.Add(apiMessage);
+
+        var apiErrorCode = SanitizeProviderText(apiError?.Error);
+        if (!string.IsNullOrWhiteSpace(apiErrorCode))
+            parts.Add($"erro={apiErrorCode}");
+
+        var apiStatus = Convert.ToString(apiError?.Status);
+        if (!string.IsNullOrWhiteSpace(apiStatus))
+            parts.Add($"status_http={apiStatus}");
+
+        var causeMessages = apiError?.Cause?
+            .Select(FormatMercadoPagoCause)
+            .Where(message => !string.IsNullOrWhiteSpace(message))
+            .Distinct()
+            .ToArray()
+            ?? [];
+
+        if (causeMessages.Length > 0)
+            parts.Add($"causas: {string.Join(" | ", causeMessages)}");
+
+        if (parts.Count == 0)
+        {
+            var fallback = SanitizeProviderText(exception.Message);
+            if (!string.IsNullOrWhiteSpace(fallback))
+                parts.Add(fallback);
+        }
+
+        var detail = parts.Count > 0
+            ? string.Join(". ", parts)
+            : "O provedor recusou a operação sem detalhar o motivo.";
+
+        return $"Mercado Pago não conseguiu {operation}. {detail}";
+    }
+
+    private static string FormatMercadoPagoCause(ApiErrorCause cause)
+    {
+        var pieces = new List<string>();
+        var code = SanitizeProviderText(cause.Code);
+        if (!string.IsNullOrWhiteSpace(code))
+            pieces.Add($"code={code}");
+
+        var primaryMessage = FirstNonEmpty(cause.Description, cause.Message, cause.Details);
+        if (!string.IsNullOrWhiteSpace(primaryMessage))
+            pieces.Add(primaryMessage);
+
+        var details = SanitizeProviderText(cause.Details);
+        if (!string.IsNullOrWhiteSpace(details) &&
+            !string.Equals(details, primaryMessage, StringComparison.OrdinalIgnoreCase))
+        {
+            pieces.Add($"details={details}");
+        }
+
+        return string.Join(" - ", pieces);
+    }
+
+    private static string? FirstNonEmpty(params object?[] values)
+    {
+        foreach (var value in values)
+        {
+            var sanitized = SanitizeProviderText(value);
+            if (!string.IsNullOrWhiteSpace(sanitized))
+                return sanitized;
+        }
+
+        return null;
+    }
+
+    private static string SanitizeProviderText(object? value)
+    {
+        if (value is null)
+            return string.Empty;
+
+        if (value is string text)
+            return text.Replace('\n', ' ').Replace('\r', ' ').Trim();
+
+        if (value is System.Collections.IEnumerable values)
+        {
+            var items = new List<string>();
+            foreach (var item in values)
+            {
+                var sanitizedItem = SanitizeProviderText(item);
+                if (!string.IsNullOrWhiteSpace(sanitizedItem))
+                    items.Add(sanitizedItem);
+            }
+
+            return string.Join(" | ", items.Distinct());
+        }
+
+        return Convert.ToString(value)?.Replace('\n', ' ').Replace('\r', ' ').Trim() ?? string.Empty;
     }
 }

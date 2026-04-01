@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using server.Utils;
 
 
 namespace server.Domain;
@@ -13,6 +14,65 @@ public class Context : DbContext
     /// </summary>
     /// <param name="options"></param>
     public Context(DbContextOptions options) : base(options) {}
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<SubscriptionCharge>()
+            .Property(charge => charge.status)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SubscriptionCharge>()
+            .Property(charge => charge.charge_kind)
+            .HasConversion<string>();
+    }
+
+    public override int SaveChanges()
+    {
+        NormalizeDateTimesToUtc();
+        return base.SaveChanges();
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        NormalizeDateTimesToUtc();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        NormalizeDateTimesToUtc();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        NormalizeDateTimesToUtc();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void NormalizeDateTimesToUtc()
+    {
+        foreach (var entry in ChangeTracker.Entries().Where(x =>
+                     x.State == EntityState.Added ||
+                     x.State == EntityState.Modified))
+        {
+            foreach (var property in entry.Properties)
+            {
+                var clrType = property.Metadata.ClrType;
+
+                if (clrType == typeof(DateTime) && property.CurrentValue is DateTime value)
+                {
+                    property.CurrentValue = UtcDateTime.EnsureUtc(value);
+                }
+                else if (clrType == typeof(DateTime?) && property.CurrentValue is DateTime nullableValue)
+                {
+                    property.CurrentValue = UtcDateTime.EnsureUtc(nullableValue);
+                }
+            }
+        }
+    }
 
  
     /// <summary>
@@ -61,6 +121,11 @@ public class Context : DbContext
     /// Tabela de assinaturas
     /// </summary>
     public DbSet<Subscription> subscriptions { get; set; }
+
+    /// <summary>
+    /// Tabela de cobranças de assinatura
+    /// </summary>
+    public DbSet<SubscriptionCharge> subscription_charges { get; set; }
     
 
 }

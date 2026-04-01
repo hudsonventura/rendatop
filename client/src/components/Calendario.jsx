@@ -1,19 +1,16 @@
-import * as React from "react"
-import { useState, useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date"
+import { DatePicker } from "@heroui/react"
 import { CalendarIcon } from "lucide-react"
-
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Input } from "@/components/ui/input"
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover"
+
+const quickDateOptions = [
+	{ label: "+90", value: { days: 90 } },
+	{ label: "+180", value: { days: 180 } },
+	{ label: "+270", value: { days: 270 } },
+	{ label: "+1 ano", value: { years: 1 } },
+]
 
 function normalizeDate(value) {
 	if (!value) return undefined
@@ -25,104 +22,125 @@ function normalizeDate(value) {
 	return Number.isNaN(parsed.getTime()) ? undefined : parsed
 }
 
-const Calendario = ({ field, disabled = false }) => {
-	const normalizedFieldValue = normalizeDate(field.value)
-	const [date, setDate] = useState(normalizedFieldValue)
-	const [inputValue, setInputValue] = useState(
-		normalizedFieldValue ? format(normalizedFieldValue, "dd/MM/yyyy") : ""
-	)
-	const [isOpen, setIsOpen] = useState(false)
+function toCalendarDate(value) {
+	const normalizedValue = normalizeDate(value)
+	if (!normalizedValue) return null
 
-	useEffect(() => {
-		const nextDate = normalizeDate(field.value)
-		setDate(nextDate)
-		setInputValue(nextDate ? format(nextDate, "dd/MM/yyyy") : "")
-	}, [field.value])
+	return new CalendarDate(
+		normalizedValue.getFullYear(),
+		normalizedValue.getMonth() + 1,
+		normalizedValue.getDate()
+	)
+}
+
+function toJsDate(value) {
+	if (!value) return null
+	return new Date(value.year, value.month - 1, value.day)
+}
+
+const Calendario = ({ field, disabled = false }) => {
+	const dateValue = toCalendarDate(field.value)
+	const wrapperRef = useRef(null)
+	const [portalContainer, setPortalContainer] = useState(undefined)
+	const [focusedValue, setFocusedValue] = useState(dateValue ?? today(getLocalTimeZone()))
 
 	useEffect(() => {
 		if (disabled) {
-			setDate(undefined)
-			setInputValue("")
 			field.onChange(null)
-			setIsOpen(false)
 		}
-	}, [disabled])
+	}, [disabled, field])
 
-	const formatMasked = (input) => {
-		const numbers = input.replace(/\D/g, "")
-		let formatted = ""
-		if (numbers.length > 0) formatted += numbers.substring(0, 2)
-		if (numbers.length > 2) formatted += "/" + numbers.substring(2, 4)
-		if (numbers.length > 4) formatted += "/" + numbers.substring(4, 8)
-		return formatted
+	useEffect(() => {
+		setFocusedValue(dateValue ?? today(getLocalTimeZone()))
+	}, [dateValue])
+
+	useEffect(() => {
+		const dialogContent = wrapperRef.current?.closest('[data-slot="dialog-content"]')
+		setPortalContainer(dialogContent ?? undefined)
+	}, [])
+
+	const handleToday = () => {
+		const currentDate = today(getLocalTimeZone())
+		setFocusedValue(currentDate)
+		field.onChange(toJsDate(currentDate))
 	}
 
-	const handleInputChange = (event) => {
-		const formatted = formatMasked(event.target.value)
-		setInputValue(formatted)
-
-		if (formatted.length === 10) {
-			const [day, month, year] = formatted.split("/")
-			const newDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-			if (!isNaN(newDate.getTime())) {
-				setDate(newDate)
-				field.onChange(newDate)
-			}
-		}
-	}
-
-	const handleCalendarSelect = (newDate) => {
-		setDate(newDate)
-		field.onChange(newDate)
-		if (newDate) {
-			setInputValue(format(newDate, "dd/MM/yyyy"))
-			setIsOpen(false)
-		}
+	const handleQuickDate = (duration) => {
+		const nextDate = today(getLocalTimeZone()).add(duration)
+		setFocusedValue(nextDate)
+		field.onChange(toJsDate(nextDate))
 	}
 
 	return (
-		<Popover modal={true} open={isOpen} onOpenChange={(open) => !disabled && setIsOpen(open)}>
-			<PopoverTrigger asChild>
-				<Button
-					type="button"
-					variant="outline"
-					className={cn(
-						"w-[240px] pl-3 text-left font-normal",
-						!normalizedFieldValue && "text-muted-foreground"
-					)}
-					disabled={disabled}
-				>
-					{normalizedFieldValue ? (
-						format(normalizedFieldValue, "dd/MM/yyyy")
-					) : (
-						<span>Escolha uma data</span>
-					)}
-					<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent align="start" className="w-auto p-0 z-[70]">
-				<div className="px-3 pt-3">
-					<Input
-						autoFocus
-						type="text"
-						value={inputValue}
-						onChange={handleInputChange}
-						placeholder="DD/MM/AAAA"
-						className="w-full"
-					/>
-				</div>
-				<Calendar
-					mode="single"
-					selected={date}
-					onSelect={handleCalendarSelect}
-					captionLayout="dropdown"
-					locale={ptBR}
-					fromYear={2000}
-					toYear={2050}
-					className="p-3"
-				/>
-			</PopoverContent>
-		</Popover>
+		<div ref={wrapperRef}>
+			<DatePicker
+				aria-label="Escolha uma data"
+				value={dateValue}
+				onChange={(value) => field.onChange(toJsDate(value))}
+				isDisabled={disabled}
+				showMonthAndYearPickers
+				selectorButtonPlacement="end"
+				selectorIcon={<CalendarIcon className="h-4 w-4" />}
+				calendarWidth={360}
+				granularity="day"
+				disableAnimation
+				placeholderValue={new CalendarDate(2026, 1, 1)}
+				calendarProps={{
+					focusedValue,
+					onFocusChange: setFocusedValue,
+					classNames: {
+						cellButton:
+							"data-[today=true]:bg-primary/12 data-[today=true]:font-semibold data-[today=true]:text-primary data-[today=true]:ring-1 data-[today=true]:ring-primary/40 data-[selected=true]:data-[today=true]:bg-primary data-[selected=true]:data-[today=true]:text-primary-foreground data-[selected=true]:data-[today=true]:ring-primary",
+					},
+				}}
+				CalendarBottomContent={
+					<div className="border-t border-border px-3 py-2">
+						<Button
+							type="button"
+							variant="outline"
+							className="h-9 w-full justify-center"
+							onClick={handleToday}
+						>
+							Hoje
+						</Button>
+						<div className="mt-2 grid grid-cols-4 gap-2">
+							{quickDateOptions.map((option) => (
+								<Button
+									key={option.label}
+									type="button"
+									variant="outline"
+									className="h-8 px-2 text-xs"
+									onClick={() => handleQuickDate(option.value)}
+								>
+									{option.label}
+								</Button>
+							))}
+						</div>
+					</div>
+				}
+				popoverProps={{
+					placement: "bottom-start",
+					offset: 8,
+					portalContainer,
+					shouldBlockScroll: false,
+				}}
+				classNames={{
+					base: "w-[320px]",
+					inputWrapper:
+						"min-h-10 rounded-md border border-input bg-background shadow-xs transition-[color,box-shadow] cursor-text data-[hover=true]:bg-accent/40 group-data-[focus=true]:border-ring group-data-[focus=true]:ring-ring/50 group-data-[focus=true]:ring-[3px]",
+					input: "text-sm text-foreground gap-0.5",
+					segment:
+						"rounded-sm px-1 text-sm text-foreground tabular-nums transition-[background-color,color,box-shadow] data-[type=literal]:px-0 data-[type=literal]:text-muted-foreground data-[editable=true]:cursor-text data-[placeholder=true]:text-muted-foreground/70 data-[editable=true]:focus:bg-primary data-[editable=true]:focus:text-primary-foreground data-[editable=true]:focus:outline-none data-[editable=true]:focus:ring-2 data-[editable=true]:focus:ring-primary/30",
+					selectorButton:
+						"h-10 min-w-10 rounded-r-md border-l border-input bg-transparent px-3 text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+					selectorIcon: "text-current",
+					popoverContent:
+						"z-[80] overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md",
+					calendar: "w-full rounded-md",
+					calendarContent: "w-full p-2",
+				}}
+			/>
+		</div>
 	)
 }
 
