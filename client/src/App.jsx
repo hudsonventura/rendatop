@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HeroUIProvider } from "@heroui/react"
 import './App.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarConfigProvider } from '@/contexts/sidebar-context'
@@ -23,29 +24,31 @@ import SubscriptionPage from "@/pages/SubscriptionPage"
 function App() {
     return (
         <div className="font-sans antialiased" style={{ fontFamily: 'var(--font-inter)' }}>
-            <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-                <SidebarConfigProvider>
-                    <Router basename={ROUTER_BASENAME}>
-                        <Routes>
-                            <Route path="/" element={<Login />} />
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/signup" element={<Signup />} />
-                            <Route path="/logout" element={<Logout />} />
-                            <Route path="/home" element={<Home />} />
-                            <Route path="/meus-investimentos" element={<MyInvestments />} />
-                            <Route path="/calendar" element={<CalendarPage />} />
-                            <Route path="/notifications" element={<NotificationsPage />} />
-                            <Route path="/settings" element={<UserSettings />} />
-                            <Route path="/forgot-password" element={<ForgotPassword />} />
-                            <Route path="/reset-password" element={<ResetPassword />} />
-                            <Route path="/forgot-totp" element={<ForgotTotp />} />
-                            <Route path="/reset-totp" element={<ResetTotp />} />
-                            <Route path="/subscription" element={<SubscriptionPage />} />
-                            <Route path="*" element={<NotFound />} />
-                        </Routes>
-                    </Router>
-                </SidebarConfigProvider>
-            </ThemeProvider>
+            <HeroUIProvider locale="pt-BR">
+                <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+                    <SidebarConfigProvider>
+                        <Router basename={ROUTER_BASENAME}>
+                            <Routes>
+                                <Route path="/" element={<Login />} />
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/signup" element={<Signup />} />
+                                <Route path="/logout" element={<Logout />} />
+                                <Route path="/home" element={<Home />} />
+                                <Route path="/meus-investimentos" element={<MyInvestments />} />
+                                <Route path="/calendar" element={<CalendarPage />} />
+                                <Route path="/notifications" element={<NotificationsPage />} />
+                                <Route path="/settings" element={<UserSettings />} />
+                                <Route path="/forgot-password" element={<ForgotPassword />} />
+                                <Route path="/reset-password" element={<ResetPassword />} />
+                                <Route path="/forgot-totp" element={<ForgotTotp />} />
+                                <Route path="/reset-totp" element={<ResetTotp />} />
+                                <Route path="/subscription" element={<SubscriptionPage />} />
+                                <Route path="*" element={<NotFound />} />
+                            </Routes>
+                        </Router>
+                    </SidebarConfigProvider>
+                </ThemeProvider>
+            </HeroUIProvider>
         </div>
     );
 }

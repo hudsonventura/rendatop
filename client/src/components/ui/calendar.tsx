@@ -64,11 +64,11 @@ function Calendar({
           defaultClassNames.month_caption
         ),
         dropdowns: cn(
-          "flex h-[--cell-size] w-full items-center justify-center gap-1.5 text-sm font-medium",
+          "grid h-[--cell-size] w-full grid-cols-[7.5rem_5.5rem] items-center justify-center gap-1.5 text-sm font-medium",
           defaultClassNames.dropdowns
         ),
         dropdown_root: cn(
-          "has-focus:border-ring border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] relative rounded-md border",
+          "has-focus:border-ring border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] relative w-full rounded-md border",
           defaultClassNames.dropdown_root
         ),
         dropdown: cn(
@@ -180,7 +180,16 @@ function CalendarDayButton({
 
   const ref = React.useRef<HTMLButtonElement>(null)
   React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus()
+    if (!modifiers.focused) return
+
+    const activeElement = document.activeElement
+    const focusIsAlreadyInsideCalendar =
+      activeElement instanceof HTMLElement &&
+      Boolean(activeElement.closest('[data-slot="calendar"]'))
+
+    if (focusIsAlreadyInsideCalendar) {
+      ref.current?.focus()
+    }
   }, [modifiers.focused])
 
   return (
