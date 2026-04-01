@@ -6,10 +6,12 @@ import { defineConfig } from "vite"
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   preview: {
-    allowedHosts: ["rendatop.sistemaonline.shop"],
-    allowedHosts: ["rendatop.com.br"],
-    allowedHosts: ["www.rendatop.com.br"],
-    allowedHosts: ["app.rendatop.com.br"],
+    allowedHosts: [
+      "rendatop.sistemaonline.shop",
+      "rendatop.com.br",
+      "www.rendatop.com.br",
+      "app.rendatop.com.br",
+    ]
   },
   resolve: {
     alias: {
