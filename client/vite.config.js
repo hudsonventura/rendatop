@@ -9,12 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   preview: {
-    allowedHosts: [
-      "rendatop.sistemaonline.shop",
-      "rendatop.com.br",
-      "www.rendatop.com.br",
-      "app.rendatop.com.br",
-    ],
+    allowedHosts: true
   },
   resolve: {
     alias: {
