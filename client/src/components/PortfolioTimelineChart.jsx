@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import * as React from "react"
 import { Area, AreaChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { useTheme } from "next-themes"
@@ -51,6 +52,14 @@ function formatCurrency(value) {
         currency: "BRL",
         minimumFractionDigits: 2,
     }).format(value)
+}
+
+function formatTooltipDate(value) {
+    return new Date(value).toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    })
 }
 
 function getBankName(investment) {
@@ -193,6 +202,23 @@ function TimelineSkeleton() {
     )
 }
 
+function CustomTooltip({ active, label, payload }) {
+    if (!active || !payload?.length) return null
+
+    return (
+        <div className="rounded-md border bg-background/95 px-3 py-2 shadow-md">
+            <p className="mb-2 text-sm font-medium text-foreground">{formatTooltipDate(label)}</p>
+            <div className="space-y-1">
+                {payload.map((entry) => (
+                    <p key={entry.dataKey} className="text-sm" style={{ color: entry.color }}>
+                        {entry.name}: {formatCurrency(Number(entry.value))}
+                    </p>
+                ))}
+            </div>
+        </div>
+    )
+}
+
 export default function PortfolioTimelineChart({ investments }) {
     const { resolvedTheme } = useTheme()
     const { chartData, bankSeries } = React.useMemo(() => {
@@ -300,7 +326,7 @@ export default function PortfolioTimelineChart({ investments }) {
                 )}
                 <div className="h-[320px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={filteredChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                        <AreaChart data={filteredChartData} margin={{ top: 28, right: 8, left: 8, bottom: 8 }}>
                             <defs>
                                 <linearGradient id="portfolio-total-fill" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor={totalLineColor} stopOpacity={0.80} />
@@ -333,14 +359,7 @@ export default function PortfolioTimelineChart({ investments }) {
                                 tickFormatter={(value) => formatCurrency(value)}
                             />
                             <Tooltip
-                                formatter={(value, name) => [formatCurrency(Number(value)), name]}
-                                labelFormatter={(value) =>
-                                    new Date(value).toLocaleDateString("pt-BR", {
-                                        day: "2-digit",
-                                        month: "short",
-                                        year: "numeric",
-                                    })
-                                }
+                                content={<CustomTooltip />}
                             />
                             <Legend />
                             <ReferenceLine
