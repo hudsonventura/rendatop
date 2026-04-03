@@ -79,6 +79,7 @@ function getIndexLabel(index, percent) {
 
     if (Number(index) === 0) return `${formatted}% CDI`
     if (Number(index) === 1) return `IPCA + ${formatted}%`
+    if (Number(index) === 3) return `CDI + ${formatted}% a.a.`
     return `${formatted}% a.a.`
 }
 
@@ -415,6 +416,7 @@ export default function RecurringInvestmentsManager() {
                                             <SelectItem value="0">CDI</SelectItem>
                                             <SelectItem value="1">IPCA+</SelectItem>
                                             <SelectItem value="2">% ao ano</SelectItem>
+                                            <SelectItem value="3">CDI + %a.a.</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

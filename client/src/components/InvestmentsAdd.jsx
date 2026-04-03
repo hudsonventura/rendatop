@@ -84,6 +84,7 @@ function getIndexLabelByType(indexType, rawPercent) {
 	})
 	if (indexType === 0) return `${formattedPercent}% CDI`
 	if (indexType === 1) return `IPCA+${formattedPercent}%`
+	if (indexType === 3) return `CDI + ${formattedPercent}% a.a.`
 	return `${formattedPercent}% a.a.`
 }
 
@@ -99,6 +100,8 @@ function getLciEquivalentPercent(selectedIndexType, rawPercent, taxes) {
 		annualNetRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100) * irFactor
 	} else if (selectedIndexType === 1) {
 		annualNetRate = (IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)) * irFactor
+	} else if (selectedIndexType === 3) {
+		annualNetRate = (SELIC_ANNUAL_ESTIMATE + (rawPercent / 100)) * irFactor
 	} else {
 		annualNetRate = (rawPercent / 100) * irFactor
 	}
@@ -116,6 +119,8 @@ function getEquivalentPercent(indexType, selectedIndexType, rawPercent) {
 		annualRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100)
 	} else if (selectedIndexType === 1) {
 		annualRate = IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)
+	} else if (selectedIndexType === 3) {
+		annualRate = SELIC_ANNUAL_ESTIMATE + (rawPercent / 100)
 	} else {
 		annualRate = rawPercent / 100
 	}
@@ -126,6 +131,10 @@ function getEquivalentPercent(indexType, selectedIndexType, rawPercent) {
 
 	if (indexType === 1) {
 		return (annualRate - IPCA_ANNUAL_ESTIMATE) * 100
+	}
+
+	if (indexType === 3) {
+		return (annualRate - SELIC_ANNUAL_ESTIMATE) * 100
 	}
 
 	return annualRate * 100
@@ -169,6 +178,10 @@ function buildPreview({
 		const annualRate = IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)
 		effectivePercent = annualRate / 366 * (days - 3)
 		estimateLabel = "IPCA estimado"
+	} else if (indexType === 3) {
+		const annualRate = SELIC_ANNUAL_ESTIMATE + (rawPercent / 100)
+		effectivePercent = annualRate / 366 * (days - 3)
+		estimateLabel = "CDI estimado"
 	} else {
 		effectivePercent = (rawPercent / 100) / 366 * (days - 3)
 	}
@@ -303,7 +316,7 @@ function InvestmentPreview({ form }) {
 			watchTaxes,
 		})
 
-		const comparisons = [0, 1, 2]
+		const comparisons = [0, 1, 2, 3]
 			.filter((type) => type !== indexType)
 			.map((type) => {
 				const equivalentPercent = getEquivalentPercent(type, indexType, rawPercent)
@@ -784,7 +797,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 								name="index"
 								render={({ field }) => (
 									<FormItem className="w-64">
-										<FormLabel>Indexador (CDI, IPCA+ ou %a.a.)</FormLabel>
+										<FormLabel>Indexador (CDI, IPCA+, %a.a. ou CDI + %a.a.)</FormLabel>
 										<Select onValueChange={field.onChange} value={field.value}>
 											<FormControl>
 												<SelectTrigger>
@@ -795,6 +808,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 												<SelectItem value="0">CDI</SelectItem>
 												<SelectItem value="1">IPCA+</SelectItem>
 												<SelectItem value="2">%a.a.</SelectItem>
+												<SelectItem value="3">CDI + %a.a.</SelectItem>
 											</SelectContent>
 										</Select>
 										<FormMessage />

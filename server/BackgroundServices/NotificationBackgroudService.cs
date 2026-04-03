@@ -62,9 +62,7 @@ public class NotificationBackgroudService : IHostedService
     {
         foreach (var item in investiments)
         {
-            var calc = new Calculator_CDI(_context);
-
-			item.calculated = calc.Calculate(item.ToRequest());
+            item.calculated = CalculateInvestment(item);
 
             _notification.Notify(
                 "RESGATE DE INVESTIMENTO HOJE!!!", 
@@ -76,19 +74,21 @@ public class NotificationBackgroudService : IHostedService
     {
         foreach (var item in investiments)
         {
-            var calc = new Calculator_CDI(_context);
-
-			item.calculated = calc.Calculate(item.ToRequest());
+            item.calculated = CalculateInvestment(item);
 
             _notification.Notify(
                 "Investimento próximo do vencimento", 
                 $"{item.title}<br>Valor: R$ {item.value:N2}<br>Rend. Líq.: R$ {item.calculated[1].value_liq:N2}<br>Banco: {item.bank}<br>Vencimento: {((DateTime)item.due_date).ToString("dd/MM/yyyy")}");
         }
     }
-    
 
+    private List<Calculated> CalculateInvestment(Investment investment)
+    {
+        var calcType = typeof(ICalculator).Assembly.GetType($"server.Domain.Calculator_{investment.index}");
+        if (calcType is null)
+            throw new ExpectedException($"Tipo de calculo nao encontrado: Calculator_{investment.index}");
 
-    
-
-    
+        var calc = (ICalculator)Activator.CreateInstance(calcType, _context)!;
+        return calc.Calculate(investment.ToRequest());
+    }
 }

@@ -47,6 +47,8 @@ function getIndexLabel(investment) {
             return `${investment.index_percent}% a.a.`
         case "CDI":
             return `${investment.index_percent}% CDI`
+        case "CDI_MAIS":
+            return `CDI + ${investment.index_percent}% a.a.`
         case "IPCA_MAIS":
             return `IPCA+${investment.index_percent}%`
         default:

@@ -76,7 +76,7 @@ const formSchema = z.object({
 
 // ── Index enum mapping (backend string → select number) ──────────────────────
 
-const INDEX_MAP = { CDI: "0", IPCA_MAIS: "1", PERCENT_YEAR: "2" }
+const INDEX_MAP = { CDI: "0", IPCA_MAIS: "1", PERCENT_YEAR: "2", CDI_MAIS: "3" }
 
 // ── Decimal formatter (same as InvestmentsAdd) ────────────────────────────────
 
@@ -320,7 +320,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                 name="index"
                                 render={({ field }) => (
                                     <FormItem className="w-64">
-                                        <FormLabel>Indexador (CDI, IPCA+ ou %a.a.)</FormLabel>
+                                        <FormLabel>Indexador (CDI, IPCA+, %a.a. ou CDI + %a.a.)</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
                                             <FormControl>
                                                 <SelectTrigger>
@@ -331,6 +331,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                                 <SelectItem value="0">CDI</SelectItem>
                                                 <SelectItem value="1">IPCA+</SelectItem>
                                                 <SelectItem value="2">%a.a.</SelectItem>
+                                                <SelectItem value="3">CDI + %a.a.</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

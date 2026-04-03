@@ -111,6 +111,8 @@ function estimateLiquidValue(investment, date) {
 
     if (investment.index === "CDI") {
         effectivePercent = (SELIC_ANNUAL_ESTIMATE * (indexPercent / 100) * days) / 365
+    } else if (investment.index === "CDI_MAIS") {
+        effectivePercent = ((SELIC_ANNUAL_ESTIMATE + indexPercent / 100) * Math.max(days - 3, 0)) / 366
     } else if (investment.index === "IPCA_MAIS") {
         effectivePercent = ((IPCA_ANNUAL_ESTIMATE + indexPercent / 100) * Math.max(days - 3, 0)) / 366
     } else {
