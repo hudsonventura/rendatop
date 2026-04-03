@@ -251,9 +251,7 @@ public class UserController : AuthenticatedController
         if (user is null)
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
 
-        if (!user.notify_email)
-            throw new ExpectedException("Ative as notificações por Email nas configurações para testar o envio.");
-
+        
         ValidateEmail(user.email);
 
         var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
