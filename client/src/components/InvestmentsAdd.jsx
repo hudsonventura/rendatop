@@ -261,7 +261,7 @@ function PreviewCard({ title, preview, rawValue }) {
 function ComparativesCard({ items }) {
 	return (
 		<div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4 space-y-3">
-			<div className="text-sm font-medium">Comparativos</div>
+			<div className="text-sm font-medium">Comparativos <small>Valores aproximados. Não deve ser levado em regra.</small></div>
 			{items?.length ? (
 				<div className="space-y-2 text-sm">
 					{items.map((item) => (
@@ -324,9 +324,11 @@ function InvestmentPreview({ form }) {
 				const equivalentPercent = getEquivalentPercent(type, indexType, rawPercent)
 				return {
 					type,
+					equivalentPercent,
 					label: `Equivale a um ${getIndexLabelByType(type, equivalentPercent)}`,
 				}
 			})
+			.filter((item) => !(item.type === 3 && Math.abs(item.equivalentPercent) < 0.005))
 
 		const lciComparison = (watchTaxes ?? true)
 			? {
@@ -810,7 +812,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 											}}
 											value={field.value || INVESTMENT_TYPE_NONE}
 										>
-											<FormControl>
+											<FormControl className="w-40">
 												<SelectTrigger>
 													<SelectValue placeholder="Opcional" />
 												</SelectTrigger>
