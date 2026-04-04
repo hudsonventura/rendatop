@@ -30,8 +30,31 @@ public class InvestmentsController : AuthenticatedController
     {
         return _context.investments
                             .Include(x => x.bank)
+                            .Include(x => x.money_box)
                             .Where(x => x.owner.id == _user.id && x.id == id)
                             .FirstOrDefault();
+    }
+
+    private MoneyBox? ResolveMoneyBox(Guid? moneyBoxId)
+    {
+        if (!moneyBoxId.HasValue)
+            return null;
+
+        return _context.money_boxes
+            .FirstOrDefault(item => item.id == moneyBoxId.Value && item.owner_id == _user.id)
+            ?? throw new ExpectedException("Cofrinho não encontrado.");
+    }
+
+    private void EnsureMoneyBoxSelectionAllowed(Guid? requestedMoneyBoxId, Guid? currentMoneyBoxId = null)
+    {
+        if (!requestedMoneyBoxId.HasValue)
+            return;
+
+        var moneyBoxesCount = _context.money_boxes.Count(item => item.owner_id == _user.id);
+        var selectionEnabled = SubscriptionFeatureAccess.CanSelectMoneyBoxes(_context, _user.id, moneyBoxesCount);
+
+        if (!selectionEnabled && requestedMoneyBoxId != currentMoneyBoxId)
+            throw new ExpectedException("Seu plano Free permite apenas 3 cofrinhos ativos para selecao. Remova cofrinhos excedentes ou volte para um plano pago para escolher um cofrinho nos investimentos.");
     }
 
     private static List<Calculated> BuildTableCalculated(Investment investment)
@@ -153,6 +176,7 @@ public class InvestmentsController : AuthenticatedController
                                                 .AsNoTracking()
                                                 .Include(x => x.owner)
                                                 .Include(x => x.bank)
+                                                .Include(x => x.money_box)
                                                 .Include(x => x.redemptions)
                                                 .Where(x => x.owner.id == _user.id)
                                                 .ToList();
@@ -214,10 +238,13 @@ public class InvestmentsController : AuthenticatedController
     {
         var bank = _context.banks.FirstOrDefault(b => b.Code == (ushort)request.bank_code)
             ?? throw new ExpectedException($"Banco com código {request.bank_code} não encontrado.");
+        var moneyBox = ResolveMoneyBox(request.money_box_id);
+        EnsureMoneyBoxSelectionAllowed(request.money_box_id);
 
         Investment investment = new Investment(request, _user, bank);
         _context.Entry(investment.owner).State = EntityState.Unchanged;
         _context.Entry(investment.bank).State = EntityState.Unchanged;
+        investment.money_box = moneyBox;
         _context.investments.Add(investment);
         _context.SaveChanges();
 
@@ -263,7 +290,10 @@ public class InvestmentsController : AuthenticatedController
                 ?? throw new ExpectedException($"Banco com código {request.bank_code} não encontrado.");
 
             Investment investment = GetInvestmentByID(id);
+            var moneyBox = ResolveMoneyBox(request.money_box_id);
+            EnsureMoneyBoxSelectionAllowed(request.money_box_id, investment.money_box_id);
             investment.Update(request, bank);
+            investment.money_box = moneyBox;
             _context.investments.Update(investment);
             _context.SaveChanges();
             return Ok();

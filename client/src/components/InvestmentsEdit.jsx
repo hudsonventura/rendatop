@@ -44,6 +44,7 @@ import {
     INVESTMENT_TYPE_NONE,
     INVESTMENT_TYPE_OPTIONS,
 } from "@/utils/investment-types"
+import { fetchMoneyBoxesOverview, MONEY_BOX_NONE } from "@/utils/money-boxes"
 
 // ── Schema (same as InvestmentsAdd) ─────────────────────────────────────────
 
@@ -61,6 +62,10 @@ const formSchema = z.object({
         .transform((value) => value.replace(/\,/g, ".")),
     investment_type: z.preprocess(
         (value) => (value === "" || value === INVESTMENT_TYPE_NONE ? undefined : value),
+        z.string().optional()
+    ),
+    money_box_id: z.preprocess(
+        (value) => (value === "" || value === MONEY_BOX_NONE ? undefined : value),
         z.string().optional()
     ),
     index: z.preprocess(
@@ -109,6 +114,11 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
     }
     const [bankList, setBankList] = useState([])
     const [liquidez_diaria, setLiquidezDiaria] = useState(!investment.due_date)
+    const [moneyBoxesOverview, setMoneyBoxesOverview] = useState({
+        items: [],
+        selection_enabled: true,
+        restriction_message: null,
+    })
 
     useEffect(() => {
         getCachedBanks()
@@ -118,6 +128,22 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
             })
             .catch(() => { })
     }, [])
+
+    useEffect(() => {
+        if (!isOpen) return
+
+        fetchMoneyBoxesOverview()
+            .then((data) => {
+                setMoneyBoxesOverview(data)
+            })
+            .catch(() => {
+                setMoneyBoxesOverview({
+                    items: [],
+                    selection_enabled: true,
+                    restriction_message: null,
+                })
+            })
+    }, [isOpen])
 
     const form = useForm({
         resolver: zodResolver(formSchema),
@@ -132,6 +158,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
             bank_code: investment.bank?.code ?? investment.bank ?? 0,
             value: formatDecimalDisplay(investment.value),
             investment_type: investment.investment_type ?? INVESTMENT_TYPE_NONE,
+            money_box_id: investment.money_box_id ?? investment.money_box?.id ?? MONEY_BOX_NONE,
             index: INDEX_MAP[investment.index] ?? "0",
             index_percent: formatDecimalDisplay(investment.index_percent),
         },
@@ -147,6 +174,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
             bank_code: values.bank_code,
             value: Number(values.value),
             investment_type: values.investment_type,
+            money_box_id: values.money_box_id ?? null,
             index: Number(values.index),
             index_percent: Number(values.index_percent),
         }
@@ -317,6 +345,38 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                                 ))}
                                             </SelectContent>
                                         </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="money_box_id"
+                                render={({ field }) => (
+                                    <FormItem className="w-48">
+                                        <FormLabel>Cofrinho</FormLabel>
+                                        <Select
+                                            onValueChange={field.onChange}
+                                            value={field.value || MONEY_BOX_NONE}
+                                            disabled={!moneyBoxesOverview.selection_enabled}
+                                        >
+                                            <FormControl className="w-48">
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Opcional" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value={MONEY_BOX_NONE}>Sem cofrinho</SelectItem>
+                                                {moneyBoxesOverview.items.map((item) => (
+                                                    <SelectItem key={item.id} value={item.id}>
+                                                        {item.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {moneyBoxesOverview.restriction_message && (
+                                            <p className="text-xs text-muted-foreground">{moneyBoxesOverview.restriction_message}</p>
+                                        )}
                                         <FormMessage />
                                     </FormItem>
                                 )}

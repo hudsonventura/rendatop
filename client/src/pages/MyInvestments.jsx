@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getReinvestmentInitialValues } from "@/utils/investment-actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getInvestmentTypeLabel } from "@/utils/investment-types";
+import { ALL_MONEY_BOXES, MONEY_BOX_UNCATEGORIZED } from "@/utils/money-boxes";
 
 function InvestmentsTableSkeleton() {
     return (
@@ -55,6 +56,7 @@ const MyInvestments = () => {
     const [selectedBank, setSelectedBank] = useState(ALL_BANKS);
     const [selectedType, setSelectedType] = useState(ALL_TYPES);
     const [selectedIndex, setSelectedIndex] = useState(ALL_INDEXES);
+    const [selectedMoneyBox, setSelectedMoneyBox] = useState(ALL_MONEY_BOXES);
 
     useEffect(() => {
         let cancelled = false;
@@ -183,6 +185,23 @@ const MyInvestments = () => {
             .sort((a, b) => a.label.localeCompare(b.label));
     }, [investments]);
 
+    const moneyBoxOptions = useMemo(() => {
+        const map = new Map();
+
+        for (const investment of investments) {
+            if (!investment?.money_box?.id || !investment?.money_box?.name) continue;
+            map.set(investment.money_box.id, {
+                value: investment.money_box.id,
+                label: investment.money_box.name,
+            });
+        }
+
+        return [
+            { value: MONEY_BOX_UNCATEGORIZED, label: "Sem cofrinho" },
+            ...Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label)),
+        ];
+    }, [investments]);
+
     const filteredAvailable = useMemo(
         () => available.filter((investment) => {
             const matchesBank = selectedBank === ALL_BANKS || investment?.bank?.name === selectedBank;
@@ -192,9 +211,14 @@ const MyInvestments = () => {
                     ? !investment?.investment_type
                     : investment?.investment_type === selectedType);
             const matchesIndex = selectedIndex === ALL_INDEXES || investment?.index === selectedIndex;
-            return matchesBank && matchesType && matchesIndex;
+            const matchesMoneyBox =
+                selectedMoneyBox === ALL_MONEY_BOXES ||
+                (selectedMoneyBox === MONEY_BOX_UNCATEGORIZED
+                    ? !investment?.money_box?.id
+                    : investment?.money_box?.id === selectedMoneyBox);
+            return matchesBank && matchesType && matchesIndex && matchesMoneyBox;
         }),
-        [available, selectedBank, selectedType, selectedIndex]
+        [available, selectedBank, selectedType, selectedIndex, selectedMoneyBox]
     );
 
     const filteredLocked = useMemo(
@@ -206,9 +230,14 @@ const MyInvestments = () => {
                     ? !investment?.investment_type
                     : investment?.investment_type === selectedType);
             const matchesIndex = selectedIndex === ALL_INDEXES || investment?.index === selectedIndex;
-            return matchesBank && matchesType && matchesIndex;
+            const matchesMoneyBox =
+                selectedMoneyBox === ALL_MONEY_BOXES ||
+                (selectedMoneyBox === MONEY_BOX_UNCATEGORIZED
+                    ? !investment?.money_box?.id
+                    : investment?.money_box?.id === selectedMoneyBox);
+            return matchesBank && matchesType && matchesIndex && matchesMoneyBox;
         }),
-        [locked, selectedBank, selectedType, selectedIndex]
+        [locked, selectedBank, selectedType, selectedIndex, selectedMoneyBox]
     );
 
     return (
@@ -303,6 +332,20 @@ const MyInvestments = () => {
                                             {indexOptions.map((index) => (
                                                 <SelectItem key={index.value} value={index.value}>
                                                     {index.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Select value={selectedMoneyBox} onValueChange={setSelectedMoneyBox}>
+                                        <SelectTrigger className="w-full sm:w-48">
+                                            <SelectValue placeholder="Filtrar por cofrinho" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL_MONEY_BOXES}>Todos os cofrinhos</SelectItem>
+                                            {moneyBoxOptions.map((moneyBox) => (
+                                                <SelectItem key={moneyBox.value} value={moneyBox.value}>
+                                                    {moneyBox.label}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

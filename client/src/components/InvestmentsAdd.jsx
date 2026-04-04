@@ -51,6 +51,7 @@ import {
 	INVESTMENT_TYPE_NONE,
 	INVESTMENT_TYPE_OPTIONS,
 } from "@/utils/investment-types"
+import { fetchMoneyBoxesOverview, MONEY_BOX_NONE } from "@/utils/money-boxes"
 
 
 // ── IR / IOF helpers (mirror backend logic) ──────────────────────────────────
@@ -389,6 +390,10 @@ const formSchema = z.object({
 		(value) => (value === "" || value === INVESTMENT_TYPE_NONE ? undefined : value),
 		z.string().optional()
 	),
+	money_box_id: z.preprocess(
+		(value) => (value === "" || value === MONEY_BOX_NONE ? undefined : value),
+		z.string().optional()
+	),
 	index_percent: z
 		.string()
 		.min(1, { required_error: "Este campo é obrigatório." })
@@ -446,17 +451,35 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 
 
 	const [bankList, setBankList] = useState([]);
+	const [moneyBoxesOverview, setMoneyBoxesOverview] = useState({
+		items: [],
+		selection_enabled: true,
+		restriction_message: null,
+	});
 	useEffect(() => {
 		getCachedBanks()
 			.then((banks) => {
 				setBankList(banks);
 				primeBanksCache(banks);
 			})
-			.catch((err) => {
-				//setError(err.message);
-				//setLoading(false);
-			});
+			.catch(() => { });
 	}, []);
+
+	useEffect(() => {
+		if (!isOpen) return;
+
+		fetchMoneyBoxesOverview()
+			.then((data) => {
+				setMoneyBoxesOverview(data);
+			})
+			.catch(() => {
+				setMoneyBoxesOverview({
+					items: [],
+					selection_enabled: true,
+					restriction_message: null,
+				});
+			});
+	}, [isOpen]);
 
 
 	const form = useForm({
@@ -470,6 +493,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			bank_code: undefined,
 			value: "",
 			investment_type: INVESTMENT_TYPE_NONE,
+			money_box_id: MONEY_BOX_NONE,
 			index: "",
 			index_percent: "",
 		},
@@ -487,6 +511,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			bank_code: initialValues?.bank_code ?? undefined,
 			value: initialValues?.value ?? "",
 			investment_type: initialValues?.investment_type ?? INVESTMENT_TYPE_NONE,
+			money_box_id: initialValues?.money_box_id ?? MONEY_BOX_NONE,
 			index: initialValues?.index ?? "",
 			index_percent: initialValues?.index_percent ?? "",
 		});
@@ -502,6 +527,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			bank_code: values.bank_code,
 			value: Number(values.value),
 			investment_type: values.investment_type,
+			money_box_id: values.money_box_id ?? null,
 			index: Number(values.index),
 			index_percent: Number(values.index_percent),
 		}
@@ -526,6 +552,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 					bank_code: undefined,
 					value: "",
 					investment_type: INVESTMENT_TYPE_NONE,
+					money_box_id: MONEY_BOX_NONE,
 					index: "",
 					index_percent: "",
 				});
@@ -797,6 +824,36 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 												))}
 											</SelectContent>
 										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="money_box_id"
+								render={({ field }) => (
+									<FormItem className="w-48">
+										<FormLabel>Cofrinho</FormLabel>
+										<Select
+											onValueChange={field.onChange}
+											value={field.value || MONEY_BOX_NONE}
+											disabled={!moneyBoxesOverview.selection_enabled}
+										>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Opcional" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value={MONEY_BOX_NONE}>Sem cofrinho</SelectItem>
+												{moneyBoxesOverview.items.map((item) => (
+													<SelectItem key={item.id} value={item.id}>
+														{item.name}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										
 										<FormMessage />
 									</FormItem>
 								)}

@@ -38,6 +38,11 @@ public class Plan
     internal bool recurring_investments { get; set; } = false;
 
     /// <summary>
+    /// Limite de cofrinhos disponíveis no plano.
+    /// </summary>
+    internal int money_boxes_limit { get; set; } = 3;
+
+    /// <summary>
     /// Dicionário de features do plano.
     /// Key = identificador da feature (ex: "ai_usage", "export_data").
     /// Value = texto explicativo para exibição ao usuário.
@@ -63,10 +68,12 @@ public static class Plans
             stoks = 5,
             whatsapp_notifications = false,
             recurring_investments = false,
+            money_boxes_limit = 3,
             features = new Dictionary<string, string>
             {
                 { "ai_usage", "2 leituras de comprovantes por IA por mês" },
                 { "investments", "Controle completo de investimentos" },
+                { "money_boxes", "Até 3 cofrinhos para organizar sua carteira" },
                 { "calendar_ics", "Calendário de vencimentos" },
                 { "notifications", "Notificações de vencimento (Telegram e E-mail)" },
                 {"stoks", "Controle de ações brasileiras, até 5 posições em aberto (em breve)" },
@@ -83,10 +90,12 @@ public static class Plans
             stoks = 30,
             whatsapp_notifications = true,
             recurring_investments = true,
+            money_boxes_limit = int.MaxValue,
             features = new Dictionary<string, string>
             {
                 { "ai_usage", "10 leituras de comprovantes por IA por mês" },
                 { "investments", "Controle completo de investimentos" },
+                { "money_boxes", "Cofrinhos ilimitados" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
                 { "whatsapp_notifications", "Notificações de vencimento (Telegram, E-mail e WhatsApp)" },
                 { "export_export_data", "Importação e Exportação de dados (em breve)" },
@@ -105,10 +114,12 @@ public static class Plans
             stoks = 100,
             whatsapp_notifications = true,
             recurring_investments = true,
+            money_boxes_limit = int.MaxValue,
             features = new Dictionary<string, string>
             {
                 { "ai_usage", "30 leituras de comprovantes por IA por mês" },
                 { "investments", "Controle completo de investimentos" },
+                { "money_boxes", "Cofrinhos ilimitados" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
                 { "whatsapp_notifications", "Notificações de vencimento (Telegram, E-mail e WhatsApp)" },
                 { "export_export_data", "Importação e Exportação de dados (em breve)" },

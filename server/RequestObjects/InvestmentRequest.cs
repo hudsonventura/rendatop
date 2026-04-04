@@ -21,6 +21,11 @@ public class InvestmentRequest
     public InvestmentType? investment_type { get; set; }
 
     /// <summary>
+    /// Cofrinho do investimento. Opcional.
+    /// </summary>
+    public Guid? money_box_id { get; set; }
+
+    /// <summary>
     /// Código do banco onde o investimento foi feito
     /// </summary>
     public int bank_code { get; set; }

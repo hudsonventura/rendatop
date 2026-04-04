@@ -19,6 +19,7 @@ import ForgotTotp from "@/pages/ForgotTotp"
 import ResetTotp from "@/pages/ResetTotp"
 import NotFound from "@/pages/NotFound"
 import SubscriptionPage from "@/pages/SubscriptionPage"
+import MoneyBoxesPage from "@/pages/MoneyBoxesPage"
 
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
                                 <Route path="/meus-investimentos" element={<MyInvestments />} />
                                 <Route path="/calendar" element={<CalendarPage />} />
                                 <Route path="/notifications" element={<NotificationsPage />} />
+                                <Route path="/cofrinhos" element={<MoneyBoxesPage />} />
                                 <Route path="/settings" element={<UserSettings />} />
                                 <Route path="/forgot-password" element={<ForgotPassword />} />
                                 <Route path="/reset-password" element={<ResetPassword />} />

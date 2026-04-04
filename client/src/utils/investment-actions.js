@@ -23,6 +23,7 @@ export function getReinvestmentInitialValues(investment) {
         bank_code: investment.bank?.code ?? investment.bank_code ?? undefined,
         value: formatDecimalDisplay(investment.calculated?.[0]?.value_liq ?? ""),
         investment_type: investment.investment_type ?? "__none__",
+        money_box_id: investment.money_box_id ?? investment.money_box?.id ?? "__money_box_none__",
         index: investment.index === "CDI" ? "0" : investment.index === "IPCA_MAIS" ? "1" : investment.index === "PERCENT_YEAR" ? "2" : investment.index === "CDI_MAIS" ? "3" : "",
         index_percent: formatDecimalDisplay(investment.index_percent ?? ""),
     }
