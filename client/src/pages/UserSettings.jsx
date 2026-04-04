@@ -20,10 +20,14 @@ const UserSettings = () => {
     const [testingEmail, setTestingEmail] = useState(false)
     const [success, setSuccess] = useState("")
     const [error, setError] = useState("")
+    const [whatsAppError, setWhatsAppError] = useState("")
+    const [telegramError, setTelegramError] = useState("")
+    const [emailError, setEmailError] = useState("")
 
     const [name, setName] = useState("")
     const [email, setEmail] = useState("")
     const [phone, setPhone] = useState("")
+    const [telegramChatId, setTelegramChatId] = useState("")
     const [cpf, setCpf] = useState("")
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
@@ -53,6 +57,7 @@ const UserSettings = () => {
                 setName(data.name || "")
                 setEmail(data.email || "")
                 setPhone(data.phone || "")
+                setTelegramChatId(data.telegram_chat_id || "")
                 setCpf(data.cpf || "")
                 setWhatsappNotificationsEnabled(canUseWhatsAppNotifications)
                 setCalendarIcsEnabled(canUseCalendarIcs)
@@ -76,24 +81,59 @@ const UserSettings = () => {
         setPhone(digits)
     }
 
+    const clearChannelErrors = () => {
+        setWhatsAppError("")
+        setTelegramError("")
+        setEmailError("")
+    }
+
+    const setChannelAwareError = (message) => {
+        const text = typeof message === "string" ? message : ""
+        const normalized = text.toLowerCase()
+
+        clearChannelErrors()
+
+        if (normalized.includes("telegram")) {
+            setTelegramError(text)
+            setError("")
+            return
+        }
+
+        if (normalized.includes("whatsapp")) {
+            setWhatsAppError(text)
+            setError("")
+            return
+        }
+
+        if (normalized.includes("email") || normalized.includes("e-mail")) {
+            setEmailError(text)
+            setError("")
+            return
+        }
+
+        setError(text)
+    }
+
     const handleToggleWhatsApp = (checked) => {
         if (!whatsappNotificationsEnabled) return
         if (checked && !phone) {
-            setError("Informe o telefone antes de habilitar WhatsApp e Telegram.")
+            setChannelAwareError("Informe o telefone antes de habilitar o WhatsApp.")
             setSuccess("")
             return
         }
         setError("")
+        setWhatsAppError("")
         setNotifyWhatsapp(checked)
     }
 
     const handleToggleTelegram = (checked) => {
-        if (checked && !phone) {
-            setError("Informe o telefone antes de habilitar WhatsApp e Telegram.")
+        if (checked && !telegramChatId.trim()) {
+            setChannelAwareError("Informe o Chat ID do Telegram antes de habilitar as notificações.")
             setSuccess("")
             return
         }
         setError("")
+        setTelegramError("")
         setNotifyTelegram(checked)
     }
 
@@ -101,6 +141,7 @@ const UserSettings = () => {
         event.preventDefault()
         setError("")
         setSuccess("")
+        clearChannelErrors()
 
         const effectiveNotifyWhatsapp = whatsappNotificationsEnabled ? notifyWhatsapp : false
         const effectiveCalendarPublicEnabled = calendarIcsEnabled ? calendarPublicEnabled : false
@@ -125,8 +166,13 @@ const UserSettings = () => {
             return
         }
 
-        if ((effectiveNotifyWhatsapp || notifyTelegram) && !phone) {
-            setError("Informe o telefone antes de habilitar WhatsApp e Telegram.")
+        if (effectiveNotifyWhatsapp && !phone) {
+            setChannelAwareError("Informe o telefone antes de habilitar o WhatsApp.")
+            return
+        }
+
+        if (notifyTelegram && !telegramChatId.trim()) {
+            setChannelAwareError("Informe o Chat ID do Telegram antes de habilitar as notificações.")
             return
         }
 
@@ -139,6 +185,7 @@ const UserSettings = () => {
                 phone,
                 notify_whatsapp: effectiveNotifyWhatsapp,
                 notify_telegram: notifyTelegram,
+                telegram_chat_id: telegramChatId.trim() || null,
                 notify_email: notifyEmail,
                 calendar_public_enabled: effectiveCalendarPublicEnabled,
             })
@@ -147,6 +194,8 @@ const UserSettings = () => {
                 setName(data.name || "")
                 sessionStorage.setItem("email", data.email)
                 if (data.name) sessionStorage.setItem("name", data.name)
+                setPhone(data.phone || "")
+                setTelegramChatId(data.telegram_chat_id || "")
                 setWhatsappNotificationsEnabled(Boolean(data.whatsapp_notifications_enabled))
                 setCalendarIcsEnabled(Boolean(data.calendar_ics_enabled))
                 setCalendarPublicEnabled(Boolean(data.calendar_public_enabled))
@@ -160,7 +209,7 @@ const UserSettings = () => {
                 const message = typeof err?.response?.data === "string"
                     ? err.response.data
                     : "Não foi possível salvar suas configurações."
-                setError(message)
+                setChannelAwareError(message)
             })
             .finally(() => {
                 setSaving(false)
@@ -170,10 +219,11 @@ const UserSettings = () => {
     const handleTestTelegram = () => {
         setError("")
         setSuccess("")
+        setTelegramError("")
         setTestingTelegram(true)
 
         axiosInstance
-            .post("/User/Settings/TestTelegram", { phone })
+            .post("/User/Settings/TestTelegram", { telegram_chat_id: telegramChatId.trim() || null })
             .then((response) => {
                 const message = response?.data?.message || "Mensagem de teste enviada no Telegram."
                 setSuccess(message)
@@ -182,7 +232,7 @@ const UserSettings = () => {
                 const message = typeof err?.response?.data === "string"
                     ? err.response.data
                     : "Não foi possível enviar a mensagem de teste no Telegram."
-                setError(message)
+                setChannelAwareError(message)
             })
             .finally(() => {
                 setTestingTelegram(false)
@@ -192,6 +242,7 @@ const UserSettings = () => {
     const handleTestWhatsApp = () => {
         setError("")
         setSuccess("")
+        setWhatsAppError("")
         setTestingWhatsApp(true)
 
         axiosInstance
@@ -204,7 +255,7 @@ const UserSettings = () => {
                 const message = typeof err?.response?.data === "string"
                     ? err.response.data
                     : "Não foi possível enviar a mensagem de teste no WhatsApp."
-                setError(message)
+                setChannelAwareError(message)
             })
             .finally(() => {
                 setTestingWhatsApp(false)
@@ -214,6 +265,7 @@ const UserSettings = () => {
     const handleTestEmail = () => {
         setError("")
         setSuccess("")
+        setEmailError("")
         setTestingEmail(true)
 
         axiosInstance
@@ -226,7 +278,7 @@ const UserSettings = () => {
                 const message = typeof err?.response?.data === "string"
                     ? err.response.data
                     : "Não foi possível enviar o email de teste."
-                setError(message)
+                setChannelAwareError(message)
             })
             .finally(() => {
                 setTestingEmail(false)
@@ -340,22 +392,6 @@ const UserSettings = () => {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="phone">Telefone</Label>
-                                        <Input
-                                            id="phone"
-                                            type="text"
-                                            value={phone}
-                                            onChange={(e) => handlePhoneChange(e.target.value)}
-                                            placeholder="99999999999"
-                                            inputMode="numeric"
-                                            maxLength={11}
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Formato: 99999999999
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-2">
                                         <Label htmlFor="cpf">CPF</Label>
                                         <Input
                                             id="cpf"
@@ -415,6 +451,28 @@ const UserSettings = () => {
                                                         ? "Receber notificações por WhatsApp"
                                                         : "Assine um plano para ativar este recurso."}
                                                 </p>
+                                                {whatsAppError && (
+                                                    <Alert variant="destructive" className="mt-3">
+                                                        <AlertCircle className="h-4 w-4" />
+                                                        <AlertTitle>WhatsApp</AlertTitle>
+                                                        <AlertDescription>{whatsAppError}</AlertDescription>
+                                                    </Alert>
+                                                )}
+                                                <div className="mt-3 space-y-2">
+                                                    <Label htmlFor="phone">Telefone do WhatsApp</Label>
+                                                    <Input
+                                                        id="phone"
+                                                        type="text"
+                                                        value={phone}
+                                                        onChange={(e) => handlePhoneChange(e.target.value)}
+                                                        placeholder="99999999999"
+                                                        inputMode="numeric"
+                                                        maxLength={11}
+                                                    />
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Informe o número com 11 dígitos. Você pode testar antes mesmo de salvar as configurações.
+                                                    </p>
+                                                </div>
                                             </div>
                                             <div className="md:justify-self-center">
                                                 <Switch
@@ -445,6 +503,26 @@ const UserSettings = () => {
                                                     <p className="text-sm font-medium">Telegram</p>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground">Receber notificações por Telegram</p>
+                                                {telegramError && (
+                                                    <Alert variant="destructive" className="mt-3">
+                                                        <AlertCircle className="h-4 w-4" />
+                                                        <AlertTitle>Telegram</AlertTitle>
+                                                        <AlertDescription>{telegramError}</AlertDescription>
+                                                    </Alert>
+                                                )}
+                                                <div className="mt-3 space-y-2">
+                                                    <Label htmlFor="telegramChatId">Chat ID do Telegram</Label>
+                                                    <Input
+                                                        id="telegramChatId"
+                                                        type="text"
+                                                        value={telegramChatId}
+                                                        onChange={(e) => setTelegramChatId(e.target.value)}
+                                                        placeholder="Ex.: 123456789"
+                                                    />
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Obrigatório apenas quando as notificações por Telegram estiverem ativas.
+                                                    </p>
+                                                </div>
                                             </div>
                                             <div className="md:justify-self-center">
                                                 <Switch
@@ -468,6 +546,13 @@ const UserSettings = () => {
                                             <div>
                                                 <p className="text-sm font-medium">Email</p>
                                                 <p className="text-xs text-muted-foreground">Receber notificações por Email</p>
+                                                {emailError && (
+                                                    <Alert variant="destructive" className="mt-3">
+                                                        <AlertCircle className="h-4 w-4" />
+                                                        <AlertTitle>Email</AlertTitle>
+                                                        <AlertDescription>{emailError}</AlertDescription>
+                                                    </Alert>
+                                                )}
                                             </div>
                                             <div className="md:justify-self-center">
                                                 <Switch

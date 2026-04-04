@@ -125,11 +125,11 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
             if (!user.notify_telegram && !user.notify_whatsapp && !user.notify_email)
                 continue;
 
-            if (user.notify_telegram)
+            if (user.notify_telegram && !string.IsNullOrWhiteSpace(user.telegram_chat_id))
             {
                 try
                 {
-                    await _telegram.Notify(title, message);
+                    await _telegram.Notify(title, message, user.telegram_chat_id);
                 }
                 catch (Exception ex)
                 {
