@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, MessageCircleMore, Sparkles } from "lucide-react"
 import { formatCpf } from "@/utils/cpf"
 
 const telegramChatIdSteps = [
@@ -529,10 +529,12 @@ const UserSettings = () => {
                                                 )}
                                                 <Button
                                                     type="button"
-                                                    variant="link"
-                                                    className="mt-2 h-auto px-0 text-sm"
+                                                    variant="secondary"
+                                                    className="mt-3 inline-flex h-auto items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition hover:bg-primary/15"
                                                     onClick={() => setTelegramGuideOpen(true)}
                                                 >
+                                                    <Sparkles className="h-4 w-4" />
+                                                    <MessageCircleMore className="h-4 w-4" />
                                                     Veja como obter seu chatID no Telegram
                                                 </Button>
                                                 <div className="mt-3 space-y-2">
