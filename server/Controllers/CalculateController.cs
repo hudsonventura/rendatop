@@ -6,7 +6,7 @@ using server.Utils;
 
 namespace server.Controllers;
 
-// <summary>
+/// <summary>
 /// Controller para calculo de investimentos
 /// </summary>
 [ApiController]

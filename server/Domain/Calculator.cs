@@ -70,7 +70,7 @@ public abstract class Calculator
     {
         var now = DateTime.UtcNow;
 
-        ///se não possuir data estimada de venda, usa a data atual
+        // Se nao possuir data estimada de venda, usa a data atual.
         if (request.date_expected_sell is null)
         {
             return new List<Calculated>(){

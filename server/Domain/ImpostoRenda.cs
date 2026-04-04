@@ -16,7 +16,7 @@ public class ImpostoRenda : ITax
     ///Acima de 720 dias: alíquota de 15%.
     /// </summary>
     /// <param name="start"></param>
-    /// <param name="end"></param>
+    /// <param name="finish"></param>
     /// <returns></returns>
     public decimal GetTax(DateTime start, DateTime? finish)
     {
