@@ -332,6 +332,7 @@ void MigrateDatabase(){
         try
         {
             dbContext.Database.Migrate();
+            Log.Information("Migrations applied successfully.");
         }
         catch (System.Exception error)
         {

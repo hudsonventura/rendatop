@@ -27,6 +27,11 @@ public class Investment
     public string title { get; set; }
 
     /// <summary>
+    /// Tipo categórico do investimento. Opcional.
+    /// </summary>
+    public InvestmentType? investment_type { get; set; }
+
+    /// <summary>
     /// String que represta o banco onde o investimento foi feito
     /// </summary>
     [ForeignKey("bank")]
@@ -117,6 +122,7 @@ public class Investment
     {
         this.owner = owner;
         this.title = request.title;
+        this.investment_type = request.investment_type;
         this.bank = bank;
         this.value = request.value;
         this.index = request.index;
@@ -134,6 +140,7 @@ public class Investment
     public void Update(InvestmentRequest request, Bank bank)
     {
         this.title = request.title;
+        this.investment_type = request.investment_type;
         this.bank = bank;
         this.value = request.value;
         this.index = request.index;
@@ -151,6 +158,7 @@ public class Investment
     {
         return new InvestmentRequest(){
             title = this.title,
+            investment_type = this.investment_type,
             bank_code = (int)(this.bank?.Code ?? 0),
             value = this.value,
             index = this.index,

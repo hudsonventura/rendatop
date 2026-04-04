@@ -1,6 +1,19 @@
 # rendatop
 Sistema de investimentos
 
+# Getting Stated
+
+Create an `.env` file and:
+```bash
+cd server && ln ../.env .env && cd ../client && ln ../.env .env
+```
+
+
+### Migrations
+``` bash
+dotnet ef migrations add NameMigration --project server/server.csproj
+dotnet ef database update --project server/server.csproj
+```
 
 # Authentications Configuration
 

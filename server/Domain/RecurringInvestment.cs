@@ -26,6 +26,7 @@ public class RecurringInvestment
     public Bank bank { get; set; } = null!;
 
     public string title { get; set; } = string.Empty;
+    public InvestmentType? investment_type { get; set; }
     public decimal value { get; set; }
     public IdexesType index { get; set; }
     public decimal index_percent { get; set; }
@@ -60,6 +61,7 @@ public class RecurringInvestment
     public void Apply(RecurringInvestmentRequest request, Bank bank)
     {
         title = request.title.Trim();
+        investment_type = request.investment_type;
         this.bank = bank;
         bank_id = bank.Id;
         value = request.value;
@@ -154,6 +156,7 @@ public class RecurringInvestment
         return new InvestmentRequest
         {
             title = title,
+            investment_type = investment_type,
             bank_code = bank.Code,
             date_buy = buyDate,
             date_expected_sell = dueDate,

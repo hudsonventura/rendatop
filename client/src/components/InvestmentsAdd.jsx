@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form"
 import { Checkbox } from "@/components/ui/checkbox"
 
-import { cn } from "@/lib/utils"
-
 import {
 	Dialog,
 	DialogContent,
@@ -23,7 +21,6 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage,
-	FormDescription
 } from "@/components/ui/form"
 
 import {
@@ -50,6 +47,10 @@ import axiosInstance from "../utils/axiosConfig";
 import { getIrTextClass } from "@/utils/ir-level"
 import { getCachedBanks, primeBanksCache } from "@/utils/banksCache"
 import { toast } from "@/hooks/use-toast"
+import {
+	INVESTMENT_TYPE_NONE,
+	INVESTMENT_TYPE_OPTIONS,
+} from "@/utils/investment-types"
 
 
 // ── IR / IOF helpers (mirror backend logic) ──────────────────────────────────
@@ -384,6 +385,10 @@ const formSchema = z.object({
 		.transform((value) => value.replace(/\./g, ""))
 		.transform((value) => value.replace(/\,/g, ".")),
 	index: z.preprocess((value) => (value === "" ? undefined : parseInt(value, 10)), z.number().int().nonnegative({ required_error: "Por favor selecione um index" })),
+	investment_type: z.preprocess(
+		(value) => (value === "" || value === INVESTMENT_TYPE_NONE ? undefined : value),
+		z.string().optional()
+	),
 	index_percent: z
 		.string()
 		.min(1, { required_error: "Este campo é obrigatório." })
@@ -464,6 +469,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			taxes: true,
 			bank_code: undefined,
 			value: "",
+			investment_type: INVESTMENT_TYPE_NONE,
 			index: "",
 			index_percent: "",
 		},
@@ -480,6 +486,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			taxes: initialValues?.taxes ?? true,
 			bank_code: initialValues?.bank_code ?? undefined,
 			value: initialValues?.value ?? "",
+			investment_type: initialValues?.investment_type ?? INVESTMENT_TYPE_NONE,
 			index: initialValues?.index ?? "",
 			index_percent: initialValues?.index_percent ?? "",
 		});
@@ -494,6 +501,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			taxes: values.taxes ?? true,
 			bank_code: values.bank_code,
 			value: Number(values.value),
+			investment_type: values.investment_type,
 			index: Number(values.index),
 			index_percent: Number(values.index_percent),
 		}
@@ -517,6 +525,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 					taxes: true,
 					bank_code: undefined,
 					value: "",
+					investment_type: INVESTMENT_TYPE_NONE,
 					index: "",
 					index_percent: "",
 				});
@@ -665,25 +674,50 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 										disabled={isExtracting}
 									>
 										{isExtracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-										{isExtracting ? "Lendo arquivo..." : "Enviar para IA"}
+										{isExtracting ? "Lendo arquivo..." : "Processar com IA"}
 									</Button>
 								</div>
 							</div>
 						</div>
 
-						<FormField
-							control={form.control}
-							name="title"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Identificação do investimento</FormLabel>
-									<FormControl>
-										<Input placeholder="Informe um título para o seu investimento" {...field} />
-									</FormControl>
-									<FormMessage>{form.formState.errors.name?.message}</FormMessage>
-								</FormItem>
-							)}
-						/>
+						<div className="flex flex-wrap gap-4">
+							<FormField
+								control={form.control}
+								name="bank_code"
+								render={({ field }) => {
+									return (
+										<FormItem className="flex flex-col shrink-0">
+											<FormLabel>Banco</FormLabel>
+											<FormControl>
+												<BankCombobox
+													banks={bankList}
+													value={field.value}
+													onChange={field.onChange}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)
+								}}
+							/>
+							<FormField
+								control={form.control}
+								name="title"
+								render={({ field }) => (
+									<FormItem className="min-w-0 flex-1">
+										<FormLabel>Identificação do investimento</FormLabel>
+										<FormControl>
+											<Input
+												placeholder="Informe um título para o seu investimento"
+												{...field}
+												className="w-full"
+											/>
+										</FormControl>
+										<FormMessage>{form.formState.errors.name?.message}</FormMessage>
+									</FormItem>
+								)}
+							/>
+						</div>
 
 						<div className="flex flex-wrap gap-4">
 							<FormField
@@ -733,52 +767,45 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 									</FormItem>
 								)}
 							/>
+							
+						</div>
+
+						<div className="flex flex-wrap gap-2">
 							<FormField
 								control={form.control}
-								name="taxes"
+								name="investment_type"
 								render={({ field }) => (
-									<FormItem className="flex flex-col justify-end space-y-2">
-										<div className="flex items-center">
+									<FormItem className="w-40">
+										<FormLabel>Tipo do investimento</FormLabel>
+										<Select
+											onValueChange={(value) => {
+												field.onChange(value)
+											}}
+											value={field.value || INVESTMENT_TYPE_NONE}
+										>
 											<FormControl>
-												<Checkbox
-													checked={field.value ?? true}
-													onCheckedChange={field.onChange}
-													className="bg-background rounded border border-input"
-												/>
+												<SelectTrigger>
+													<SelectValue placeholder="Opcional" />
+												</SelectTrigger>
 											</FormControl>
-											<span className="ml-2 text-sm">Possui incidência de impostos</span>
-										</div>
+											<SelectContent>
+												<SelectItem value={INVESTMENT_TYPE_NONE}>Não informado</SelectItem>
+												{INVESTMENT_TYPE_OPTIONS.map((option) => (
+													<SelectItem key={option.value} value={option.value}>
+														{option.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										<FormMessage />
 									</FormItem>
 								)}
 							/>
-						</div>
-
-						<div className="flex flex-wrap gap-4">
-							<FormField
-								control={form.control}
-								name="bank_code"
-								render={({ field }) => {
-									return (
-										<FormItem className="flex flex-col">
-											<FormLabel>Banco</FormLabel>
-											<FormControl>
-												<BankCombobox
-													banks={bankList}
-													value={field.value}
-													onChange={field.onChange}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)
-								}}
-							/>
-
 							<FormField
 								control={form.control}
 								name="value"
 								render={({ field }) => (
-									<FormItem className="w-32">
+									<FormItem className="w-35">
 										<FormLabel>Valor investido</FormLabel>
 										<FormControl>
 											<Input
@@ -792,16 +819,20 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 								)}
 							/>
 
+							
+
+							
+
 							<FormField
 								control={form.control}
 								name="index"
 								render={({ field }) => (
-									<FormItem className="w-64">
-										<FormLabel>Indexador (CDI, IPCA+, %a.a. ou CDI + %a.a.)</FormLabel>
+									<FormItem className="w-50">
+										<FormLabel>Indexador (CDI, IPCA+, %a.a.)</FormLabel>
 										<Select onValueChange={field.onChange} value={field.value}>
-											<FormControl>
+											<FormControl className="w-50">
 												<SelectTrigger>
-													<SelectValue placeholder="Selecione o index" />
+													<SelectValue placeholder="Selecione o indexador" />
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>
@@ -820,17 +851,36 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 								control={form.control}
 								name="index_percent"
 								render={({ field }) => (
-									<FormItem className="w-32">
-										<FormLabel>Valor do indexador</FormLabel>
+									<FormItem className="w-27">
+										<FormLabel>% indexador</FormLabel>
 										<FormControl>
 											<Input
-												placeholder="Ex.: 108% ou 13,11%"
+												placeholder="14,99"
 												{...field}
 												onChange={handleInputChangeDecimal}
 												className="text-sm"
 											/>
 										</FormControl>
 										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="taxes"
+								render={({ field }) => (
+									<FormItem className="flex flex-col justify-end space-y-2">
+										<div className="flex items-center">
+											<FormControl>
+												<Checkbox
+													checked={field.value ?? true}
+													onCheckedChange={field.onChange}
+													className="bg-background rounded border border-input"
+												/>
+											</FormControl>
+											<span className="ml-2 text-sm">Possui incidência de impostos</span>
+										</div>
 									</FormItem>
 								)}
 							/>

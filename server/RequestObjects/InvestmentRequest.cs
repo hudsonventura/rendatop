@@ -16,6 +16,11 @@ public class InvestmentRequest
     public string title { get; set; }
 
     /// <summary>
+    /// Tipo do investimento. Opcional.
+    /// </summary>
+    public InvestmentType? investment_type { get; set; }
+
+    /// <summary>
     /// Código do banco onde o investimento foi feito
     /// </summary>
     public int bank_code { get; set; }

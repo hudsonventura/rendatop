@@ -4,6 +4,7 @@ namespace server.RequestObjects;
 
 public record RecurringInvestmentRequest(
     string title,
+    InvestmentType? investment_type,
     int bank_code,
     decimal value,
     IdexesType index,

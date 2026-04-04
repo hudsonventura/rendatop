@@ -168,6 +168,7 @@ public class RecurringInvestmentsController : AuthenticatedController
         return new RecurringInvestmentResponse(
             recurringInvestment.id,
             recurringInvestment.title,
+            recurringInvestment.investment_type,
             recurringInvestment.bank.Code,
             recurringInvestment.bank.Name,
             recurringInvestment.value,
@@ -202,6 +203,7 @@ public record RecurringInvestmentActiveRequest(
 public record RecurringInvestmentResponse(
     Guid id,
     string title,
+    InvestmentType? investment_type,
     int bank_code,
     string bank_name,
     decimal value,
