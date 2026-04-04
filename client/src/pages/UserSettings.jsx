@@ -8,9 +8,25 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { formatCpf } from "@/utils/cpf"
+
+const telegramChatIdSteps = [
+    {
+        title: "Abra seu Telegram e busque pelo app RendaTop",
+        description: "Abra o aplicativo do Telegram no celular ou no computador. Na busca do Telegram, procure por RendaTop e abra a conversa com o bot e clique no botão Start.",
+        imageAlt: "Passo 1 para obter o chatID no Telegram",
+        imageSrc: "/chatid1.png"
+    },
+    {
+        title: "Copie seu chatID",
+        description: "O bot responderá com o seu chatID. Copie esse número e cole no campo Chat ID do Telegram.",
+        imageAlt: "Passo 4 para obter o chatID no Telegram",
+        imageSrc: "/chatid2.png"
+    },
+]
 
 const UserSettings = () => {
     const [loading, setLoading] = useState(true)
@@ -18,6 +34,7 @@ const UserSettings = () => {
     const [testingTelegram, setTestingTelegram] = useState(false)
     const [testingWhatsApp, setTestingWhatsApp] = useState(false)
     const [testingEmail, setTestingEmail] = useState(false)
+    const [telegramGuideOpen, setTelegramGuideOpen] = useState(false)
     const [success, setSuccess] = useState("")
     const [error, setError] = useState("")
     const [whatsAppError, setWhatsAppError] = useState("")
@@ -510,6 +527,14 @@ const UserSettings = () => {
                                                         <AlertDescription>{telegramError}</AlertDescription>
                                                     </Alert>
                                                 )}
+                                                <Button
+                                                    type="button"
+                                                    variant="link"
+                                                    className="mt-2 h-auto px-0 text-sm"
+                                                    onClick={() => setTelegramGuideOpen(true)}
+                                                >
+                                                    Veja como obter seu chatID no Telegram
+                                                </Button>
                                                 <div className="mt-3 space-y-2">
                                                     <Label htmlFor="telegramChatId">Chat ID do Telegram</Label>
                                                     <Input
@@ -730,6 +755,41 @@ const UserSettings = () => {
                     </Card>
                 </div>
             </BaseLayout>
+
+            <Dialog open={telegramGuideOpen} onOpenChange={setTelegramGuideOpen}>
+                <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Como obter seu chatID no Telegram</DialogTitle>
+                        <DialogDescription>
+                            Siga estes passos no Telegram. Depois copie o chatID informado pelo bot e cole no campo do perfil.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {telegramChatIdSteps.map((step, index) => (
+                            <div key={step.title} className="rounded-lg border p-4 space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                                        {index + 1}
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-medium">{step.title}</h4>
+                                        <p className="text-sm text-muted-foreground">{step.description}</p>
+                                    </div>
+                                </div>
+
+                                <div className="overflow-hidden rounded-md border border-dashed bg-muted/30">
+                                    <img
+                                        src={step.imageSrc}
+                                        alt={step.imageAlt}
+                                        className="h-auto w-full object-contain"
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }

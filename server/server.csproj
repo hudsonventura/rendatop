@@ -27,6 +27,7 @@
     <PackageReference Include="SnowflakeIDGenerator" Version="1.5.2024.306" />
     <PackageReference Include="StackExchange.Redis" Version="2.12.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
+    <PackageReference Include="Telegram.Bot" Version="22.9.0" />
     <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.22" />
   </ItemGroup>
 

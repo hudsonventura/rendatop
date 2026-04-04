@@ -27,7 +27,7 @@ SnowflakeGuid.SetMachineID(0);
 
 var builder = WebApplication.CreateBuilder(args);
 
-INotification telegram = new Telegram(Environment.GetEnvironmentVariable("TELEGRAM_TOKEN"), Environment.GetEnvironmentVariable("TELEGRAM_CHATID"));
+INotification telegram = new server.Utils.Telegram(Environment.GetEnvironmentVariable("TELEGRAM_TOKEN"), Environment.GetEnvironmentVariable("TELEGRAM_CHATID"));
 builder.Services.AddSingleton<INotification>(telegram);
 IWhatsAppNotification whatsapp = new WhatsApp(
     Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_URL"),
@@ -318,6 +318,9 @@ void AddBackgroundServices()
 
     // serviço diário (06:00 UTC) para gerar investimentos recorrentes
     builder.Services.AddHostedService<RecurringInvestmentsBackgroundService>();
+
+    // serviço para responder rapidamente ao /start do bot e informar o chatID do usuário
+    builder.Services.AddHostedService<TelegramBotBackgroundService>();
 }
 
 
