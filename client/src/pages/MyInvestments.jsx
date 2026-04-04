@@ -44,6 +44,7 @@ const MyInvestments = () => {
     const ALL_BANKS = "__all_banks__";
     const ALL_TYPES = "__all_types__";
     const UNCATEGORIZED_TYPE = "__uncategorized__";
+    const ALL_INDEXES = "__all_indexes__";
     const [investments, setInvestments] = useState([]);
     const [loadingInvestments, setLoadingInvestments] = useState(true);
     const [reload, setReload] = useState(0);
@@ -53,6 +54,7 @@ const MyInvestments = () => {
     const [activeTab, setActiveTab] = useState("available");
     const [selectedBank, setSelectedBank] = useState(ALL_BANKS);
     const [selectedType, setSelectedType] = useState(ALL_TYPES);
+    const [selectedIndex, setSelectedIndex] = useState(ALL_INDEXES);
 
     useEffect(() => {
         let cancelled = false;
@@ -151,6 +153,36 @@ const MyInvestments = () => {
         ];
     }, [investments]);
 
+    const indexOptions = useMemo(() => {
+        const uniqueIndexes = Array.from(new Set(
+            investments
+                .map((investment) => investment?.index)
+                .filter(Boolean)
+        ));
+
+        const getIndexLabel = (index) => {
+            switch (index) {
+                case "CDI":
+                    return "CDI";
+                case "IPCA_MAIS":
+                    return "IPCA+";
+                case "PERCENT_YEAR":
+                    return "%a.a.";
+                case "CDI_MAIS":
+                    return "CDI + %a.a.";
+                default:
+                    return index;
+            }
+        };
+
+        return uniqueIndexes
+            .map((index) => ({
+                value: index,
+                label: getIndexLabel(index),
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+    }, [investments]);
+
     const filteredAvailable = useMemo(
         () => available.filter((investment) => {
             const matchesBank = selectedBank === ALL_BANKS || investment?.bank?.name === selectedBank;
@@ -159,9 +191,10 @@ const MyInvestments = () => {
                 (selectedType === UNCATEGORIZED_TYPE
                     ? !investment?.investment_type
                     : investment?.investment_type === selectedType);
-            return matchesBank && matchesType;
+            const matchesIndex = selectedIndex === ALL_INDEXES || investment?.index === selectedIndex;
+            return matchesBank && matchesType && matchesIndex;
         }),
-        [available, selectedBank, selectedType]
+        [available, selectedBank, selectedType, selectedIndex]
     );
 
     const filteredLocked = useMemo(
@@ -172,9 +205,10 @@ const MyInvestments = () => {
                 (selectedType === UNCATEGORIZED_TYPE
                     ? !investment?.investment_type
                     : investment?.investment_type === selectedType);
-            return matchesBank && matchesType;
+            const matchesIndex = selectedIndex === ALL_INDEXES || investment?.index === selectedIndex;
+            return matchesBank && matchesType && matchesIndex;
         }),
-        [locked, selectedBank, selectedType]
+        [locked, selectedBank, selectedType, selectedIndex]
     );
 
     return (
@@ -255,6 +289,20 @@ const MyInvestments = () => {
                                             {typeOptions.map((type) => (
                                                 <SelectItem key={type.value} value={type.value}>
                                                     {type.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Select value={selectedIndex} onValueChange={setSelectedIndex}>
+                                        <SelectTrigger className="w-full sm:w-44">
+                                            <SelectValue placeholder="Filtrar por indexador" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL_INDEXES}>Todos os indexadores</SelectItem>
+                                            {indexOptions.map((index) => (
+                                                <SelectItem key={index.value} value={index.value}>
+                                                    {index.label}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
