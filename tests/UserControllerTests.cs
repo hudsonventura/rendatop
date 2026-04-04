@@ -21,6 +21,7 @@ public class UserControllerTests
             "65999999999",
             false,
             false,
+            null,
             true,
             false
         ));
@@ -49,6 +50,7 @@ public class UserControllerTests
             "",
             false,
             false,
+            null,
             true,
             false
         )));
@@ -60,6 +62,42 @@ public class UserControllerTests
         Assert.Equal("Test User", savedUser.name);
     }
 
+    [Fact]
+    public void UpdateSettings_ThrowsWhenTelegramEnabledWithoutChatId()
+    {
+        using var fixture = new UserControllerFixture();
+
+        var exception = Assert.Throws<ExpectedException>(() => fixture.Controller.UpdateSettings(new UserSettingsRequest(
+            "Test User",
+            "test@example.com",
+            null,
+            "",
+            false,
+            true,
+            null,
+            true,
+            false
+        )));
+
+        Assert.Equal("Informe o Chat ID do Telegram para habilitar notificações por Telegram.", exception.Message);
+    }
+
+    [Fact]
+    public async Task TestTelegram_UsesRequestChatIdWithoutPersistingIt()
+    {
+        using var fixture = new UserControllerFixture();
+
+        var result = await fixture.Controller.TestTelegram(new NotificationTestRequest(null, "123456789"));
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<GenericMessageResponse>(okResult.Value);
+        Assert.Equal("123456789", fixture.Notification.LastChatId);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var savedUser = assertionContext.users.Single(x => x.id == fixture.User.id);
+        Assert.Null(savedUser.telegram_chat_id);
+    }
+
     private sealed class UserControllerFixture : IDisposable
     {
         private readonly DbContextOptions<Context> _options;
@@ -67,6 +105,7 @@ public class UserControllerTests
         public Context Context { get; }
         public UserController Controller { get; }
         public User User { get; }
+        public FakeNotification Notification { get; }
 
         public UserControllerFixture()
         {
@@ -91,10 +130,12 @@ public class UserControllerTests
             httpContext.Items["User"] = User;
             var httpContextAccessor = new HttpContextAccessor { HttpContext = httpContext };
 
+            Notification = new FakeNotification();
+
             Controller = new UserController(
                 httpContextAccessor,
                 new TestContextFactory(_options),
-                new FakeNotification(),
+                Notification,
                 new FakeWhatsAppNotification(),
                 new FakeEmailNotification());
         }
@@ -124,7 +165,13 @@ public class UserControllerTests
 
     private sealed class FakeNotification : INotification
     {
-        public Task Notify(string title, string message) => Task.CompletedTask;
+        public string? LastChatId { get; private set; }
+
+        public Task Notify(string title, string message, string? chatId = null)
+        {
+            LastChatId = chatId;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeWhatsAppNotification : IWhatsAppNotification

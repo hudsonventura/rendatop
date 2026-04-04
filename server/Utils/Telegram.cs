@@ -6,23 +6,27 @@ public class Telegram : INotification
 {
     private readonly HttpClient _httpClient = new HttpClient();
     string _token;
-    string _chatId;
+    string? _defaultChatId;
 
 
-    public Telegram(string token, string chatId)
+    public Telegram(string token, string? chatId)
     {
         _token = token;
-        _chatId = chatId;
+        _defaultChatId = chatId;
     }
 
-    public async Task Notify(string title, string message)
+    public async Task Notify(string title, string message, string? chatId = null)
     {
+        var targetChatId = string.IsNullOrWhiteSpace(chatId) ? _defaultChatId : chatId;
+        if (string.IsNullOrWhiteSpace(targetChatId))
+            throw new Exception("Chat ID do Telegram não configurado.");
+
         var formattedMessage = $"<b>[{title}]</b><br><br>{message}";
         var request = new HttpRequestMessage(HttpMethod.Post,
             "https://api.telegram.org/bot" + _token + "/sendMessage")
         {
             Content = new StringContent(
-                "{\"chat_id\":\"" + _chatId +
+                "{\"chat_id\":\"" + targetChatId +
                 "\",\"text\":\"" + formattedMessage.Replace("<br>", "\n") + "\",\"parse_mode\":\"HTML\"}",
                 Encoding.UTF8, "application/json")
         };

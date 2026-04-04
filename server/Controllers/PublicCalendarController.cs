@@ -85,6 +85,7 @@ public class PublicCalendarController : ControllerBase
         {
             IdexesType.PERCENT_YEAR => $"{investment.index_percent:N2}% a.a.",
             IdexesType.CDI => $"{investment.index_percent:N2}% CDI",
+            IdexesType.CDI_MAIS => $"CDI + {investment.index_percent:N2}% a.a.",
             IdexesType.IPCA_MAIS => $"IPCA + {investment.index_value:N2}%",
             _ => $"{investment.index_percent:N2}%"
         };

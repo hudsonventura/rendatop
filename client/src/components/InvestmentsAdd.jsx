@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form"
 import { Checkbox } from "@/components/ui/checkbox"
 
-import { cn } from "@/lib/utils"
-
 import {
 	Dialog,
 	DialogContent,
@@ -23,7 +21,6 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage,
-	FormDescription
 } from "@/components/ui/form"
 
 import {
@@ -50,6 +47,11 @@ import axiosInstance from "../utils/axiosConfig";
 import { getIrTextClass } from "@/utils/ir-level"
 import { getCachedBanks, primeBanksCache } from "@/utils/banksCache"
 import { toast } from "@/hooks/use-toast"
+import {
+	INVESTMENT_TYPE_NONE,
+	INVESTMENT_TYPE_OPTIONS,
+} from "@/utils/investment-types"
+import { fetchMoneyBoxesOverview, MONEY_BOX_NONE } from "@/utils/money-boxes"
 
 
 // ── IR / IOF helpers (mirror backend logic) ──────────────────────────────────
@@ -84,6 +86,7 @@ function getIndexLabelByType(indexType, rawPercent) {
 	})
 	if (indexType === 0) return `${formattedPercent}% CDI`
 	if (indexType === 1) return `IPCA+${formattedPercent}%`
+	if (indexType === 3) return `CDI + ${formattedPercent}% a.a.`
 	return `${formattedPercent}% a.a.`
 }
 
@@ -99,6 +102,8 @@ function getLciEquivalentPercent(selectedIndexType, rawPercent, taxes) {
 		annualNetRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100) * irFactor
 	} else if (selectedIndexType === 1) {
 		annualNetRate = (IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)) * irFactor
+	} else if (selectedIndexType === 3) {
+		annualNetRate = (SELIC_ANNUAL_ESTIMATE + (rawPercent / 100)) * irFactor
 	} else {
 		annualNetRate = (rawPercent / 100) * irFactor
 	}
@@ -116,6 +121,8 @@ function getEquivalentPercent(indexType, selectedIndexType, rawPercent) {
 		annualRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100)
 	} else if (selectedIndexType === 1) {
 		annualRate = IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)
+	} else if (selectedIndexType === 3) {
+		annualRate = SELIC_ANNUAL_ESTIMATE + (rawPercent / 100)
 	} else {
 		annualRate = rawPercent / 100
 	}
@@ -126,6 +133,10 @@ function getEquivalentPercent(indexType, selectedIndexType, rawPercent) {
 
 	if (indexType === 1) {
 		return (annualRate - IPCA_ANNUAL_ESTIMATE) * 100
+	}
+
+	if (indexType === 3) {
+		return (annualRate - SELIC_ANNUAL_ESTIMATE) * 100
 	}
 
 	return annualRate * 100
@@ -169,6 +180,10 @@ function buildPreview({
 		const annualRate = IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)
 		effectivePercent = annualRate / 366 * (days - 3)
 		estimateLabel = "IPCA estimado"
+	} else if (indexType === 3) {
+		const annualRate = SELIC_ANNUAL_ESTIMATE + (rawPercent / 100)
+		effectivePercent = annualRate / 366 * (days - 3)
+		estimateLabel = "CDI estimado"
 	} else {
 		effectivePercent = (rawPercent / 100) / 366 * (days - 3)
 	}
@@ -246,7 +261,7 @@ function PreviewCard({ title, preview, rawValue }) {
 function ComparativesCard({ items }) {
 	return (
 		<div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4 space-y-3">
-			<div className="text-sm font-medium">Comparativos</div>
+			<div className="text-sm font-medium">Comparativos <small>Valores aproximados. Não deve ser levado em regra.</small></div>
 			{items?.length ? (
 				<div className="space-y-2 text-sm">
 					{items.map((item) => (
@@ -303,15 +318,17 @@ function InvestmentPreview({ form }) {
 			watchTaxes,
 		})
 
-		const comparisons = [0, 1, 2]
+		const comparisons = [0, 1, 2, 3]
 			.filter((type) => type !== indexType)
 			.map((type) => {
 				const equivalentPercent = getEquivalentPercent(type, indexType, rawPercent)
 				return {
 					type,
+					equivalentPercent,
 					label: `Equivale a um ${getIndexLabelByType(type, equivalentPercent)}`,
 				}
 			})
+			.filter((item) => !(item.type === 3 && Math.abs(item.equivalentPercent) < 0.005))
 
 		const lciComparison = (watchTaxes ?? true)
 			? {
@@ -371,6 +388,14 @@ const formSchema = z.object({
 		.transform((value) => value.replace(/\./g, ""))
 		.transform((value) => value.replace(/\,/g, ".")),
 	index: z.preprocess((value) => (value === "" ? undefined : parseInt(value, 10)), z.number().int().nonnegative({ required_error: "Por favor selecione um index" })),
+	investment_type: z.preprocess(
+		(value) => (value === "" || value === INVESTMENT_TYPE_NONE ? undefined : value),
+		z.string().optional()
+	),
+	money_box_id: z.preprocess(
+		(value) => (value === "" || value === MONEY_BOX_NONE ? undefined : value),
+		z.string().optional()
+	),
 	index_percent: z
 		.string()
 		.min(1, { required_error: "Este campo é obrigatório." })
@@ -428,17 +453,35 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 
 
 	const [bankList, setBankList] = useState([]);
+	const [moneyBoxesOverview, setMoneyBoxesOverview] = useState({
+		items: [],
+		selection_enabled: true,
+		restriction_message: null,
+	});
 	useEffect(() => {
 		getCachedBanks()
 			.then((banks) => {
 				setBankList(banks);
 				primeBanksCache(banks);
 			})
-			.catch((err) => {
-				//setError(err.message);
-				//setLoading(false);
-			});
+			.catch(() => { });
 	}, []);
+
+	useEffect(() => {
+		if (!isOpen) return;
+
+		fetchMoneyBoxesOverview()
+			.then((data) => {
+				setMoneyBoxesOverview(data);
+			})
+			.catch(() => {
+				setMoneyBoxesOverview({
+					items: [],
+					selection_enabled: true,
+					restriction_message: null,
+				});
+			});
+	}, [isOpen]);
 
 
 	const form = useForm({
@@ -451,6 +494,8 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			taxes: true,
 			bank_code: undefined,
 			value: "",
+			investment_type: INVESTMENT_TYPE_NONE,
+			money_box_id: MONEY_BOX_NONE,
 			index: "",
 			index_percent: "",
 		},
@@ -467,6 +512,8 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			taxes: initialValues?.taxes ?? true,
 			bank_code: initialValues?.bank_code ?? undefined,
 			value: initialValues?.value ?? "",
+			investment_type: initialValues?.investment_type ?? INVESTMENT_TYPE_NONE,
+			money_box_id: initialValues?.money_box_id ?? MONEY_BOX_NONE,
 			index: initialValues?.index ?? "",
 			index_percent: initialValues?.index_percent ?? "",
 		});
@@ -481,6 +528,8 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			taxes: values.taxes ?? true,
 			bank_code: values.bank_code,
 			value: Number(values.value),
+			investment_type: values.investment_type,
+			money_box_id: values.money_box_id ?? null,
 			index: Number(values.index),
 			index_percent: Number(values.index_percent),
 		}
@@ -504,6 +553,8 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 					taxes: true,
 					bank_code: undefined,
 					value: "",
+					investment_type: INVESTMENT_TYPE_NONE,
+					money_box_id: MONEY_BOX_NONE,
 					index: "",
 					index_percent: "",
 				});
@@ -652,25 +703,50 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 										disabled={isExtracting}
 									>
 										{isExtracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-										{isExtracting ? "Lendo arquivo..." : "Enviar para IA"}
+										{isExtracting ? "Lendo arquivo..." : "Processar com IA"}
 									</Button>
 								</div>
 							</div>
 						</div>
 
-						<FormField
-							control={form.control}
-							name="title"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Identificação do investimento</FormLabel>
-									<FormControl>
-										<Input placeholder="Informe um título para o seu investimento" {...field} />
-									</FormControl>
-									<FormMessage>{form.formState.errors.name?.message}</FormMessage>
-								</FormItem>
-							)}
-						/>
+						<div className="flex flex-wrap gap-4">
+							<FormField
+								control={form.control}
+								name="bank_code"
+								render={({ field }) => {
+									return (
+										<FormItem className="flex flex-col shrink-0">
+											<FormLabel>Banco</FormLabel>
+											<FormControl>
+												<BankCombobox
+													banks={bankList}
+													value={field.value}
+													onChange={field.onChange}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)
+								}}
+							/>
+							<FormField
+								control={form.control}
+								name="title"
+								render={({ field }) => (
+									<FormItem className="min-w-0 flex-1">
+										<FormLabel>Identificação do investimento</FormLabel>
+										<FormControl>
+											<Input
+												placeholder="Informe um título para o seu investimento"
+												{...field}
+												className="w-full"
+											/>
+										</FormControl>
+										<FormMessage>{form.formState.errors.name?.message}</FormMessage>
+									</FormItem>
+								)}
+							/>
+						</div>
 
 						<div className="flex flex-wrap gap-4">
 							<FormField
@@ -720,6 +796,135 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 									</FormItem>
 								)}
 							/>
+							
+						</div>
+
+						<div className="flex flex-wrap gap-2">
+							<FormField
+								control={form.control}
+								name="investment_type"
+								render={({ field }) => (
+									<FormItem className="w-40">
+										<FormLabel>Tipo do investimento</FormLabel>
+										<Select
+											onValueChange={(value) => {
+												field.onChange(value)
+											}}
+											value={field.value || INVESTMENT_TYPE_NONE}
+										>
+											<FormControl className="w-40">
+												<SelectTrigger>
+													<SelectValue placeholder="Opcional" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value={INVESTMENT_TYPE_NONE}>Não informado</SelectItem>
+												{INVESTMENT_TYPE_OPTIONS.map((option) => (
+													<SelectItem key={option.value} value={option.value}>
+														{option.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="money_box_id"
+								render={({ field }) => (
+									<FormItem className="w-48">
+										<FormLabel>Cofrinho</FormLabel>
+										<Select
+											onValueChange={field.onChange}
+											value={field.value || MONEY_BOX_NONE}
+											disabled={!moneyBoxesOverview.selection_enabled}
+										>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Opcional" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value={MONEY_BOX_NONE}>Sem cofrinho</SelectItem>
+												{moneyBoxesOverview.items.map((item) => (
+													<SelectItem key={item.id} value={item.id}>
+														{item.name}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="value"
+								render={({ field }) => (
+									<FormItem className="w-35">
+										<FormLabel>Valor investido</FormLabel>
+										<FormControl>
+											<Input
+												placeholder="Ex.: 3.999,99"
+												{...field}
+												onChange={handleInputChangeDecimal}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							
+
+							
+
+							<FormField
+								control={form.control}
+								name="index"
+								render={({ field }) => (
+									<FormItem className="w-50">
+										<FormLabel>Indexador (CDI, IPCA+, %a.a.)</FormLabel>
+										<Select onValueChange={field.onChange} value={field.value}>
+											<FormControl className="w-50">
+												<SelectTrigger>
+													<SelectValue placeholder="Selecione o indexador" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value="0">CDI</SelectItem>
+												<SelectItem value="1">IPCA+</SelectItem>
+												<SelectItem value="2">%a.a.</SelectItem>
+												<SelectItem value="3">CDI + %a.a.</SelectItem>
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="index_percent"
+								render={({ field }) => (
+									<FormItem className="w-27">
+										<FormLabel>% indexador</FormLabel>
+										<FormControl>
+											<Input
+												placeholder="14,99"
+												{...field}
+												onChange={handleInputChangeDecimal}
+												className="text-sm"
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
 							<FormField
 								control={form.control}
 								name="taxes"
@@ -735,88 +940,6 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 											</FormControl>
 											<span className="ml-2 text-sm">Possui incidência de impostos</span>
 										</div>
-									</FormItem>
-								)}
-							/>
-						</div>
-
-						<div className="flex flex-wrap gap-4">
-							<FormField
-								control={form.control}
-								name="bank_code"
-								render={({ field }) => {
-									return (
-										<FormItem className="flex flex-col">
-											<FormLabel>Banco</FormLabel>
-											<FormControl>
-												<BankCombobox
-													banks={bankList}
-													value={field.value}
-													onChange={field.onChange}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)
-								}}
-							/>
-
-							<FormField
-								control={form.control}
-								name="value"
-								render={({ field }) => (
-									<FormItem className="w-32">
-										<FormLabel>Valor investido</FormLabel>
-										<FormControl>
-											<Input
-												placeholder="Ex.: 3.999,99"
-												{...field}
-												onChange={handleInputChangeDecimal}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="index"
-								render={({ field }) => (
-									<FormItem className="w-64">
-										<FormLabel>Indexador (CDI, IPCA+ ou %a.a.)</FormLabel>
-										<Select onValueChange={field.onChange} value={field.value}>
-											<FormControl>
-												<SelectTrigger>
-													<SelectValue placeholder="Selecione o index" />
-												</SelectTrigger>
-											</FormControl>
-											<SelectContent>
-												<SelectItem value="0">CDI</SelectItem>
-												<SelectItem value="1">IPCA+</SelectItem>
-												<SelectItem value="2">%a.a.</SelectItem>
-											</SelectContent>
-										</Select>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="index_percent"
-								render={({ field }) => (
-									<FormItem className="w-32">
-										<FormLabel>Valor do indexador</FormLabel>
-										<FormControl>
-											<Input
-												placeholder="Ex.: 108% ou 13,11%"
-												{...field}
-												onChange={handleInputChangeDecimal}
-												className="text-sm"
-											/>
-										</FormControl>
-										<FormMessage />
 									</FormItem>
 								)}
 							/>

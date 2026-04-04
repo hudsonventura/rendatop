@@ -73,8 +73,12 @@ public class UserController : AuthenticatedController
             throw new ExpectedException("Já existe uma conta com esse email.", HttpStatusCode.Conflict);
 
         var phone = SanitizePhone(request.phone);
-        if ((request.notify_whatsapp || request.notify_telegram) && string.IsNullOrWhiteSpace(phone))
-            throw new ExpectedException("Informe um telefone com 11 dígitos para habilitar notificações por WhatsApp e Telegram.");
+        if (request.notify_whatsapp && string.IsNullOrWhiteSpace(phone))
+            throw new ExpectedException("Informe um telefone com 11 dígitos para habilitar notificações por WhatsApp.");
+
+        var telegramChatId = SanitizeTelegramChatId(request.telegram_chat_id);
+        if (request.notify_telegram && string.IsNullOrWhiteSpace(telegramChatId))
+            throw new ExpectedException("Informe o Chat ID do Telegram para habilitar notificações por Telegram.");
 
         var canUseWhatsAppNotifications = CanUseWhatsAppNotifications(user.id);
         var canUseCalendarIcs = CanUseCalendarIcs(user.id);
@@ -90,6 +94,7 @@ public class UserController : AuthenticatedController
         user.phone = phone;
         user.notify_whatsapp = request.notify_whatsapp;
         user.notify_telegram = request.notify_telegram;
+        user.telegram_chat_id = telegramChatId;
         user.notify_email = request.notify_email;
         user.calendar_public_enabled = request.calendar_public_enabled;
         if (user.calendar_public_enabled && user.calendar_public_token is null)
@@ -189,9 +194,15 @@ public class UserController : AuthenticatedController
         var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
         var message = $"✅ Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
 
+        var telegramChatId = string.IsNullOrWhiteSpace(request?.telegram_chat_id)
+            ? SanitizeTelegramChatId(user.telegram_chat_id)
+            : SanitizeTelegramChatId(request?.telegram_chat_id);
+        if (string.IsNullOrWhiteSpace(telegramChatId))
+            throw new ExpectedException("Informe o Chat ID do Telegram no campo ao lado de Telegram e clique em testar novamente. Você pode testar antes mesmo de salvar as configurações.");
+
         try
         {
-            await _notify.Notify("📈 RentaTop | Teste Telegram", message);
+            await _notify.Notify("📈 RentaTop | Teste Telegram", message, telegramChatId);
         }
         catch (Exception ex)
         {
@@ -251,9 +262,7 @@ public class UserController : AuthenticatedController
         if (user is null)
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
 
-        if (!user.notify_email)
-            throw new ExpectedException("Ative as notificações por Email nas configurações para testar o envio.");
-
+        
         ValidateEmail(user.email);
 
         var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
@@ -306,6 +315,7 @@ public class UserController : AuthenticatedController
             user.cpf ?? string.Empty,
             whatsappNotificationsEnabled && user.notify_whatsapp,
             user.notify_telegram,
+            user.telegram_chat_id,
             user.notify_email,
             calendarIcsEnabled && user.calendar_public_enabled,
             calendarIcsEnabled && user.calendar_public_enabled
@@ -348,6 +358,14 @@ public class UserController : AuthenticatedController
 
         return $"{Request.Scheme}://{Request.Host}/public/calendar/{token}.ics";
     }
+
+    private static string? SanitizeTelegramChatId(string? chatId)
+    {
+        if (string.IsNullOrWhiteSpace(chatId))
+            return null;
+
+        return chatId.Trim();
+    }
 }
 
 public record UserSettingsRequest(
@@ -357,13 +375,15 @@ public record UserSettingsRequest(
     string? phone,
     bool notify_whatsapp,
     bool notify_telegram,
+    string? telegram_chat_id,
     bool notify_email,
     bool calendar_public_enabled,
     bool? totp_enabled = null
 );
 
 public record NotificationTestRequest(
-    string? phone
+    string? phone,
+    string? telegram_chat_id
 );
 
 public record UserSettingsResponse(
@@ -373,6 +393,7 @@ public record UserSettingsResponse(
     string cpf,
     bool notify_whatsapp,
     bool notify_telegram,
+    string? telegram_chat_id,
     bool notify_email,
     bool calendar_public_enabled,
     string? calendar_public_url,

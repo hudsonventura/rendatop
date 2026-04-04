@@ -27,6 +27,19 @@ public class Investment
     public string title { get; set; }
 
     /// <summary>
+    /// Tipo categórico do investimento. Opcional.
+    /// </summary>
+    public InvestmentType? investment_type { get; set; }
+
+    /// <summary>
+    /// Cofrinho vinculado ao investimento. Opcional.
+    /// </summary>
+    public Guid? money_box_id { get; set; }
+
+    [ForeignKey(nameof(money_box_id))]
+    public MoneyBox? money_box { get; set; }
+
+    /// <summary>
     /// String que represta o banco onde o investimento foi feito
     /// </summary>
     [ForeignKey("bank")]
@@ -117,6 +130,9 @@ public class Investment
     {
         this.owner = owner;
         this.title = request.title;
+        this.investment_type = request.investment_type;
+        this.money_box_id = request.money_box_id;
+        this.money_box = null;
         this.bank = bank;
         this.value = request.value;
         this.index = request.index;
@@ -134,6 +150,9 @@ public class Investment
     public void Update(InvestmentRequest request, Bank bank)
     {
         this.title = request.title;
+        this.investment_type = request.investment_type;
+        this.money_box_id = request.money_box_id;
+        this.money_box = null;
         this.bank = bank;
         this.value = request.value;
         this.index = request.index;
@@ -151,6 +170,8 @@ public class Investment
     {
         return new InvestmentRequest(){
             title = this.title,
+            investment_type = this.investment_type,
+            money_box_id = this.money_box_id,
             bank_code = (int)(this.bank?.Code ?? 0),
             value = this.value,
             index = this.index,

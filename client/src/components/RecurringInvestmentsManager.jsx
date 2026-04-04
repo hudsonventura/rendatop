@@ -14,6 +14,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertCircle, Plus, Repeat, Trash2, Pencil } from "lucide-react"
+import {
+    getInvestmentTypeLabel,
+    INVESTMENT_TYPE_NONE,
+    INVESTMENT_TYPE_OPTIONS,
+} from "@/utils/investment-types"
 
 const weekDays = [
     { value: 0, label: "Domingo" },
@@ -44,6 +49,7 @@ const allMonthValues = monthsList.map((month) => month.value)
 
 const defaultForm = {
     title: "",
+    investment_type: INVESTMENT_TYPE_NONE,
     bank_code: undefined,
     value: "",
     index: "0",
@@ -79,6 +85,7 @@ function getIndexLabel(index, percent) {
 
     if (Number(index) === 0) return `${formatted}% CDI`
     if (Number(index) === 1) return `IPCA + ${formatted}%`
+    if (Number(index) === 3) return `CDI + ${formatted}% a.a.`
     return `${formatted}% a.a.`
 }
 
@@ -102,6 +109,7 @@ function getFrequencyLabel(item) {
 function buildFormFromItem(item) {
     return {
         title: item.title || "",
+        investment_type: item.investment_type ?? INVESTMENT_TYPE_NONE,
         bank_code: item.bank_code,
         value: String(item.value ?? ""),
         index: String(item.index ?? 0),
@@ -239,6 +247,7 @@ export default function RecurringInvestmentsManager() {
 
         const payload = {
             title: form.title.trim(),
+            investment_type: form.investment_type === INVESTMENT_TYPE_NONE ? null : form.investment_type,
             bank_code: Number(form.bank_code),
             value: Number(form.value),
             index: Number(form.index),
@@ -355,7 +364,7 @@ export default function RecurringInvestmentsManager() {
                                 />
                             </div>
 
-                            <div className="grid gap-4 md:grid-cols-2">
+                            <div className="grid gap-4 md:grid-cols-3">
                                 <div className="space-y-2">
                                     <Label>Banco</Label>
                                     <BankCombobox
@@ -366,18 +375,38 @@ export default function RecurringInvestmentsManager() {
                                 </div>
 
                                 <div className="space-y-2">
-                                        <Label htmlFor="frequency">Frequência</Label>
-                                        <Select
-                                            value={form.frequency}
-                                            onValueChange={(value) => setForm((current) => ({
-                                                ...current,
-                                                frequency: value,
-                                                weekdays: value === "0" ? [] : current.weekdays,
-                                                months: value === "1" && (!current.months?.length)
-                                                    ? allMonthValues
-                                                    : current.months,
-                                            }))}
-                                        >
+                                    <Label htmlFor="investment_type">Tipo do investimento</Label>
+                                    <Select
+                                        value={form.investment_type}
+                                        onValueChange={(value) => setForm((current) => ({ ...current, investment_type: value }))}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Opcional" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={INVESTMENT_TYPE_NONE}>Não informado</SelectItem>
+                                            {INVESTMENT_TYPE_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="frequency">Frequência</Label>
+                                    <Select
+                                        value={form.frequency}
+                                        onValueChange={(value) => setForm((current) => ({
+                                            ...current,
+                                            frequency: value,
+                                            weekdays: value === "0" ? [] : current.weekdays,
+                                            months: value === "1" && (!current.months?.length)
+                                                ? allMonthValues
+                                                : current.months,
+                                        }))}
+                                    >
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Selecione a frequência" />
                                         </SelectTrigger>
@@ -415,6 +444,7 @@ export default function RecurringInvestmentsManager() {
                                             <SelectItem value="0">CDI</SelectItem>
                                             <SelectItem value="1">IPCA+</SelectItem>
                                             <SelectItem value="2">% ao ano</SelectItem>
+                                            <SelectItem value="3">CDI + %a.a.</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -605,16 +635,20 @@ export default function RecurringInvestmentsManager() {
                                         <p className="font-medium">{item.bank_name}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-muted-foreground">Aplicação</p>
-                                        <p className="font-medium">{formatCurrency(item.value)}</p>
+                                        <p className="text-xs text-muted-foreground">Tipo</p>
+                                        <p className="font-medium">{item.investment_type ? getInvestmentTypeLabel(item.investment_type) : "Não informado"}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-muted-foreground">Indexador</p>
-                                        <p className="font-medium">{getIndexLabel(item.index, item.index_percent)}</p>
+                                        <p className="text-xs text-muted-foreground">Aplicação</p>
+                                        <p className="font-medium">{formatCurrency(item.value)}</p>
                                     </div>
                                 </div>
 
                                 <div className="grid gap-4 md:grid-cols-3">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Indexador</p>
+                                        <p className="font-medium">{getIndexLabel(item.index, item.index_percent)}</p>
+                                    </div>
                                     <div>
                                         <p className="text-xs text-muted-foreground">Duração</p>
                                         <p className="font-medium">

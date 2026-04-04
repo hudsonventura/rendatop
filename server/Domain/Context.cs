@@ -101,6 +101,11 @@ public class Context : DbContext
     public DbSet<Investment> investments { get; set; }
 
     /// <summary>
+    /// Tabela de cofrinhos
+    /// </summary>
+    public DbSet<MoneyBox> money_boxes { get; set; }
+
+    /// <summary>
     /// Tabela de investimentos recorrentes
     /// </summary>
     public DbSet<RecurringInvestment> recurring_investments { get; set; }

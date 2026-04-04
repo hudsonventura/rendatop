@@ -9,6 +9,7 @@ import {
     Settings,
     Bell,
     CreditCard,
+    PiggyBank,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
@@ -45,6 +46,11 @@ const navItems = [
         title: "Meus Investimentos",
         url: "/meus-investimentos",
         icon: Wallet,
+    },
+    {
+        title: "Cofrinhos",
+        url: "/cofrinhos",
+        icon: PiggyBank,
     },
     {
         title: "Calendário",

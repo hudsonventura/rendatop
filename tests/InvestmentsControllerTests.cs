@@ -414,6 +414,6 @@ public class InvestmentsControllerTests
 
     private sealed class FakeNotification : INotification
     {
-        public Task Notify(string title, string message) => Task.CompletedTask;
+        public Task Notify(string title, string message, string? chatId = null) => Task.CompletedTask;
     }
 }

@@ -49,6 +49,11 @@ public class User
     public bool notify_telegram { get; set; } = false;
 
     /// <summary>
+    /// Chat ID do Telegram usado para envio das notificações
+    /// </summary>
+    public string? telegram_chat_id { get; set; }
+
+    /// <summary>
     /// Preferência para receber notificações via Email
     /// </summary>
     public bool notify_email { get; set; } = false;

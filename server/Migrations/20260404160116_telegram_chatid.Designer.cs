@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using server.Domain;
@@ -12,9 +13,11 @@ using server.Domain;
 namespace server.Migrations
 {
     [DbContext(typeof(Context))]
-    partial class ContextModelSnapshot : ModelSnapshot
+    [Migration("20260404160116_telegram_chatid")]
+    partial class telegram_chatid
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -106,9 +109,6 @@ namespace server.Migrations
                     b.Property<int?>("investment_type")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("money_box_id")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("ownerid")
                         .HasColumnType("uuid");
 
@@ -126,37 +126,9 @@ namespace server.Migrations
 
                     b.HasIndex("bank_id");
 
-                    b.HasIndex("money_box_id");
-
                     b.HasIndex("ownerid");
 
                     b.ToTable("investments");
-                });
-
-            modelBuilder.Entity("server.Domain.MoneyBox", b =>
-                {
-                    b.Property<Guid>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("owner_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("updated_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("owner_id");
-
-                    b.ToTable("money_boxes");
                 });
 
             modelBuilder.Entity("server.Domain.Notification", b =>
@@ -534,10 +506,6 @@ namespace server.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("server.Domain.MoneyBox", "money_box")
-                        .WithMany()
-                        .HasForeignKey("money_box_id");
-
                     b.HasOne("server.Domain.User", "owner")
                         .WithMany()
                         .HasForeignKey("ownerid")
@@ -545,19 +513,6 @@ namespace server.Migrations
                         .IsRequired();
 
                     b.Navigation("bank");
-
-                    b.Navigation("money_box");
-
-                    b.Navigation("owner");
-                });
-
-            modelBuilder.Entity("server.Domain.MoneyBox", b =>
-                {
-                    b.HasOne("server.Domain.User", "owner")
-                        .WithMany()
-                        .HasForeignKey("owner_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("owner");
                 });

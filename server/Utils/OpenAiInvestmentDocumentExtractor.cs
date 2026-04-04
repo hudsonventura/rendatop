@@ -128,7 +128,7 @@ public class OpenAiInvestmentDocumentExtractor : IInvestmentDocumentExtractor
                 date_buy = new { type = new[] { "string", "null" }, description = "Data de compra no formato YYYY-MM-DD." },
                 due_date = new { type = new[] { "string", "null" }, description = "Data de vencimento/resgate no formato YYYY-MM-DD." },
                 value = new { type = new[] { "number", "null" } },
-                index = new { type = new[] { "integer", "null" }, @enum = new int?[] { 0, 1, 2, null } },
+                index = new { type = new[] { "integer", "null" }, @enum = new int?[] { 0, 1, 2, 3, null } },
                 index_percent = new { type = new[] { "number", "null" } },
                 taxes = new { type = new[] { "boolean", "null" } },
                 liquidez_diaria = new { type = new[] { "boolean", "null" } },
@@ -187,8 +187,8 @@ Retorne somente os campos do schema solicitado.
 Regras:
 - Preencha apenas quando o documento trouxer a informação com boa confiança.
 - Use null quando estiver ausente, ilegível ou ambígua.
-- `index`: 0 para CDI, 1 para IPCA+, 2 para percentual ao ano (% a.a.).
-- `index_percent`: use somente o percentual principal do indexador. Exemplos: 110% do CDI => 110; IPCA+7,25% => 7.25; 13,40% a.a. => 13.40.
+- `index`: 0 para CDI, 1 para IPCA+, 2 para percentual ao ano (% a.a.), 3 para CDI + spread (% a.a.).
+- `index_percent`: use somente o percentual principal do indexador. Exemplos: 110% do CDI => 110; IPCA+7,25% => 7.25; 13,40% a.a. => 13.40; CDI+2,00% a.a. => 2.00.
 - `taxes`: false para investimentos isentos como LCI, LCA, CRI, CRA, debênture incentivada; true para CDB e casos tributáveis; null se não der para inferir.
 - `liquidez_diaria`: true apenas se o documento indicar liquidez diária/resgate diário; false se indicar vencimento fixo sem liquidez diária; null se não der para inferir.
 - `title`: gere um título curto e útil quando houver dados suficientes, como produto + banco.
