@@ -202,6 +202,7 @@ public class RecurringInvestmentsControllerTests
         {
             return new RecurringInvestmentRequest(
                 title,
+                InvestmentType.CDB,
                 Bank.Code,
                 500m,
                 IdexesType.CDI,

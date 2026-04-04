@@ -35,7 +35,7 @@ public class NotificationIntegrationTests
     {
         NotificationIntegrationEnvironment.Load();
 
-        var telegram = new Telegram(
+        var telegram = new server.Utils.Telegram(
             NotificationIntegrationEnvironment.GetRequired("TELEGRAM_TOKEN"),
             NotificationIntegrationEnvironment.GetRequired("TELEGRAM_CHATID"));
         var marker = NotificationIntegrationEnvironment.BuildMarker("telegram");
