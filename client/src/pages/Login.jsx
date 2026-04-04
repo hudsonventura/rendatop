@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, TrendingUp, Eye, EyeOff } from "lucide-react"
+import { AlertCircle, Eye, EyeOff } from "lucide-react"
 import axiosInstance from "@/utils/axiosConfig";
 import { appPath } from "@/utils/appPath";
+import LoginCandleWallpaper from "@/components/LoginCandleWallpaper";
 
 const apiBaseUrl = (import.meta.env.VITE_API_URL || "/api").replace(/\/+$/, "") || "/api";
 
@@ -128,39 +129,40 @@ const Login = () => {
 
     return (
         <div className="min-h-screen flex">
-            {/* Left panel — gradient branding */}
-            <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-primary/80 to-primary/60 items-center justify-center">
-                <div className="absolute inset-0 opacity-10">
-                    <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl" />
-                    <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl" />
-                    <div className="absolute top-1/2 left-1/3 w-48 h-48 bg-white rounded-full blur-2xl" />
-                </div>
-                <div className="relative z-10 text-center space-y-6 px-12">
-                    <div className="flex items-center justify-center gap-3 mb-8">
-                        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-white/20 backdrop-blur-sm">
+            <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-slate-950">
+                <LoginCandleWallpaper />
+
+                <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/80 via-slate-950/25 to-slate-950/70" />
+
+                <div className="relative z-10 flex w-full max-w-2xl flex-col gap-10 px-12 py-16 text-white">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/10 shadow-lg shadow-black/20 backdrop-blur-md">
                             <img src="/favicon.svg" alt="RendaTop" className="h-14 w-14" />
                         </div>
+                        <div>
+                            <p className="text-sm uppercase tracking-[0.32em] text-white/55">Gestão de investimentos</p>
+                            <h1 className="text-4xl font-bold tracking-tight text-white">RendaTop</h1>
+                        </div>
                     </div>
-                    <h1 className="text-4xl font-bold text-primary-foreground tracking-tight">
-                        RendaTop
-                    </h1>
-                    <p className="text-lg text-primary-foreground/80 max-w-md mx-auto leading-relaxed">
-                        Gerencie seus investimentos de renda fixa com facilidade. Acompanhe rendimentos, impostos e vencimentos em um só lugar.
-                    </p>
-                    <div className="flex items-center justify-center gap-8 pt-4">
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-primary-foreground">CDI</p>
-                            <p className="text-sm text-primary-foreground/60">Indexadores</p>
+
+                    <div className="max-w-xl space-y-4">
+                        <p className="text-lg leading-relaxed text-white/78">
+                            Gerencie seus investimentos de renda fixa com facilidade. Acompanhe rendimentos, impostos e vencimentos em um só lugar.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
+                            <p className="text-2xl font-semibold text-white">CDI</p>
+                            <p className="mt-1 text-sm text-white/55">Indexadores</p>
                         </div>
-                        <div className="w-px h-10 bg-primary-foreground/20"></div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-primary-foreground">IPCA+</p>
-                            <p className="text-sm text-primary-foreground/60">Pré-fixado</p>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
+                            <p className="text-2xl font-semibold text-white">IPCA+</p>
+                            <p className="mt-1 text-sm text-white/55">Pré-fixado</p>
                         </div>
-                        <div className="w-px h-10 bg-primary-foreground/20"></div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-primary-foreground">%a.a.</p>
-                            <p className="text-sm text-primary-foreground/60">Rendimento</p>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
+                            <p className="text-2xl font-semibold text-white">%a.a.</p>
+                            <p className="mt-1 text-sm text-white/55">Rendimento</p>
                         </div>
                     </div>
                 </div>
