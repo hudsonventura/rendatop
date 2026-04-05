@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from "react-hook-form"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -41,6 +41,7 @@ import { z } from "zod"
 import axiosInstance from "../utils/axiosConfig"
 import { getCachedBanks, primeBanksCache } from "@/utils/banksCache"
 import {
+    detectInvestmentTypeFromTitle,
     INVESTMENT_TYPE_NONE,
     INVESTMENT_TYPE_OPTIONS,
 } from "@/utils/investment-types"
@@ -105,6 +106,7 @@ function formatDecimalDisplay(num) {
 const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose }) => {
     const [internalOpen, setInternalOpen] = useState(false)
     const isOpen = externalOpen !== undefined ? externalOpen : internalOpen
+    const autoDetectedInvestmentTypeRef = useRef(detectInvestmentTypeFromTitle(investment.title ?? "") ?? INVESTMENT_TYPE_NONE)
     const setIsOpen = (val) => {
         if (externalOpen !== undefined) {
             if (!val && onExternalClose) onExternalClose()
@@ -163,6 +165,26 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
             index_percent: formatDecimalDisplay(investment.index_percent),
         },
     })
+
+    useEffect(() => {
+        if (!isOpen) return
+
+        autoDetectedInvestmentTypeRef.current = detectInvestmentTypeFromTitle(investment.title ?? "") ?? INVESTMENT_TYPE_NONE
+    }, [investment.title, isOpen])
+
+    const syncInvestmentTypeWithTitle = (nextTitle) => {
+        const detectedType = detectInvestmentTypeFromTitle(nextTitle) ?? INVESTMENT_TYPE_NONE
+        const currentType = form.getValues("investment_type") || INVESTMENT_TYPE_NONE
+
+        if (currentType === INVESTMENT_TYPE_NONE || currentType === autoDetectedInvestmentTypeRef.current) {
+            form.setValue("investment_type", detectedType, {
+                shouldDirty: true,
+                shouldValidate: true,
+            })
+        }
+
+        autoDetectedInvestmentTypeRef.current = detectedType
+    }
 
     function onSubmit(values) {
         const payload = {
@@ -255,6 +277,10 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                             <Input
                                                 placeholder="Informe um título para o seu investimento"
                                                 {...field}
+                                                onChange={(event) => {
+                                                    field.onChange(event)
+                                                    syncInvestmentTypeWithTitle(event.target.value)
+                                                }}
                                                 className="w-full"
                                             />
                                         </FormControl>

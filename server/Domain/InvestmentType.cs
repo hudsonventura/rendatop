@@ -11,5 +11,6 @@ public enum InvestmentType
     Debentures = 6,
     TitulosPublicos = 7,
     CRI = 8,
-    CRA = 9
+    CRA = 9,
+    RDB = 10
 }

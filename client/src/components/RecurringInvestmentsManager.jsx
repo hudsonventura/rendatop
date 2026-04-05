@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import axiosInstance from "@/utils/axiosConfig"
 import { getCachedBanks, primeBanksCache } from "@/utils/banksCache"
 import BankCombobox from "@/components/BankCombobox"
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertCircle, Plus, Repeat, Trash2, Pencil } from "lucide-react"
 import {
+    detectInvestmentTypeFromTitle,
     getInvestmentTypeLabel,
     INVESTMENT_TYPE_NONE,
     INVESTMENT_TYPE_OPTIONS,
@@ -135,6 +136,7 @@ export default function RecurringInvestmentsManager() {
     const [open, setOpen] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
     const [form, setForm] = useState(defaultForm)
+    const autoDetectedInvestmentTypeRef = useRef(INVESTMENT_TYPE_NONE)
 
     const frequency = Number(form.frequency)
 
@@ -175,6 +177,7 @@ export default function RecurringInvestmentsManager() {
 
     const resetForm = () => {
         setForm(defaultForm)
+        autoDetectedInvestmentTypeRef.current = INVESTMENT_TYPE_NONE
         setEditingItem(null)
     }
 
@@ -185,8 +188,27 @@ export default function RecurringInvestmentsManager() {
 
     const openEdit = (item) => {
         setForm(buildFormFromItem(item))
+        autoDetectedInvestmentTypeRef.current = detectInvestmentTypeFromTitle(item.title ?? "") ?? INVESTMENT_TYPE_NONE
         setEditingItem(item)
         setOpen(true)
+    }
+
+    const handleTitleChange = (nextTitle) => {
+        setForm((current) => {
+            const detectedType = detectInvestmentTypeFromTitle(nextTitle) ?? INVESTMENT_TYPE_NONE
+            const currentType = current.investment_type || INVESTMENT_TYPE_NONE
+            const nextInvestmentType = currentType === INVESTMENT_TYPE_NONE || currentType === autoDetectedInvestmentTypeRef.current
+                ? detectedType
+                : currentType
+
+            autoDetectedInvestmentTypeRef.current = detectedType
+
+            return {
+                ...current,
+                title: nextTitle,
+                investment_type: nextInvestmentType,
+            }
+        })
     }
 
     const handleMonthsToggle = (month) => {
@@ -359,7 +381,7 @@ export default function RecurringInvestmentsManager() {
                                 <Input
                                     id="title"
                                     value={form.title}
-                                    onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+                                    onChange={(event) => handleTitleChange(event.target.value)}
                                     placeholder="Ex.: Aporte semanal CDI"
                                 />
                             </div>
