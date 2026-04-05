@@ -70,6 +70,12 @@ function getBankColor(investment) {
     return investment.bank?.color || null
 }
 
+function getCurrentLiquidValue(investment) {
+    const currentCalculated = investment.table_calculated?.[0] ?? investment.calculated?.[0]
+    const fallbackValue = investment.table_value ?? investment.value ?? 0
+    return Number(currentCalculated?.value_liq ?? fallbackValue)
+}
+
 function getBankKey(bankName) {
     return `bank_${bankName
         .normalize("NFD")
@@ -86,6 +92,7 @@ function estimateLiquidValue(investment, date) {
     const startDate = startOfDay(new Date(investment.date_buy))
     const finishDate = investment.due_date ? startOfDay(new Date(investment.due_date)) : null
     const targetDate = startOfDay(date)
+    const today = startOfDay(new Date())
 
     if (finishDate && targetDate > finishDate) {
         return 0
@@ -95,6 +102,10 @@ function estimateLiquidValue(investment, date) {
 
     if (Number.isNaN(startDate.getTime()) || currentDate < startDate) {
         return 0
+    }
+
+    if (targetDate.getTime() === today.getTime()) {
+        return getCurrentLiquidValue(investment)
     }
 
     const days = diffInDays(startDate, currentDate)
