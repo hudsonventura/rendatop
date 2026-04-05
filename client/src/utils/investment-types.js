@@ -2,6 +2,7 @@ export const INVESTMENT_TYPE_NONE = "__none__"
 
 export const INVESTMENT_TYPE_OPTIONS = [
     { value: "CDB", label: "CDB" },
+    { value: "RDB", label: "RDB" },
     { value: "LCI", label: "LCI" },
     { value: "LCA", label: "LCA" },
     { value: "RCI", label: "RCI" },
@@ -15,6 +16,7 @@ export const INVESTMENT_TYPE_OPTIONS = [
 
 const TYPE_KEYWORDS = [
     { value: "CDB", terms: [["cdb"]] },
+    { value: "RDB", terms: [["rdb"]] },
     { value: "LCI", terms: [["lci"]] },
     { value: "LCA", terms: [["lca"]] },
     { value: "RCI", terms: [["rci"]] },

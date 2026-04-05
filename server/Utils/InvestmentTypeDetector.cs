@@ -7,6 +7,7 @@ public static class InvestmentTypeDetector
     private static readonly (InvestmentType Type, string[][] Terms)[] Rules =
     [
         (InvestmentType.CDB, [["cdb"]]),
+        (InvestmentType.RDB, [["rdb"]]),
         (InvestmentType.LCI, [["lci"]]),
         (InvestmentType.LCA, [["lca"]]),
         (InvestmentType.RCI, [["rci"]]),

@@ -189,7 +189,7 @@ Regras:
 - Use null quando estiver ausente, ilegível ou ambígua.
 - `index`: 0 para CDI, 1 para IPCA+, 2 para percentual ao ano (% a.a.), 3 para CDI + spread (% a.a.).
 - `index_percent`: use somente o percentual principal do indexador. Exemplos: 110% do CDI => 110; IPCA+7,25% => 7.25; 13,40% a.a. => 13.40; CDI+2,00% a.a. => 2.00.
-- `taxes`: false para investimentos isentos como LCI, LCA, CRI, CRA, debênture incentivada; true para CDB e casos tributáveis; null se não der para inferir.
+- `taxes`: false para investimentos isentos como LCI, LCA, CRI, CRA, debênture incentivada; true para CDB, RDB e casos tributáveis; null se não der para inferir.
 - `liquidez_diaria`: true apenas se o documento indicar liquidez diária/resgate diário; false se indicar vencimento fixo sem liquidez diária; null se não der para inferir.
 - `title`: gere um título curto e útil quando houver dados suficientes, como produto + banco.
 - Normalize datas para YYYY-MM-DD.

@@ -48,6 +48,7 @@ import { getIrTextClass } from "@/utils/ir-level"
 import { getCachedBanks, primeBanksCache } from "@/utils/banksCache"
 import { toast } from "@/hooks/use-toast"
 import {
+	detectInvestmentTypeFromTitle,
 	INVESTMENT_TYPE_NONE,
 	INVESTMENT_TYPE_OPTIONS,
 } from "@/utils/investment-types"
@@ -440,6 +441,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [isExtracting, setIsExtracting] = useState(false);
 	const fileInputRef = useRef(null);
+	const autoDetectedInvestmentTypeRef = useRef(detectInvestmentTypeFromTitle(initialValues?.title ?? "") ?? INVESTMENT_TYPE_NONE);
 	const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
 	const setIsOpen = (value) => {
 		if (externalOpen !== undefined) {
@@ -504,6 +506,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 	useEffect(() => {
 		if (!isOpen) return;
 
+		autoDetectedInvestmentTypeRef.current = detectInvestmentTypeFromTitle(initialValues?.title ?? "") ?? INVESTMENT_TYPE_NONE;
 		form.reset({
 			title: initialValues?.title ?? "",
 			date_buy: initialValues?.date_buy ?? undefined,
@@ -519,6 +522,20 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 		});
 		setLiquidezDiaria(initialValues?.liquidez_diaria ?? false);
 	}, [form, initialValues, isOpen]);
+
+	const syncInvestmentTypeWithTitle = (nextTitle) => {
+		const detectedType = detectInvestmentTypeFromTitle(nextTitle) ?? INVESTMENT_TYPE_NONE;
+		const currentType = form.getValues("investment_type") || INVESTMENT_TYPE_NONE;
+
+		if (currentType === INVESTMENT_TYPE_NONE || currentType === autoDetectedInvestmentTypeRef.current) {
+			form.setValue("investment_type", detectedType, {
+				shouldDirty: true,
+				shouldValidate: true,
+			});
+		}
+
+		autoDetectedInvestmentTypeRef.current = detectedType;
+	};
 
 	function onSubmit(values) {
 		const payload = {
@@ -569,7 +586,10 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 	}
 
 	const applyExtractedValues = (data) => {
-		if (data.title) form.setValue("title", data.title, { shouldDirty: true });
+		if (data.title) {
+			form.setValue("title", data.title, { shouldDirty: true });
+			syncInvestmentTypeWithTitle(data.title);
+		}
 		const parsedDateBuy = parseApiDate(data.date_buy);
 		if (parsedDateBuy) {
 			form.setValue("date_buy", parsedDateBuy, { shouldDirty: true });
@@ -739,6 +759,10 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 											<Input
 												placeholder="Informe um título para o seu investimento"
 												{...field}
+												onChange={(event) => {
+													field.onChange(event);
+													syncInvestmentTypeWithTitle(event.target.value);
+												}}
 												className="w-full"
 											/>
 										</FormControl>
