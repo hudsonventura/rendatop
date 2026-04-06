@@ -813,8 +813,6 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
     // Load Mercado Pago JS SDK
     useEffect(() => {
         const publicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
-        console.log(publicKey);
-        console.log(import.meta.env);
         if (!publicKey) { setError('Chave pública do Mercado Pago não configurada.'); return; }
 
         if (window.MercadoPago) { setMpReady(true); return; }
