@@ -3,6 +3,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 COPY client/package.json client/package-lock.json ./
+COPY .env ./.env
 
 # Keep optional native packages available for Tailwind's platform binding.
 RUN npm ci --include=optional
