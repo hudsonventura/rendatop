@@ -1,7 +1,6 @@
 .git
 .gitignore
 .data
-client/*
 landing/*
 nginx/*
 model-front/*

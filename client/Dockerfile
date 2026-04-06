@@ -2,12 +2,12 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY client/package.json client/package-lock.json ./
 
 # Keep optional native packages available for Tailwind's platform binding.
 RUN npm ci --include=optional
 
-COPY . .
+COPY client/ .
 
 RUN npm run build
 
@@ -17,8 +17,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY package.json package-lock.json ./
-COPY vite.config.js ./
+COPY client/package.json client/package-lock.json ./
+COPY client/vite.config.js ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 

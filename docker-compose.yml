@@ -70,8 +70,8 @@ services:
 
   client:
     build:
-      context: ./client
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./client/Dockerfile
     container_name: rendatop-client
     restart: always
     depends_on: 
