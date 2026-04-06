@@ -51,6 +51,8 @@ const solutionsItems = [
     { name: 'Contato', href: '#contact' }
 ]
 
+const clientBaseUrl = process.env.BASE_URL_CLIENT || '/app'
+
 // Smooth scroll function
 const smoothScrollTo = (targetId: string) => {
     if (targetId.startsWith('#')) {
@@ -120,10 +122,10 @@ export function LandingNavbar() {
                 <div className="hidden xl:flex items-center space-x-2">
                     <ModeToggle variant="ghost" />
                     <Button variant="ghost" asChild className="cursor-pointer">
-                        <Link href="/app/signup">Crie uma conta</Link>
+                        <Link href={clientBaseUrl+'/signup'}>Crie uma conta</Link>
                     </Button>
                     <Button asChild className="cursor-pointer">
-                        <Link href="/app/login">Entrar</Link>
+                        <Link href={clientBaseUrl+'/login'}>Entrar</Link>
                     </Button>
                 </div>
 
