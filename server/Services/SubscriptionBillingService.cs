@@ -252,7 +252,7 @@ public class SubscriptionBillingService
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new ExpectedException("Nenhuma assinatura ativa para cancelar.");
 
-        if (!IsCardPaymentMethod(subscription.payment_method))
+        if (!SupportsProratedRefund(subscription.payment_method))
         {
             await ScheduleCancellationAtPeriodEndAsync(context, subscription, now, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
@@ -262,7 +262,7 @@ public class SubscriptionBillingService
                 cancelled = true,
                 scheduled = true,
                 effective_at = subscription.current_period_end,
-                message = "Devido ao pagamento via PIX/boleto, o cancelamento foi programado para o fim do período atual. Nenhuma nova cobrança será enviada."
+                message = "Devido ao método de pagamento utilizado, o cancelamento foi programado para o fim do período atual. Nenhuma nova cobrança será enviada."
             };
         }
 
@@ -1136,6 +1136,12 @@ public class SubscriptionBillingService
     private static bool IsCardPaymentMethod(string paymentMethod) =>
         string.Equals(paymentMethod, "credit_card", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(paymentMethod, "debit_card", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsPixPaymentMethod(string paymentMethod) =>
+        string.Equals(paymentMethod, "pix", StringComparison.OrdinalIgnoreCase);
+
+    private static bool SupportsProratedRefund(string paymentMethod) =>
+        IsCardPaymentMethod(paymentMethod) || IsPixPaymentMethod(paymentMethod);
 
     private static string BuildExternalReference(string prefix, Guid userId, string planId)
     {

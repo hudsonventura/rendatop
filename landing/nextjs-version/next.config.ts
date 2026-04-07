@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  env: {
+    BASE_URL_CLIENT: process.env.BASE_URL_CLIENT,
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
