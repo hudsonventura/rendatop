@@ -1,4 +1,6 @@
 using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
 using MercadoPago.Client;
 using MercadoPago.Client.Customer;
 using MercadoPago.Client.Payment;
@@ -21,6 +23,7 @@ namespace server.Payments.MercadoPago;
 public class MercadoPagoPaymentProvider : IPaymentProvider
 {
     private readonly ILogger<MercadoPagoPaymentProvider> _logger;
+    private readonly string _statementDescriptor;
 
     public MercadoPagoPaymentProvider(ILogger<MercadoPagoPaymentProvider> logger)
     {
@@ -39,6 +42,10 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
         );
 
         MercadoPagoConfig.AccessToken = trimmed;
+
+        _statementDescriptor = BuildStatementDescriptor(
+            Environment.GetEnvironmentVariable("MERCADO_PAGO_STATEMENT_DESCRIPTOR"));
+        _logger.LogInformation("MP statement descriptor configurado: {StatementDescriptor}", _statementDescriptor);
     }
 
 
@@ -56,6 +63,7 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
                 TransactionAmount = request.amount,
                 Token = request.card_token,
                 Description = request.description,
+                StatementDescriptor = _statementDescriptor,
                 Installments = request.installments,
                 PaymentMethodId = request.payment_method_id,
                 ExternalReference = request.external_reference,
@@ -352,6 +360,7 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
             {
                 TransactionAmount = request.amount,
                 Description = request.description,
+                StatementDescriptor = _statementDescriptor,
                 ExternalReference = request.external_reference,
                 Installments = 1,
                 Payer = new PaymentPayerRequest
@@ -376,6 +385,34 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
                 date_of_expiration = UtcDateTime.EnsureUtc(payment.DateOfExpiration)
             };
         });
+    }
+
+    private static string BuildStatementDescriptor(string? rawValue)
+    {
+        const string fallback = "RENDATOP";
+
+        var value = string.IsNullOrWhiteSpace(rawValue) ? fallback : rawValue.Trim();
+        var normalized = value.Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(normalized.Length);
+
+        foreach (var ch in normalized)
+        {
+            var category = char.GetUnicodeCategory(ch);
+            if (category == System.Globalization.UnicodeCategory.NonSpacingMark)
+                continue;
+
+            if (char.IsLetterOrDigit(ch) || ch == ' ')
+                builder.Append(char.ToUpperInvariant(ch));
+        }
+
+        var sanitized = Regex.Replace(builder.ToString(), @"\s+", " ").Trim();
+        if (string.IsNullOrWhiteSpace(sanitized))
+            sanitized = fallback;
+
+        if (sanitized.Length > 22)
+            sanitized = sanitized[..22].TrimEnd();
+
+        return sanitized;
     }
 
     public async Task<PaymentRefundResult> RefundPaymentAsync(string paymentId, decimal? amount = null, CancellationToken cancellationToken = default)

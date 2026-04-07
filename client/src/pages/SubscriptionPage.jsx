@@ -99,6 +99,24 @@ function extractErrorMessage(error, fallbackMessage) {
     return fallbackMessage;
 }
 
+const PAYMENT_REQUEST_TIMEOUT_MS = 60000;
+const PAYMENT_REQUEST_CONFIG = { timeout: PAYMENT_REQUEST_TIMEOUT_MS };
+const PAYMENT_PROCESSING_MESSAGE = 'O processamento do pagamento pode demorar um pouco. Aguarde enquanto confirmamos a cobrança.';
+const PAYMENT_TIMEOUT_MESSAGE = 'O processamento está demorando um pouco mais do que o previsto, mas, assim que confirmado, o sistema liberará o funcionamento do plano.';
+const PAYMENT_TIMEOUT_FOLLOW_UP_MESSAGE = 'Você pode fechar esta janela e acompanhar o status na tela de assinatura.';
+
+function isTimeoutError(error) {
+    const message = String(error?.message || '');
+    return error?.code === 'ECONNABORTED' || message.toLowerCase().includes('timeout');
+}
+
+function getPlanSyncState(overview, planId) {
+    return {
+        isActive: overview?.active_subscription?.plan_id === planId,
+        isPending: overview?.pending_subscription?.plan_id === planId
+    };
+}
+
 const SubscriptionPage = () => {
     const [plans, setPlans] = useState([]);
     const [activeSub, setActiveSub] = useState(null);
@@ -126,14 +144,18 @@ const SubscriptionPage = () => {
                 axiosInstance.get('/subscription/overview').catch(() => ({ data: null })),
                 axiosInstance.get('/User/Settings').catch(() => ({ data: null }))
             ]);
+            const overviewData = subRes.data || null;
+            const settingsData = settingsRes?.data || null;
             setPlans(plansRes.data);
-            setActiveSub(subRes.data?.active_subscription || null);
-            setPendingSub(subRes.data?.pending_subscription || null);
-            setPendingCharge(subRes.data?.pending_charge || null);
-            setPayerFullName(settingsRes?.data?.name || sessionStorage.getItem('name') || "");
-            setPayerCpf(settingsRes?.data?.cpf || "");
+            setActiveSub(overviewData?.active_subscription || null);
+            setPendingSub(overviewData?.pending_subscription || null);
+            setPendingCharge(overviewData?.pending_charge || null);
+            setPayerFullName(settingsData?.name || sessionStorage.getItem('name') || "");
+            setPayerCpf(settingsData?.cpf || "");
+            return overviewData;
         } catch (err) {
             console.error(err);
+            return null;
         } finally {
             setLoading(false);
         }
@@ -804,6 +826,8 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [processingMessage, setProcessingMessage] = useState('');
+    const [delayedProcessing, setDelayedProcessing] = useState(false);
     const [mpReady, setMpReady] = useState(false);
     const [documentCpf, setDocumentCpf] = useState("");
     const [cardType, setCardType] = useState("credit_card");
@@ -828,6 +852,25 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
     useEffect(() => {
         setDocumentCpf(sanitizeCpf(payerCpf));
     }, [payerCpf]);
+
+    useEffect(() => {
+        if (!delayedProcessing) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const overview = await onSuccess();
+                if (getPlanSyncState(overview, plan.id).isActive) {
+                    setDelayedProcessing(false);
+                    setProcessingMessage('');
+                    setSuccess(true);
+                }
+            } catch {
+                // ignore transient sync errors after timeout
+            }
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [delayedProcessing, onSuccess, plan.id]);
 
     const parseExpirationDate = (value) => {
         const digits = (value || "").replace(/\D/g, "").slice(0, 4);
@@ -883,9 +926,12 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setDelayedProcessing(false);
+        setProcessingMessage(PAYMENT_PROCESSING_MESSAGE);
         const form = e.target;
         const docNumber = sanitizeCpf(form.docNumber.value || documentCpf);
         if (!isValidCpf(docNumber)) {
+            setProcessingMessage('');
             setError('CPF inválido. Verifique os 11 dígitos antes de continuar.');
             return;
         }
@@ -899,6 +945,7 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
             const cardNumber = form.cardNumber.value.replace(/\s/g, '');
             const expirationValue = form.expirationDate.value || expirationDate;
             if (!isValidExpirationDate(expirationValue)) {
+                setProcessingMessage('');
                 setError('Informe a validade no formato MM/YY, com mês entre 01 e 12 e ano dentro da faixa permitida.');
                 return;
             }
@@ -923,6 +970,7 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
             }
 
             if (!paymentMethodId) {
+                setProcessingMessage('');
                 setError('Não foi possível identificar a bandeira do cartão pelos primeiros dígitos informados. Confira o número do cartão e tente novamente.');
                 return;
             }
@@ -945,17 +993,27 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
                 issuer_id: issuerId,
                 installments: 1,
                 payer_cpf: docNumber
-            });
+            }, PAYMENT_REQUEST_CONFIG);
 
             if (result.data.status === 'approved') {
+                setProcessingMessage('');
                 setSuccess(true);
                 await onSuccess();
             } else {
+                setProcessingMessage('');
                 const status = result.data?.status || 'desconhecido';
                 const detail = result.data?.status_detail || 'sem detalhe retornado pelo provedor';
                 setError(`Pagamento ${status}: ${detail}`);
             }
         } catch (err) {
+            if (isTimeoutError(err)) {
+                setError('');
+                setDelayedProcessing(true);
+                setProcessingMessage(PAYMENT_TIMEOUT_MESSAGE);
+                await onSuccess();
+                return;
+            }
+            setProcessingMessage('');
             setError(extractErrorMessage(err, 'Erro ao processar pagamento.'));
         } finally {
             setLoading(false);
@@ -970,6 +1028,21 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
                 </div>
                 <p className="font-medium">Assinatura ativada com sucesso!</p>
                 <Button onClick={onClose}>Fechar</Button>
+            </div>
+        );
+    }
+
+    if (delayedProcessing) {
+        return (
+            <div className="py-8 space-y-4">
+                <div className="flex justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+                </div>
+                <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <p>{processingMessage}</p>
+                    <p className="mt-2 text-xs text-amber-800">{PAYMENT_TIMEOUT_FOLLOW_UP_MESSAGE}</p>
+                </div>
+                <Button onClick={onClose} className="w-full">Fechar e acompanhar</Button>
             </div>
         );
     }
@@ -1047,6 +1120,12 @@ const CardPaymentForm = ({ plan, onSuccess, onClose, payerCpf }) => {
                 <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>
             )}
 
+            {loading && processingMessage && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    {processingMessage}
+                </div>
+            )}
+
             <Button type="submit" className="w-full" disabled={loading || !mpReady}>
                 {loading ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processando...</>
@@ -1066,6 +1145,8 @@ const PixPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }) =
     const [error, setError] = useState('');
     const [pixData, setPixData] = useState(null);
     const [polling, setPolling] = useState(false);
+    const [processingMessage, setProcessingMessage] = useState('');
+    const [delayedProcessing, setDelayedProcessing] = useState(false);
     const [copied, setCopied] = useState(false);
     const [documentCpf, setDocumentCpf] = useState("");
 
@@ -1073,12 +1154,34 @@ const PixPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }) =
         setDocumentCpf(sanitizeCpf(payerCpf));
     }, [payerCpf]);
 
+    useEffect(() => {
+        if (!delayedProcessing) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const overview = await onSuccess();
+                if (getPlanSyncState(overview, plan.id).isActive) {
+                    setDelayedProcessing(false);
+                    setProcessingMessage('');
+                    setPixData(prev => ({ ...(prev || {}), status: 'approved' }));
+                }
+            } catch {
+                // ignore transient sync errors after timeout
+            }
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [delayedProcessing, onSuccess, plan.id]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setDelayedProcessing(false);
+        setProcessingMessage(PAYMENT_PROCESSING_MESSAGE);
         const form = e.target;
         const normalizedCpf = sanitizeCpf(form.cpf.value || documentCpf);
         if (!isValidCpf(normalizedCpf)) {
+            setProcessingMessage('');
             setError('CPF inválido. Verifique os 11 dígitos antes de continuar.');
             return;
         }
@@ -1092,9 +1195,10 @@ const PixPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }) =
                 payer_first_name: firstName,
                 payer_last_name: lastName,
                 payer_cpf: normalizedCpf
-            });
+            }, PAYMENT_REQUEST_CONFIG);
 
             setPixData(result.data);
+            setProcessingMessage('');
 
             if (result.data.status === 'approved') {
                 await onSuccess();
@@ -1102,6 +1206,14 @@ const PixPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }) =
                 setPolling(true);
             }
         } catch (err) {
+            if (isTimeoutError(err)) {
+                setError('');
+                setDelayedProcessing(true);
+                setProcessingMessage(PAYMENT_TIMEOUT_MESSAGE);
+                await onSuccess();
+                return;
+            }
+            setProcessingMessage('');
             setError(extractErrorMessage(err, 'Erro ao gerar PIX.'));
         } finally {
             setLoading(false);
@@ -1140,6 +1252,21 @@ const PixPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }) =
                 </div>
                 <p className="font-medium">Pagamento aprovado!</p>
                 <Button onClick={onClose}>Fechar</Button>
+            </div>
+        );
+    }
+
+    if (delayedProcessing) {
+        return (
+            <div className="py-8 space-y-4">
+                <div className="flex justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+                </div>
+                <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <p>{processingMessage}</p>
+                    <p className="mt-2 text-xs text-amber-800">{PAYMENT_TIMEOUT_FOLLOW_UP_MESSAGE}</p>
+                </div>
+                <Button onClick={onClose} className="w-full">Fechar e acompanhar</Button>
             </div>
         );
     }
@@ -1200,6 +1327,12 @@ const PixPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }) =
                 <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>
             )}
 
+            {loading && processingMessage && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    {processingMessage}
+                </div>
+            )}
+
             <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Gerando PIX...</>
@@ -1219,6 +1352,8 @@ const BoletoPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }
     const [error, setError] = useState('');
     const [boletoData, setBoletoData] = useState(null);
     const [polling, setPolling] = useState(false);
+    const [processingMessage, setProcessingMessage] = useState('');
+    const [delayedProcessing, setDelayedProcessing] = useState(false);
     const [copied, setCopied] = useState(false);
     const [documentCpf, setDocumentCpf] = useState("");
 
@@ -1226,12 +1361,34 @@ const BoletoPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }
         setDocumentCpf(sanitizeCpf(payerCpf));
     }, [payerCpf]);
 
+    useEffect(() => {
+        if (!delayedProcessing) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const overview = await onSuccess();
+                if (getPlanSyncState(overview, plan.id).isActive) {
+                    setDelayedProcessing(false);
+                    setProcessingMessage('');
+                    setBoletoData(prev => ({ ...(prev || {}), status: 'approved' }));
+                }
+            } catch {
+                // ignore transient sync errors after timeout
+            }
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [delayedProcessing, onSuccess, plan.id]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setDelayedProcessing(false);
+        setProcessingMessage(PAYMENT_PROCESSING_MESSAGE);
         const form = e.target;
         const normalizedCpf = sanitizeCpf(form.cpf.value || documentCpf);
         if (!isValidCpf(normalizedCpf)) {
+            setProcessingMessage('');
             setError('CPF inválido. Verifique os 11 dígitos antes de continuar.');
             return;
         }
@@ -1245,11 +1402,20 @@ const BoletoPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }
                 payer_first_name: firstName,
                 payer_last_name: lastName,
                 payer_cpf: normalizedCpf
-            });
+            }, PAYMENT_REQUEST_CONFIG);
 
             setBoletoData(result.data);
+            setProcessingMessage('');
             setPolling(true);
         } catch (err) {
+            if (isTimeoutError(err)) {
+                setError('');
+                setDelayedProcessing(true);
+                setProcessingMessage(PAYMENT_TIMEOUT_MESSAGE);
+                await onSuccess();
+                return;
+            }
+            setProcessingMessage('');
             setError(extractErrorMessage(err, 'Erro ao gerar boleto.'));
         } finally {
             setLoading(false);
@@ -1288,6 +1454,21 @@ const BoletoPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }
                 </div>
                 <p className="font-medium">Pagamento aprovado!</p>
                 <Button onClick={onClose}>Fechar</Button>
+            </div>
+        );
+    }
+
+    if (delayedProcessing) {
+        return (
+            <div className="py-8 space-y-4">
+                <div className="flex justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+                </div>
+                <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <p>{processingMessage}</p>
+                    <p className="mt-2 text-xs text-amber-800">{PAYMENT_TIMEOUT_FOLLOW_UP_MESSAGE}</p>
+                </div>
+                <Button onClick={onClose} className="w-full">Fechar e acompanhar</Button>
             </div>
         );
     }
@@ -1366,6 +1547,12 @@ const BoletoPaymentForm = ({ plan, onSuccess, onClose, payerFullName, payerCpf }
 
             {error && (
                 <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>
+            )}
+
+            {loading && processingMessage && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    {processingMessage}
+                </div>
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
