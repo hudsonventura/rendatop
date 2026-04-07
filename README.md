@@ -51,3 +51,11 @@ Observações:
 - o backend envia esse valor no campo `statement_descriptor` ao criar pagamentos com cartão
 - o texto é normalizado para remover acentos e caracteres especiais
 - o valor é truncado para no máximo 22 caracteres
+
+
+## Tests
+```bash
+sudo docker compose -f docker-compose-tests.yml down --remove-orphans && \
+sudo docker compose -f docker-compose-tests.yml up && \
+sudo docker compose -f docker-compose-tests.yml down --remove-orphans
+```
