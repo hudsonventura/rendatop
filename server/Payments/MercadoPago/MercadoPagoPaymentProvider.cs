@@ -419,8 +419,10 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
     {
         return await ExecuteWithMercadoPagoHandlingAsync("solicitar o estorno do pagamento", async () =>
         {
-            var client = new PaymentClient();
-            var refund = await client.RefundAsync(long.Parse(paymentId), amount, cancellationToken: cancellationToken);
+            var client = new PaymentRefundClient();
+            var requestOptions = new RequestOptions();
+            requestOptions.CustomHeaders.Add("X-Render-In-Process-Refunds", "true");
+            var refund = await client.RefundAsync(long.Parse(paymentId), amount, requestOptions, cancellationToken);
 
             return new PaymentRefundResult
             {

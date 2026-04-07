@@ -326,6 +326,31 @@ public class SubscriptionBillingServiceTests
     }
 
     [Fact]
+    public async Task CancelActiveSubscriptionAsync_RefundsProratedAndCancelsImmediately_ForPix()
+    {
+        using var fixture = new SubscriptionBillingFixture();
+        fixture.SeedActiveSubscriptionWithCharge("pix", DateTime.UtcNow.AddDays(15), currentCycleReminderSentAt: null);
+
+        var result = await fixture.Service.CancelActiveSubscriptionAsync(
+            fixture.User.id,
+            confirmed: true,
+            SubscriptionCancellationMode.RefundProrated);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var subscription = assertionContext.subscriptions.Single();
+
+        Assert.True(result.cancelled);
+        Assert.False(result.scheduled);
+        Assert.Equal(SubscriptionStatus.Cancelled, subscription.status);
+        Assert.False(subscription.cancel_at_period_end);
+
+        var refund = Assert.Single(fixture.PaymentProvider.RefundRequests);
+        Assert.Equal("seed-payment", refund.PaymentId);
+        Assert.True(refund.Amount > 0);
+        Assert.Equal(refund.Amount, result.refunded_amount);
+    }
+
+    [Fact]
     public async Task ProcessDueTomorrowRenewalNotificationsAsync_DoesNotNotifyWhenCancellationWasScheduled()
     {
         using var fixture = new SubscriptionBillingFixture();

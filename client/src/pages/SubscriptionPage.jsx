@@ -233,6 +233,8 @@ const SubscriptionPage = () => {
     const currentPlanId = activeSub?.plan_id || 'free';
     const pendingPlanId = pendingSub?.plan_id || null;
     const isCardSubscription = activeSub?.payment_method?.includes('card');
+    const isPixSubscription = activeSub?.payment_method === 'pix';
+    const supportsImmediateRefund = isCardSubscription || isPixSubscription;
 
     const planIcons = { free: null, plus: Sparkles, pro: Crown };
 
@@ -495,17 +497,24 @@ const SubscriptionPage = () => {
                     <DialogHeader>
                         <DialogTitle>Cancelar assinatura?</DialogTitle>
                         <DialogDescription>
-                            {isCardSubscription
-                                ? 'Escolha como deseja encerrar sua assinatura paga com cartão.'
-                                : 'Como o pagamento foi feito via PIX ou boleto, o cancelamento só pode acontecer ao final do período atual.'}
+                            {supportsImmediateRefund
+                                ? isPixSubscription
+                                    ? 'Escolha como deseja encerrar sua assinatura paga via PIX.'
+                                    : 'Escolha como deseja encerrar sua assinatura paga com cartão.'
+                                : 'Como o pagamento foi feito por um método sem reembolso proporcional imediato, o cancelamento só pode acontecer ao final do período atual.'}
                         </DialogDescription>
                     </DialogHeader>
 
-                    {isCardSubscription ? (
+                    {supportsImmediateRefund ? (
                         <div className="space-y-3 text-sm text-muted-foreground">
                             <p>
                                 Se você escolher receber o valor proporcional, a assinatura será encerrada agora e o sistema solicitará um estorno proporcional do período restante.
                             </p>
+                            {isPixSubscription ? (
+                                <p>
+                                    Em pagamentos PIX, o Mercado Pago processa a devolução para a conta do pagador vinculada ao pagamento original. Não é necessário informar chave PIX nesta etapa.
+                                </p>
+                            ) : null}
                             <p>
                                 Se preferir permanecer ativo até o fim do período, vamos apenas programar o cancelamento e não enviaremos novas cobranças.
                             </p>
@@ -536,7 +545,7 @@ const SubscriptionPage = () => {
                             Não
                         </Button>
 
-                        {isCardSubscription ? (
+                        {supportsImmediateRefund ? (
                             <>
                                 <Button
                                     variant="outline"
