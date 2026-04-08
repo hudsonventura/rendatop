@@ -496,7 +496,7 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
             ? string.Join(". ", parts)
             : "O provedor recusou a operação sem detalhar o motivo.";
 
-        return $"Mercado Pago não conseguiu {operation}. {detail}";
+        return $"Mercado Pago não conseguiu {operation}. Entre em contato pelo email contato@rendatop.com.br  {detail}";
     }
 
     private static string FormatMercadoPagoCause(ApiErrorCause cause)

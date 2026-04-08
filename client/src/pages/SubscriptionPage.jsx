@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Check, CreditCard, QrCode, Barcode, Loader2, Crown, Sparkles, Copy, X, ExternalLink } from "lucide-react";
+import { Check, CreditCard, QrCode, Barcode, Loader2, Crown, Sparkles, Copy, ExternalLink, AlertTriangle } from "lucide-react";
 import { BaseLayout } from "@/components/layouts/base-layout";
 import Logged from "@/components/Logged";
 import axiosInstance from "@/utils/axiosConfig";
@@ -104,6 +104,39 @@ const PAYMENT_REQUEST_CONFIG = { timeout: PAYMENT_REQUEST_TIMEOUT_MS };
 const PAYMENT_PROCESSING_MESSAGE = 'O processamento do pagamento pode demorar um pouco. Aguarde enquanto confirmamos a cobrança.';
 const PAYMENT_TIMEOUT_MESSAGE = 'O processamento está demorando um pouco mais do que o previsto, mas, assim que confirmado, o sistema liberará o funcionamento do plano.';
 const PAYMENT_TIMEOUT_FOLLOW_UP_MESSAGE = 'Você pode fechar esta janela e acompanhar o status na tela de assinatura.';
+
+function SubscriptionBillingNotice({ paymentMethod }) {
+    const isOfflineMethod = paymentMethod === 'pix' || paymentMethod === 'boleto';
+    const methodMessage = isOfflineMethod
+        ? 'Para continuar com a assinatura no próximo ciclo, será necessário realizar um novo pagamento manualmente.'
+        : 'No próximo ciclo, uma nova cobrança será feita automaticamente no cartão para manter a assinatura ativa.';
+
+    return (
+        <div className="rounded-xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-full bg-amber-200 p-2 text-amber-900">
+                    <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div className="space-y-2">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-900">
+                        Atenção importante
+                    </p>
+                    <div className="space-y-1 text-amber-950">
+                        <p className="text-base font-extrabold leading-snug sm:text-lg">
+                            Você está contratando uma assinatura.
+                        </p>
+                        <p className="text-sm font-semibold leading-relaxed sm:text-[15px]">
+                            No mês seguinte haverá uma nova cobrança para renovação do plano.
+                        </p>
+                        <p className="text-sm leading-relaxed sm:text-[15px]">
+                            {methodMessage}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function isTimeoutError(error) {
     const message = String(error?.message || '');
@@ -773,6 +806,8 @@ const PendingChargeCard = ({ charge, planName, onRefresh }) => {
 // ======================== PAYMENT DIALOG ========================
 
 const PaymentDialog = ({ open, onOpenChange, plan, onSuccess, payerFullName, payerCpf }) => {
+    const [paymentTab, setPaymentTab] = useState('card');
+
     if (!plan) return null;
 
     return (
@@ -783,7 +818,11 @@ const PaymentDialog = ({ open, onOpenChange, plan, onSuccess, payerFullName, pay
                     <DialogDescription>R${plan.price?.toFixed(2).replace('.', ',')} /mês</DialogDescription>
                 </DialogHeader>
 
-                <Tabs defaultValue="card" className="mt-2">
+                <div className="mt-4">
+                    <SubscriptionBillingNotice paymentMethod={paymentTab} />
+                </div>
+
+                <Tabs value={paymentTab} onValueChange={setPaymentTab} className="mt-4">
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="card" className="gap-1.5">
                             <CreditCard className="h-3.5 w-3.5" /> Cartão

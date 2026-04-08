@@ -181,6 +181,6 @@ public class UserControllerTests
 
     private sealed class FakeEmailNotification : IEmailNotification
     {
-        public Task Notify(string destination, string title, string message) => Task.CompletedTask;
+        public Task Notify(string destination, string title, string message, bool isHtml = false) => Task.CompletedTask;
     }
 }

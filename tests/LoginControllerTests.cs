@@ -196,7 +196,7 @@ public class LoginControllerTests
     {
         public List<EmailMessage> Messages { get; } = [];
 
-        public Task Notify(string toEmail, string title, string message)
+        public Task Notify(string toEmail, string title, string message, bool isHtml = false)
         {
             Messages.Add(new EmailMessage(toEmail, title, message));
             return Task.CompletedTask;

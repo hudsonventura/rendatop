@@ -26,6 +26,7 @@ public class SubscriptionBillingService
     private readonly IPaymentProvider _paymentProvider;
     private readonly IEmailNotification _emailNotification;
     private readonly ILogger<SubscriptionBillingService> _logger;
+    private readonly string? _clientBaseUrl;
 
     public SubscriptionBillingService(
         IDbContextFactory<Context> contextFactory,
@@ -37,6 +38,7 @@ public class SubscriptionBillingService
         _paymentProvider = paymentProvider;
         _emailNotification = emailNotification;
         _logger = logger;
+        _clientBaseUrl = Environment.GetEnvironmentVariable("BASE_URL_CLIENT");
     }
 
     public async Task<string> SavePayerCpfAsync(Guid userId, string? cpf, CancellationToken cancellationToken = default)
@@ -257,13 +259,17 @@ public class SubscriptionBillingService
             await ScheduleCancellationAtPeriodEndAsync(context, subscription, now, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
 
-            return new SubscriptionCancellationResult
+            var result = new SubscriptionCancellationResult
             {
                 cancelled = true,
                 scheduled = true,
                 effective_at = subscription.current_period_end,
                 message = "Devido ao método de pagamento utilizado, o cancelamento foi programado para o fim do período atual. Nenhuma nova cobrança será enviada."
             };
+
+            await SendCancellationEmailAsync(subscription.user, subscription, result);
+
+            return result;
         }
 
         if (mode == SubscriptionCancellationMode.RefundProrated)
@@ -297,7 +303,7 @@ public class SubscriptionBillingService
             await CancelPendingRenewalChargesAsync(context, subscription.id, now, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
 
-            return new SubscriptionCancellationResult
+            var result = new SubscriptionCancellationResult
             {
                 cancelled = true,
                 scheduled = false,
@@ -307,18 +313,24 @@ public class SubscriptionBillingService
                     ? $"Assinatura cancelada imediatamente. Reembolso proporcional solicitado: R$ {refundAmount:N2}."
                     : "Assinatura cancelada imediatamente. Não havia saldo proporcional disponível para reembolso."
             };
+
+            await SendCancellationEmailAsync(subscription.user, subscription, result);
+            return result;
         }
 
         await ScheduleCancellationAtPeriodEndAsync(context, subscription, now, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new SubscriptionCancellationResult
+        var scheduledResult = new SubscriptionCancellationResult
         {
             cancelled = true,
             scheduled = true,
             effective_at = subscription.current_period_end,
             message = "O cancelamento foi programado para o fim do período atual. Sua assinatura permanecerá ativa até lá e nenhuma nova cobrança será enviada."
         };
+
+        await SendCancellationEmailAsync(subscription.user, subscription, scheduledResult);
+        return scheduledResult;
     }
 
     public async Task<SubscriptionCancellationResult> RevertScheduledCancellationAsync(
@@ -908,10 +920,20 @@ public class SubscriptionBillingService
         await _emailNotification.Notify(
             user.email,
             "RendaTop | Recibo de assinatura",
-            BuildReceiptMessage(user, charge));
+            SubscriptionReceiptEmailTemplate.Build(user, charge, _clientBaseUrl),
+            isHtml: true);
 
         charge.receipt_sent_at = DateTime.UtcNow;
         charge.updated_at = DateTime.UtcNow;
+    }
+
+    private async Task SendCancellationEmailAsync(User user, Subscription subscription, SubscriptionCancellationResult result)
+    {
+        await _emailNotification.Notify(
+            user.email,
+            "RendaTop | Cancelamento de assinatura",
+            SubscriptionCancellationEmailTemplate.Build(user, subscription, result, _clientBaseUrl),
+            isHtml: true);
     }
 
     private void EnsureNoDuplicateCharge(Context context, Guid userId, string planId)
@@ -1162,30 +1184,6 @@ public class SubscriptionBillingService
         return (parts[0], string.Join(" ", parts.Skip(1)));
     }
 
-    private static string BuildReceiptMessage(User user, SubscriptionCharge charge)
-    {
-        var plan = Plans.GetById(charge.plan_id);
-        var approvedAt = FormatLocalDateTime(charge.approved_at ?? DateTime.UtcNow);
-        var billingEnd = FormatLocalDateTime(charge.billing_period_end);
-        var dueAt = FormatLocalDateTime(charge.due_at ?? charge.billing_period_end);
-        var paymentMethodLabel = GetPaymentMethodLabel(charge.payment_method);
-        var renewalMessage = IsCardPaymentMethod(charge.payment_method)
-            ? "Na data de vencimento será feita uma nova cobrança automática da sua assinatura."
-            : "Na data de vencimento você precisará realizar um novo pagamento para manter a assinatura ativa.";
-
-        return
-            $"Olá, {user.name}!{Environment.NewLine}{Environment.NewLine}" +
-            "Este e-mail comprova a contratação/renovação da sua assinatura no RendaTop." + Environment.NewLine + Environment.NewLine +
-            $"Plano: {plan?.name ?? charge.plan_id}{Environment.NewLine}" +
-            $"Método de pagamento: {paymentMethodLabel}{Environment.NewLine}" +
-            $"CPF: {charge.payer_cpf}{Environment.NewLine}" +
-            $"Valor: R$ {charge.amount:N2}{Environment.NewLine}" +
-            $"Data da assinatura: {approvedAt}{Environment.NewLine}" +
-            $"Data de fim do período: {billingEnd}{Environment.NewLine}" +
-            $"Data de vencimento: {dueAt}{Environment.NewLine}{Environment.NewLine}" +
-            renewalMessage;
-    }
-
     private static string BuildReminderMessage(User user, SubscriptionCharge charge, bool automaticCardCharge)
     {
         var plan = Plans.GetById(charge.plan_id);
@@ -1205,15 +1203,4 @@ public class SubscriptionBillingService
         return value.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
     }
 
-    private static string GetPaymentMethodLabel(string paymentMethod)
-    {
-        return paymentMethod switch
-        {
-            "credit_card" => "Cartão de crédito",
-            "debit_card" => "Cartão de débito",
-            "pix" => "PIX",
-            "boleto" => "Boleto",
-            _ => paymentMethod
-        };
-    }
 }

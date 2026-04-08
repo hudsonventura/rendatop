@@ -31,7 +31,7 @@ public class EmailSmtp : IEmailNotification
         _enableSsl = string.Equals(enableSsl, "true", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task Notify(string toEmail, string title, string message)
+    public async Task Notify(string toEmail, string title, string message, bool isHtml = false)
     {
         if (string.IsNullOrWhiteSpace(_host) || string.IsNullOrWhiteSpace(_fromEmail))
             throw new Exception("Configuração SMTP incompleta. Defina SMTP_HOST e SMTP_FROM_EMAIL.");
@@ -47,7 +47,7 @@ public class EmailSmtp : IEmailNotification
                 : new MailAddress(_fromEmail, _fromName),
             Subject = title,
             Body = message,
-            IsBodyHtml = false
+            IsBodyHtml = isHtml
         };
         mail.To.Add(destination);
 
