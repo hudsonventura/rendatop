@@ -46,7 +46,7 @@ services:
     environment:
       - POSTGRES_HOST=db-test
       - REDIS_HOST=redis-test:6379
-      - WHATSAPP_EVOLUTION_URL=http://10.10.1.202:8080
+      #- WHATSAPP_EVOLUTION_URL=http://10.10.1.202:8080
       - WHATSAPP_WWEBJS_URL=http://whatsapp-wwebjs-test:3000
       - NOTIFICATION_TESTS_MANAGED_BY_COMPOSE=true
       - WHATSAPP_TEST_PHONE=65992327494
