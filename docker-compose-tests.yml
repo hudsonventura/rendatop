@@ -22,18 +22,6 @@ services:
       timeout: 5s
       retries: 12
 
-  whatsapp-wwebjs-test:
-    image: avoylenko/wwebjs-api:v1.34.6
-    container_name: rendatop-test-whatsapp-wwebjs
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - API_KEY=${WHATSAPP_WWEBJS_API_KEY}
-      - ENABLE_WEBHOOK=FALSE
-      - ENABLE_LOCAL_CALLBACK_EXAMPLE=FALSE
-    volumes:
-      - ./.data/wwebjs-test:/usr/src/app/sessions
 
 
   tests:
@@ -47,7 +35,7 @@ services:
       - POSTGRES_HOST=db-test
       - REDIS_HOST=redis-test:6379
       #- WHATSAPP_EVOLUTION_URL=http://10.10.1.202:8080
-      - WHATSAPP_WWEBJS_URL=http://whatsapp-wwebjs-test:3000
+      - WHATSAPP_WWEBJS_URL=http://10.10.1.202:3000
       - NOTIFICATION_TESTS_MANAGED_BY_COMPOSE=true
       - WHATSAPP_TEST_PHONE=65992327494
     depends_on:
