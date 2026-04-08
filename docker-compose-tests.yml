@@ -43,6 +43,4 @@ services:
         condition: service_healthy
       redis-test:
         condition: service_healthy
-      whatsapp-wwebjs-test:
-        condition: service_started
     restart: "no"
