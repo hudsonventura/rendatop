@@ -12,14 +12,7 @@ public class NotificationIntegrationTests
     {
         NotificationIntegrationEnvironment.Load();
 
-        var smtp = new EmailSmtp(
-            Environment.GetEnvironmentVariable("SMTP_HOST"),
-            Environment.GetEnvironmentVariable("SMTP_PORT"),
-            Environment.GetEnvironmentVariable("SMTP_USERNAME"),
-            Environment.GetEnvironmentVariable("SMTP_PASSWORD"),
-            Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL"),
-            Environment.GetEnvironmentVariable("SMTP_FROM_NAME"),
-            Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL"));
+        var smtp = NotificationIntegrationEnvironment.CreateSmtp();
 
         var destination = NotificationIntegrationEnvironment.GetRequired("SMTP_FROM_EMAIL");
         var marker = NotificationIntegrationEnvironment.BuildMarker("email");
@@ -28,6 +21,94 @@ public class NotificationIntegrationTests
             destination,
             $"[Integration] Email {marker}",
             $"Teste de integração real de email. Marcador: {marker}");
+    }
+
+    [Fact]
+    public async Task EmailSmtp_SendsRealSubscriptionReceiptHtml_ToConfiguredTestInbox()
+    {
+        NotificationIntegrationEnvironment.Load();
+
+        var smtp = NotificationIntegrationEnvironment.CreateSmtp();
+        var destination = NotificationIntegrationEnvironment.GetRequired("SMTP_EMAIL_TESTS");
+        var marker = NotificationIntegrationEnvironment.BuildMarker("receipt");
+
+        var user = new server.Domain.User
+        {
+            name = "Hudson Ventura",
+            email = destination,
+            password = "integration-test"
+        };
+
+        var charge = new server.Domain.SubscriptionCharge
+        {
+            plan_id = "plus",
+            payment_method = "credit_card",
+            payer_cpf = "12345678909",
+            amount = 6.90m,
+            charge_kind = server.Domain.SubscriptionChargeKind.Initial,
+            billing_period_start = DateTime.UtcNow,
+            billing_period_end = DateTime.UtcNow.AddMonths(1),
+            due_at = DateTime.UtcNow.AddMonths(1),
+            approved_at = DateTime.UtcNow
+        };
+
+        var html = SubscriptionReceiptEmailTemplate.Build(
+            user,
+            charge,
+            Environment.GetEnvironmentVariable("BASE_URL_CLIENT"));
+
+        await smtp.Notify(
+            destination,
+            $"[Integration] Recibo de assinatura {marker}",
+            html,
+            isHtml: true);
+    }
+
+    [Fact]
+    public async Task EmailSmtp_SendsRealSubscriptionCancellationHtml_ToConfiguredTestInbox()
+    {
+        NotificationIntegrationEnvironment.Load();
+
+        var smtp = NotificationIntegrationEnvironment.CreateSmtp();
+        var destination = NotificationIntegrationEnvironment.GetRequired("SMTP_EMAIL_TESTS");
+        var marker = NotificationIntegrationEnvironment.BuildMarker("cancellation");
+
+        var user = new server.Domain.User
+        {
+            name = "Hudson Ventura",
+            email = destination,
+            password = "integration-test"
+        };
+
+        var subscription = new server.Domain.Subscription
+        {
+            plan_id = "plus",
+            payment_method = "credit_card",
+            current_period_start = DateTime.UtcNow.AddDays(-12),
+            current_period_end = DateTime.UtcNow.AddDays(18),
+            cancellation_requested_at = DateTime.UtcNow
+        };
+
+        var result = new server.Services.SubscriptionCancellationResult
+        {
+            cancelled = true,
+            scheduled = false,
+            refunded_amount = 4.35m,
+            effective_at = DateTime.UtcNow,
+            message = "Assinatura cancelada imediatamente. Reembolso proporcional solicitado: R$ 4,35."
+        };
+
+        var html = SubscriptionCancellationEmailTemplate.Build(
+            user,
+            subscription,
+            result,
+            Environment.GetEnvironmentVariable("BASE_URL_CLIENT"));
+
+        await smtp.Notify(
+            destination,
+            $"[Integration] Cancelamento de assinatura {marker}",
+            html,
+            isHtml: true);
     }
 
     [Fact]
@@ -105,6 +186,18 @@ public class NotificationIntegrationTests
 
         public static string BuildMarker(string channel) =>
             $"{channel}-{DateTime.UtcNow:yyyyMMddHHmmss}";
+
+        public static EmailSmtp CreateSmtp()
+        {
+            return new EmailSmtp(
+                Environment.GetEnvironmentVariable("SMTP_HOST"),
+                Environment.GetEnvironmentVariable("SMTP_PORT"),
+                Environment.GetEnvironmentVariable("SMTP_USERNAME"),
+                Environment.GetEnvironmentVariable("SMTP_PASSWORD"),
+                Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL"),
+                Environment.GetEnvironmentVariable("SMTP_FROM_NAME"),
+                Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL"));
+        }
 
         public static IWhatsAppNotification CreateWhatsAppNotification()
         {

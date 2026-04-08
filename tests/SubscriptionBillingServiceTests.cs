@@ -52,7 +52,10 @@ public class SubscriptionBillingServiceTests
         Assert.NotNull(charge.receipt_sent_at);
 
         var email = Assert.Single(fixture.Email.Messages);
-        Assert.Contains("CPF: 12345678909", email.Message);
+        Assert.True(email.IsHtml);
+        Assert.Contains("<html", email.Message);
+        Assert.Contains("https://app.rendatop.test/favicon.svg", email.Message);
+        Assert.Contains("12345678909", email.Message);
         Assert.Contains("nova cobrança automática", email.Message);
     }
 
@@ -277,6 +280,11 @@ public class SubscriptionBillingServiceTests
         Assert.True(subscription.cancel_at_period_end);
         Assert.NotNull(subscription.cancellation_requested_at);
         Assert.Equal(SubscriptionChargeStatus.Cancelled, renewalCharge.status);
+        var email = Assert.Single(fixture.Email.Messages);
+        Assert.True(email.IsHtml);
+        Assert.Contains("Cancelamento de assinatura", email.Message);
+        Assert.Contains("Sem estorno", email.Message);
+        Assert.Contains("ate o fim do periodo atual", email.Message);
     }
 
     [Fact]
@@ -298,6 +306,10 @@ public class SubscriptionBillingServiceTests
         Assert.Equal(SubscriptionStatus.Active, subscription.status);
         Assert.True(subscription.cancel_at_period_end);
         Assert.Empty(fixture.PaymentProvider.RefundRequests);
+        var email = Assert.Single(fixture.Email.Messages);
+        Assert.True(email.IsHtml);
+        Assert.Contains("Cancelamento programado", email.Message);
+        Assert.Contains("Sem estorno", email.Message);
     }
 
     [Fact]
@@ -323,6 +335,11 @@ public class SubscriptionBillingServiceTests
         Assert.Equal("seed-payment", refund.PaymentId);
         Assert.True(refund.Amount > 0);
         Assert.Equal(refund.Amount, result.refunded_amount);
+        var email = Assert.Single(fixture.Email.Messages);
+        Assert.True(email.IsHtml);
+        Assert.Contains("Assinatura cancelada", email.Message);
+        Assert.Contains($"R$ {refund.Amount:N2}", email.Message);
+        Assert.Contains("estorno proporcional", email.Message);
     }
 
     [Fact]
@@ -348,6 +365,10 @@ public class SubscriptionBillingServiceTests
         Assert.Equal("seed-payment", refund.PaymentId);
         Assert.True(refund.Amount > 0);
         Assert.Equal(refund.Amount, result.refunded_amount);
+        var email = Assert.Single(fixture.Email.Messages);
+        Assert.True(email.IsHtml);
+        Assert.Contains($"R$ {refund.Amount:N2}", email.Message);
+        Assert.Contains("estorno proporcional", email.Message);
     }
 
     [Fact]
@@ -439,6 +460,8 @@ public class SubscriptionBillingServiceTests
 
         public SubscriptionBillingFixture()
         {
+            Environment.SetEnvironmentVariable("BASE_URL_CLIENT", "https://app.rendatop.test");
+
             var databaseName = Guid.NewGuid().ToString("N");
             _options = new DbContextOptionsBuilder<Context>()
                 .UseInMemoryDatabase(databaseName)
@@ -567,14 +590,14 @@ public class SubscriptionBillingServiceTests
     {
         public List<EmailMessage> Messages { get; } = [];
 
-        public Task Notify(string toEmail, string title, string message)
+        public Task Notify(string toEmail, string title, string message, bool isHtml = false)
         {
-            Messages.Add(new EmailMessage(toEmail, title, message));
+            Messages.Add(new EmailMessage(toEmail, title, message, isHtml));
             return Task.CompletedTask;
         }
     }
 
-    private sealed record EmailMessage(string ToEmail, string Title, string Message);
+    private sealed record EmailMessage(string ToEmail, string Title, string Message, bool IsHtml);
 
     private sealed class FakePaymentProvider : IPaymentProvider
     {
