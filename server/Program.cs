@@ -29,10 +29,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 INotification telegram = new server.Utils.Telegram(Environment.GetEnvironmentVariable("TELEGRAM_TOKEN"), Environment.GetEnvironmentVariable("TELEGRAM_CHATID"));
 builder.Services.AddSingleton<INotification>(telegram);
-IWhatsAppNotification whatsapp = new WhatsApp(
-    Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_URL"),
-    Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_INSTANCE"),
-    Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_API_KEY")
+IWhatsAppNotification whatsapp = new FallbackWhatsAppNotification(
+    Environment.GetEnvironmentVariable("WHATSAPP_PROVIDER"),
+    Environment.GetEnvironmentVariable("WHATSAPP_PROVIDER_FALLBACK"),
+    new WWebJsWhatsAppNotification(
+        Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_URL"),
+        Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_API_KEY"),
+        Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_SESSION_ID")),
+    new WhatsApp(
+        Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_URL"),
+        Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_INSTANCE"),
+        Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_API_KEY")
+    )
 );
 builder.Services.AddSingleton<IWhatsAppNotification>(whatsapp);
 IEmailNotification email = new EmailSmtp(

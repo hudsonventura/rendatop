@@ -15,25 +15,38 @@ services:
     image: redis:7
     container_name: rendatop-redis
     restart: always
-    ports:
-      - "6379:6379"
     volumes:
       - ./.data/redis:/data
 
 
-  evolution:
-    container_name: evolution_api
-    image: atendai/evolution-api:v2.2.3
+  # evolution:
+  #   container_name: evolution_api
+  #   image: atendai/evolution-api:v2.2.3
+  #   restart: always
+  #   ports:
+  #     - "8080:8080"
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - db
+  #     - redis
+  #   volumes:
+  #     - ./.data/evolution:/evolution/instances
+
+  whatsapp-wwebjs:
+    image: avoylenko/wwebjs-api:v1.34.6
+    container_name: rendatop-whatsapp-wwebjs
     restart: always
-    ports:
-      - "8080:8080"
     env_file:
       - .env
-    depends_on:
-      - db
-      - redis
+    environment:
+      - API_KEY=${WHATSAPP_WWEBJS_API_KEY}
+      - ENABLE_WEBHOOK=FALSE
+      - ENABLE_LOCAL_CALLBACK_EXAMPLE=FALSE
     volumes:
-      - ./.data/evolution:/evolution/instances
+      - ./.data/wwebjs:/usr/src/app/sessions
+    ports:
+      - "3000:3000"
 
 
   server:
@@ -47,13 +60,12 @@ services:
     environment:
       - POSTGRES_HOST=db
       - WHATSAPP_EVOLUTION_URL=http://evolution:8080
+      - WHATSAPP_WWEBJS_URL=http://whatsapp-wwebjs:3000
       - REDIS_HOST=redis:6379
       - ASPNETCORE_URLS=http://+:5000
     depends_on:
       - db
       - redis
-    ports:
-      - "5000:5000"
     
   migrator:
     build:
@@ -76,8 +88,6 @@ services:
     restart: always
     depends_on: 
       - server
-    expose:
-      - "4173"
 
   nginx:
     build:
@@ -99,6 +109,4 @@ services:
       dockerfile: Dockerfile
     container_name: rendatop-landing
     restart: always
-    ports:
-      - "3001:3000"
     

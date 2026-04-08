@@ -2,18 +2,6 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "docker compose up db",
-            "type": "shell",
-            "command": "docker compose -f docker-compose-dev.yml up -d db redis evolution",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "presentation": {
-                "reveal": "silent",
-                "panel": "shared"
-            }
-        },
-        {
             "label": "npm run dev",
             "type": "shell",
             "command": "npm run dev",
@@ -40,9 +28,21 @@
             }
         },
         {
+            "label": "docker compose up",
+            "type": "shell",
+            "command": "docker compose -f docker-compose-dev.yml up -d",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            }
+        },
+        {
             "label": "docker compose down",
             "type": "shell",
-            "command": "docker compose down -f docker-compose-dev.yml",
+            "command": "docker compose -f docker-compose-dev.yml down",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -61,18 +61,11 @@
             }
         },
         {
-            "label": "Prepare Infra",
-            "dependsOn": [
-                "docker compose up db",
-                "dotrush: Build"
-            ],
-            "dependsOrder": "sequence"
-        },
-        {
             "label": "Prepare Debug",
             "dependsOn": [
                 "npm run dev",
-                "Prepare Infra"
+                "docker compose up",
+                "dotrush: Build"
             ],
             "dependsOrder": "parallel"
         },
