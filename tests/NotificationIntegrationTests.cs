@@ -46,15 +46,12 @@ public class NotificationIntegrationTests
     }
 
     [Fact]
-    public async Task WhatsApp_SendsRealMessage_UsingEvolutionContainerAndDotEnvCredentials()
+    public async Task WhatsApp_SendsRealMessage_UsingConfiguredProviderAndDotEnvCredentials()
     {
         NotificationIntegrationEnvironment.Load();
-        await NotificationIntegrationEnvironment.EnsureEvolutionStackAsync();
+        await NotificationIntegrationEnvironment.EnsureWhatsAppStackAsync();
 
-        var whatsApp = new WhatsApp(
-            NotificationIntegrationEnvironment.GetRequired("WHATSAPP_EVOLUTION_URL"),
-            NotificationIntegrationEnvironment.GetRequired("WHATSAPP_EVOLUTION_INSTANCE"),
-            NotificationIntegrationEnvironment.GetRequired("WHATSAPP_EVOLUTION_API_KEY"));
+        var whatsApp = NotificationIntegrationEnvironment.CreateWhatsAppNotification();
         var phone = NotificationIntegrationEnvironment.GetRequired("WHATSAPP_TEST_PHONE");
         var marker = NotificationIntegrationEnvironment.BuildMarker("whatsapp");
 
@@ -109,7 +106,36 @@ public class NotificationIntegrationTests
         public static string BuildMarker(string channel) =>
             $"{channel}-{DateTime.UtcNow:yyyyMMddHHmmss}";
 
-        public static async Task EnsureEvolutionStackAsync()
+        public static IWhatsAppNotification CreateWhatsAppNotification()
+        {
+            var provider = (Environment.GetEnvironmentVariable("WHATSAPP_PROVIDER") ?? "evolution").Trim().ToLowerInvariant();
+            return provider switch
+            {
+                "wwebjs" => new WWebJsWhatsAppNotification(
+                    GetRequired("WHATSAPP_WWEBJS_URL"),
+                    Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_API_KEY"),
+                    Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_SESSION_ID")),
+                _ => new WhatsApp(
+                    GetRequired("WHATSAPP_EVOLUTION_URL"),
+                    GetRequired("WHATSAPP_EVOLUTION_INSTANCE"),
+                    GetRequired("WHATSAPP_EVOLUTION_API_KEY"))
+            };
+        }
+
+        public static async Task EnsureWhatsAppStackAsync()
+        {
+            var provider = (Environment.GetEnvironmentVariable("WHATSAPP_PROVIDER") ?? "evolution").Trim().ToLowerInvariant();
+            if (provider == "wwebjs")
+            {
+                var baseUrl = GetRequired("WHATSAPP_WWEBJS_URL").TrimEnd('/');
+                await WaitForHttpAsync($"{baseUrl}/ping");
+                return;
+            }
+
+            await EnsureEvolutionStackAsync();
+        }
+
+        private static async Task EnsureEvolutionStackAsync()
         {
             var baseUrl = GetRequired("WHATSAPP_EVOLUTION_URL").TrimEnd('/');
             if (!IsManagedByCompose())
@@ -159,7 +185,7 @@ public class NotificationIntegrationTests
             }
 
             throw new InvalidOperationException(
-                $"Evolution API não respondeu em tempo hábil em {url}.",
+                $"Serviço HTTP não respondeu em tempo hábil em {url}.",
                 lastError);
         }
 

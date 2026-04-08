@@ -21,16 +21,31 @@ services:
       - ./.data/redis:/data
 
 
-  evolution:
-    container_name: evolution_api
-    image: atendai/evolution-api:v2.2.3
+  # evolution:
+  #   container_name: evolution_api
+  #   image: atendai/evolution-api:v2.2.3
+  #   restart: always
+  #   ports:
+  #     - "8080:8080"
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ./.data/evolution:/evolution/instances
+
+  whatsapp-wwebjs:
+    image: avoylenko/wwebjs-api:v1.34.6
+    container_name: rendatop-whatsapp-wwebjs
     restart: always
-    ports:
-      - "8080:8080"
     env_file:
       - .env
+    environment:
+      - API_KEY=${WHATSAPP_WWEBJS_API_KEY}
+      - ENABLE_WEBHOOK=FALSE
+      - ENABLE_LOCAL_CALLBACK_EXAMPLE=FALSE
     volumes:
-      - ./.data/evolution:/evolution/instances
+      - ./.data/wwebjs:/usr/src/app/sessions
+    ports:
+      - "3003:3000"
     
   migrator:
     build:

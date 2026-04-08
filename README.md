@@ -33,6 +33,39 @@ https://console.cloud.google.com/auth/branding?authuser=1&project=rendatop
 http://10.10.1.202:8080/Manager
 Senha no .env -> AUTHENTICATION_API_KEY
 
+## WhatsApp via WWebJS API
+O projeto agora pode usar o `wwebjs-api` como provider principal, mantendo a Evolution como fallback.
+
+Use as variáveis de `.env.add`:
+
+```bash
+WHATSAPP_PROVIDER=wwebjs
+WHATSAPP_PROVIDER_FALLBACK=evolution
+WHATSAPP_WWEBJS_URL=http://whatsapp-wwebjs:3000
+WHATSAPP_WWEBJS_API_KEY=CHANGE_ME_WWEBJS
+WHATSAPP_WWEBJS_SESSION_ID=Default
+```
+
+O container recomendado é `avoylenko/wwebjs-api:v1.34.6`, com sessão persistida em volume local.
+
+Para iniciar a sessão manualmente:
+
+```bash
+curl -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" http://localhost:3000/session/start/Default
+```
+
+Para solicitar o pairing code:
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" \
+  -d '{"phoneNumber":"5565999999999","showNotification":true}' \
+  http://localhost:3000/session/requestPairingCode/Default
+```
+
+O envio de mensagens usa o endpoint `POST /client/sendMessage/:sessionId` do próprio `wwebjs-api`.
+
 ## Mercado Pago
 ### Documentação
 
