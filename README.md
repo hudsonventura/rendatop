@@ -51,7 +51,12 @@ O container recomendado é `avoylenko/wwebjs-api:v1.34.6`, com sessão persistid
 Para iniciar a sessão manualmente:
 
 ```bash
-curl -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" http://localhost:3000/session/start/Default
+WHATSAPP_WWEBJS_API_KEY=sua_key
+WHATSAPP_WWEBJS_API_URL=http://10.10.1.202:3000
+```
+
+```bash
+curl -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" $WHATSAPP_WWEBJS_API_URL:3000/session/start/Default
 ```
 
 Para solicitar o pairing code:
@@ -61,7 +66,17 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" \
   -d '{"phoneNumber":"5565999999999","showNotification":true}' \
-  http://localhost:3000/session/requestPairingCode/Default
+  $WHATSAPP_WWEBJS_API_URL:3000/session/requestPairingCode/Default
+```
+
+Para solicitar o QR Code:
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" \
+  $WHATSAPP_WWEBJS_API_URL:3000/session/qr/Default/image \
+  --output qrcode.png
 ```
 
 O envio de mensagens usa o endpoint `POST /client/sendMessage/:sessionId` do próprio `wwebjs-api`.
