@@ -19,5 +19,7 @@ export const metadata: Metadata = {
 }
 
 export default function LandingPage() {
-  return <LandingPageContent />
+  const backendBaseUrl = (process.env.BASE_URL_SERVER || '').trim()
+
+  return <LandingPageContent backendBaseUrl={backendBaseUrl} />
 }
