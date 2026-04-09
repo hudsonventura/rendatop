@@ -257,7 +257,7 @@ const MyInvestments = () => {
                                 checked={showArchived}
                                 onCheckedChange={(checked) => setShowArchived(Boolean(checked))}
                             />
-                            Mostrar investimentos arquivados junto com os ativos
+                            Mostrar também os investimentos arquivados
                         </label>
                     )}
 
