@@ -8,6 +8,58 @@ Create an `.env` file and:
 cd server && ln ../.env .env && cd ../client && ln ../.env .env
 ```
 
+## Tracking de visitas da landing
+
+O projeto registra a origem de visitas da landing page usando o parâmetro `visit` na URL.
+
+Exemplos:
+```text
+http://localhost:3000/landing?visit=instagram
+http://localhost:3000/landing?visit=youtube
+http://localhost:5173/?visit=google
+```
+
+Quando a landing é aberta, o frontend envia um `POST` para:
+```text
+POST /public/landing-visits
+```
+
+O backend salva:
+- `visit`
+- `ip_address`
+- `user_agent`
+- `referrer`
+- `created_at`
+
+Se a URL não tiver `visit`, o valor salvo será `direct`.
+
+### Frontends que registram a visita
+
+- App React/Vite em [client/src/pages/Login.jsx](/home/hudsonventura/sources/rendatop/client/src/pages/Login.jsx)
+- Landing Next.js em [landing-page-content.tsx](/home/hudsonventura/sources/rendatop/landing/nextjs-version/src/app/landing/landing-page-content.tsx)
+
+### Configuração de ambiente
+
+Para desenvolvimento local, mantenha no `.env`:
+```bash
+BASE_URL_SERVER=http://localhost:5000
+BASE_URL_CLIENT=http://localhost:5173
+BASE_URL_LANDING=http://localhost:3000
+CORS_ORIGINS=${BASE_URL_CLIENT},${BASE_URL_LANDING}
+```
+
+Importante:
+- `BASE_URL_LANDING` deve incluir a porta correta, por exemplo `http://localhost:3000`
+- o backend expande os placeholders de `CORS_ORIGINS` automaticamente
+- depois de alterar o `.env`, reinicie o backend
+
+Para a landing Next.js, defina também:
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+Se quiser validar rapidamente, abra a landing com `?visit=instagram` e confirme no backend se a tabela `landing_visits` recebeu o registro.
+
 
 ### Migrations
 ``` bash
