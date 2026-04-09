@@ -54,7 +54,7 @@ public class SubscriptionBillingServiceTests
         var email = Assert.Single(fixture.Email.Messages);
         Assert.True(email.IsHtml);
         Assert.Contains("<html", email.Message);
-        Assert.Contains("https://app.rendatop.test/favicon.svg", email.Message);
+        Assert.Contains("icon.png", email.Message);
         Assert.Contains("12345678909", email.Message);
         Assert.Contains("nova cobrança automática", email.Message);
     }
@@ -235,6 +235,64 @@ public class SubscriptionBillingServiceTests
         Assert.Equal(SubscriptionChargeStatus.Approved, renewalCharge.status);
         Assert.NotNull(renewalCharge.receipt_sent_at);
         Assert.Single(fixture.Email.Messages);
+    }
+
+    [Fact]
+    public async Task ProcessDueCardRenewalsAsync_ExpiresSubscription_WhenProviderRejectsForInsufficientAmount()
+    {
+        using var fixture = new SubscriptionBillingFixture();
+        fixture.SeedActiveSubscriptionWithCharge("credit_card", DateTime.UtcNow.AddMinutes(-5), currentCycleReminderSentAt: DateTime.UtcNow.AddHours(-1));
+        fixture.PaymentProvider.SavedCardPaymentResult = new PaymentResult
+        {
+            payment_id = "renew-card-rejected-insufficient",
+            status = "rejected",
+            status_detail = "cc_rejected_insufficient_amount",
+            amount = 6.9m
+        };
+
+        await fixture.Service.ProcessDueCardRenewalsAsync();
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var subscription = assertionContext.subscriptions.Single();
+        var renewalCharge = assertionContext.subscription_charges
+            .OrderByDescending(x => x.created_at)
+            .First(x => x.charge_kind == SubscriptionChargeKind.Renewal);
+
+        Assert.Equal(SubscriptionStatus.Expired, subscription.status);
+        Assert.Equal(SubscriptionChargeStatus.Rejected, renewalCharge.status);
+        Assert.Equal("renew-card-rejected-insufficient", renewalCharge.provider_payment_id);
+        Assert.Equal("cc_rejected_insufficient_amount", renewalCharge.provider_status_detail);
+        Assert.Null(renewalCharge.receipt_sent_at);
+        Assert.Empty(fixture.Email.Messages);
+    }
+
+    [Fact]
+    public async Task ProcessDueCardRenewalsAsync_ExpiresSubscription_WhenProviderRejectsForSecurityCode()
+    {
+        using var fixture = new SubscriptionBillingFixture();
+        fixture.SeedActiveSubscriptionWithCharge("credit_card", DateTime.UtcNow.AddMinutes(-5), currentCycleReminderSentAt: DateTime.UtcNow.AddHours(-1));
+        fixture.PaymentProvider.SavedCardPaymentResult = new PaymentResult
+        {
+            payment_id = "renew-card-rejected-cvv",
+            status = "rejected",
+            status_detail = "cc_rejected_bad_filled_security_code",
+            amount = 6.9m
+        };
+
+        await fixture.Service.ProcessDueCardRenewalsAsync();
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var subscription = assertionContext.subscriptions.Single();
+        var renewalCharge = assertionContext.subscription_charges
+            .OrderByDescending(x => x.created_at)
+            .First(x => x.charge_kind == SubscriptionChargeKind.Renewal);
+
+        Assert.Equal(SubscriptionStatus.Expired, subscription.status);
+        Assert.Equal(SubscriptionChargeStatus.Rejected, renewalCharge.status);
+        Assert.Equal("renew-card-rejected-cvv", renewalCharge.provider_payment_id);
+        Assert.Equal("cc_rejected_bad_filled_security_code", renewalCharge.provider_status_detail);
+        Assert.Null(renewalCharge.receipt_sent_at);
+        Assert.Empty(fixture.Email.Messages);
     }
 
     [Fact]
@@ -460,7 +518,7 @@ public class SubscriptionBillingServiceTests
 
         public SubscriptionBillingFixture()
         {
-            Environment.SetEnvironmentVariable("BASE_URL_CLIENT", "https://app.rendatop.test");
+            Environment.SetEnvironmentVariable("BASE_URL_CLIENT", "https://rendatop.sistemaonline.shop");
 
             var databaseName = Guid.NewGuid().ToString("N");
             _options = new DbContextOptionsBuilder<Context>()

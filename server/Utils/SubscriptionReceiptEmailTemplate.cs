@@ -17,8 +17,7 @@ public static class SubscriptionReceiptEmailTemplate
         var paymentMethodLabel = GetPaymentMethodLabel(charge.payment_method);
         var renewalMessage = IsCardPaymentMethod(charge.payment_method)
             ? "Na data de vencimento será feita uma nova cobrança automática no cartão cadastrado."
-            : "Na data de vencimento sera necessario realizar um novo pagamento para manter a assinatura ativa.";
-        var iconUrl = BuildClientAssetUrl(clientBaseUrl, "icon.png");
+            : "Na data dapp.rendatop.testildClientAssetUrl(clientBaseUrl, "icon.png");
         var iconMarkup = string.IsNullOrWhiteSpace(iconUrl)
             ? string.Empty
             : $"""
