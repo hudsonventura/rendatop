@@ -15,14 +15,23 @@ import { FaqSection } from './components/faq-section'
 import { LandingFooter } from './components/footer'
 import { AboutSection } from './components/about-section'
 
-export function LandingPageContent() {
+type LandingPageContentProps = {
+  backendBaseUrl: string
+}
+
+export function LandingPageContent({ backendBaseUrl }: LandingPageContentProps) {
   const searchParams = useSearchParams()
 
   useEffect(() => {
     const visit = (searchParams.get('visit') || '').trim()
     const normalizedVisit = visit ? visit.toLowerCase() : 'direct'
     const storageKey = `landing-next-visit:${window.location.pathname}:${normalizedVisit}`
-    const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/+$/, '')
+    const apiBaseUrl = (backendBaseUrl || '').replace(/\/+$/, '')
+
+    if (!apiBaseUrl) {
+      console.error('BASE_URL_SERVER não configurado para registrar visitas da landing page.')
+      return
+    }
 
     if (sessionStorage.getItem(storageKey)) {
       return
@@ -40,7 +49,7 @@ export function LandingPageContent() {
       sessionStorage.removeItem(storageKey)
       console.error('Erro ao registrar visita da landing page:', error)
     })
-  }, [searchParams])
+  }, [backendBaseUrl, searchParams])
 
   return (
     <div className="min-h-screen bg-background">

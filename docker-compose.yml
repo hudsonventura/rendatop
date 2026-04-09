@@ -108,5 +108,7 @@ services:
       context: ./landing
       dockerfile: Dockerfile
     container_name: rendatop-landing
+    env_file:
+      - .env
     restart: always
     
