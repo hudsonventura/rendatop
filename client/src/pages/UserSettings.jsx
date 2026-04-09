@@ -13,18 +13,22 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2, MessageCircleMore, Sparkles } from "lucide-react"
 import { formatCpf } from "@/utils/cpf"
 
+const frontendBaseUrl = (import.meta.env.VITE_FRONTEND_URL || "").replace(/\/+$/, "")
+const buildFrontendAssetUrl = (relativePath) =>
+    frontendBaseUrl ? `${frontendBaseUrl}/${relativePath.replace(/^\/+/, "")}` : `/${relativePath.replace(/^\/+/, "")}`
+
 const telegramChatIdSteps = [
     {
         title: "Abra seu Telegram e busque pelo app RendaTop",
         description: "Abra o aplicativo do Telegram no celular ou no computador. Na busca do Telegram, procure por 'rendatop_bot', abra a conversa com o bot e clique no botão Iniciar/Start.",
         imageAlt: "Passo 1 para obter o chatID no Telegram",
-        imageSrc: "/chatid1.png"
+        imageSrc: buildFrontendAssetUrl("chatid1.png")
     },
     {
         title: "Copie seu chatID",
         description: "O bot responderá com o seu chatID. Copie esse número e cole no campo Chat ID do Telegram.",
         imageAlt: "Passo 4 para obter o chatID no Telegram",
-        imageSrc: "/chatid2.png"
+        imageSrc: buildFrontendAssetUrl("chatid2.png")
     },
 ]
 

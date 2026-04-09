@@ -5,7 +5,9 @@ Sistema de investimentos
 
 Create an `.env` file and:
 ```bash
-cd server && ln ../.env .env && cd ../client && ln ../.env .env
+cd server && ln ../.env .env && \
+cd ../client && ln ../.env .env && \
+cd ../landing/next-version && ln ../../.env .env
 ```
 
 ## Tracking de visitas da landing
