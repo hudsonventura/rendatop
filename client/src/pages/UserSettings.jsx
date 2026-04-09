@@ -16,7 +16,7 @@ import { formatCpf } from "@/utils/cpf"
 const telegramChatIdSteps = [
     {
         title: "Abra seu Telegram e busque pelo app RendaTop",
-        description: "Abra o aplicativo do Telegram no celular ou no computador. Na busca do Telegram, procure por RendaTop e abra a conversa com o bot e clique no botão Start.",
+        description: "Abra o aplicativo do Telegram no celular ou no computador. Na busca do Telegram, procure por 'rendatop_bot', abra a conversa com o bot e clique no botão Iniciar/Start.",
         imageAlt: "Passo 1 para obter o chatID no Telegram",
         imageSrc: "/chatid1.png"
     },
