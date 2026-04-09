@@ -26,6 +26,12 @@ public class Context : DbContext
         modelBuilder.Entity<SubscriptionCharge>()
             .Property(charge => charge.charge_kind)
             .HasConversion<string>();
+
+        modelBuilder.Entity<LandingVisit>()
+            .HasIndex(x => x.visit);
+
+        modelBuilder.Entity<LandingVisit>()
+            .HasIndex(x => x.created_at);
     }
 
     public override int SaveChanges()
@@ -116,6 +122,11 @@ public class Context : DbContext
     /// </summary>
     public DbSet<Redemption> redemptions { get; set; }
 
+
+    /// <summary>
+    /// Tabela de visitas da landing page
+    /// </summary>
+    public DbSet<LandingVisit> landing_visits { get; set; }
 
     /// <summary>
     /// Tabela de notificação

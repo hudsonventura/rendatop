@@ -61,6 +61,31 @@ const Login = () => {
             .catch(() => { /* not logged in, stay on login page */ });
     }, []);
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const visit = (params.get("visit") || "").trim();
+        const normalizedVisit = visit ? visit.toLowerCase() : "direct";
+        const storageKey = `landing-visit:${window.location.pathname}:${normalizedVisit}`;
+
+        if (sessionStorage.getItem(storageKey)) {
+            return;
+        }
+
+        sessionStorage.setItem(storageKey, "1");
+
+        fetch(`${apiBaseUrl}/public/landing-visits`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({ visit }),
+        }).catch((error) => {
+            sessionStorage.removeItem(storageKey);
+            console.error("Erro ao registrar visita da landing page:", error);
+        });
+    }, []);
+
     const handleLogin = async (event) => {
         event.preventDefault();
         setErro(false);

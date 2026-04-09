@@ -1,4 +1,4 @@
-const ROUTER_BASENAME = (import.meta.env.VITE_ROUTER_BASENAME || "/app").replace(/\/+$/, "") || "/";
+const ROUTER_BASENAME = (import.meta.env.VITE_ROUTER_BASENAME || "/").replace(/\/+$/, "") || "/";
 
 export function appPath(path = "/") {
     if (/^https?:\/\//i.test(path)) {
