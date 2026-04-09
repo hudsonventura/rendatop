@@ -8,6 +8,7 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getInvestmentLiquidValueAtDate } from "@/utils/investment-timeline"
 
 // ── Chart colours ─────────────────────────────────────────────────────────────
 
@@ -32,11 +33,12 @@ function formatCurrency(value) {
 function buildChartData(investments) {
     const map = new Map()
     const colorMap = new Map()
+    const today = new Date()
 
     for (const inv of investments) {
         if (inv.archived) continue
-        const firstCalc = inv.calculated?.[0]
-        const liquidValue = firstCalc?.value_liq ?? inv.value
+        const liquidValue = getInvestmentLiquidValueAtDate(inv, today)
+        if (liquidValue <= 0) continue
         const bankName = inv.bank?.name || "Banco Desconhecido"
         const bankColor = inv.bank?.color
         map.set(bankName, (map.get(bankName) ?? 0) + liquidValue)

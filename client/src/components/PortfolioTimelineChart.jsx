@@ -5,10 +5,8 @@ import { useTheme } from "next-themes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { addDays, diffInDays, getInvestmentLiquidValueAtDate, startOfDay } from "@/utils/investment-timeline"
 
-const DAY_MS = 24 * 60 * 60 * 1000
-const SELIC_ANNUAL_ESTIMATE = 0.1315
-const IPCA_ANNUAL_ESTIMATE = 0.045
 const CHART_COLORS = [
     "var(--chart-1)",
     "var(--chart-2)",
@@ -16,35 +14,6 @@ const CHART_COLORS = [
     "var(--chart-4)",
     "var(--chart-5)",
 ]
-
-function startOfDay(date) {
-    const normalized = new Date(date)
-    normalized.setHours(0, 0, 0, 0)
-    return normalized
-}
-
-function addDays(date, days) {
-    const next = new Date(date)
-    next.setDate(next.getDate() + days)
-    return next
-}
-
-function diffInDays(start, end) {
-    return Math.floor((startOfDay(end).getTime() - startOfDay(start).getTime()) / DAY_MS)
-}
-
-function getIRPercent(taxes, days) {
-    if (!taxes) return 0
-    if (days <= 180) return 22.5
-    if (days <= 365) return 20
-    if (days <= 730) return 17.5
-    return 15
-}
-
-function getIOFPercent(days) {
-    if (days >= 30) return 0
-    return 100 - days * 3.333333333333
-}
 
 function formatCurrency(value) {
     return new Intl.NumberFormat("pt-BR", {
@@ -70,12 +39,6 @@ function getBankColor(investment) {
     return investment.bank?.color || null
 }
 
-function getCurrentLiquidValue(investment) {
-    const currentCalculated = investment.table_calculated?.[0] ?? investment.calculated?.[0]
-    const fallbackValue = investment.table_value ?? investment.value ?? 0
-    return Number(currentCalculated?.value_liq ?? fallbackValue)
-}
-
 function getBankKey(bankName) {
     return `bank_${bankName
         .normalize("NFD")
@@ -83,58 +46,6 @@ function getBankKey(bankName) {
         .replace(/[^a-zA-Z0-9]+/g, "_")
         .replace(/^_+|_+$/g, "")
         .toLowerCase()}`
-}
-
-function estimateLiquidValue(investment, date) {
-    const investedValue = Number(investment.value ?? 0)
-    if (investedValue <= 0 || !investment.date_buy) return 0
-
-    const startDate = startOfDay(new Date(investment.date_buy))
-    const finishDate = investment.due_date ? startOfDay(new Date(investment.due_date)) : null
-    const targetDate = startOfDay(date)
-    const today = startOfDay(new Date())
-
-    if (finishDate && targetDate > finishDate) {
-        return 0
-    }
-
-    const currentDate = targetDate
-
-    if (Number.isNaN(startDate.getTime()) || currentDate < startDate) {
-        return 0
-    }
-
-    if (targetDate.getTime() === today.getTime()) {
-        return getCurrentLiquidValue(investment)
-    }
-
-    const days = diffInDays(startDate, currentDate)
-    if (days <= 0) {
-        return investedValue
-    }
-
-    const taxes = investment.taxes ?? true
-    const irRate = getIRPercent(taxes, days) / 100
-    const iofRate = getIOFPercent(days) / 100
-    const indexPercent = Number(investment.index_percent ?? 0)
-
-    let effectivePercent = 0
-
-    if (investment.index === "CDI") {
-        effectivePercent = (SELIC_ANNUAL_ESTIMATE * (indexPercent / 100) * days) / 365
-    } else if (investment.index === "CDI_MAIS") {
-        effectivePercent = ((SELIC_ANNUAL_ESTIMATE + indexPercent / 100) * Math.max(days - 3, 0)) / 366
-    } else if (investment.index === "IPCA_MAIS") {
-        effectivePercent = ((IPCA_ANNUAL_ESTIMATE + indexPercent / 100) * Math.max(days - 3, 0)) / 366
-    } else {
-        effectivePercent = ((indexPercent / 100) * Math.max(days - 3, 0)) / 366
-    }
-
-    const grossProfit = investedValue * effectivePercent
-    const grossAfterIof = grossProfit * (1 - iofRate)
-    const netProfit = grossAfterIof * (1 - irRate)
-
-    return investedValue + netProfit
 }
 
 function buildTimelineData(investments) {
@@ -182,7 +93,7 @@ function buildTimelineData(investments) {
         const bankTotals = Object.fromEntries(bankSeries.map(({ key }) => [key, 0]))
 
         for (const investment of validInvestments) {
-            const value = estimateLiquidValue(investment, currentDate)
+            const value = getInvestmentLiquidValueAtDate(investment, currentDate)
             const bankKey = getBankKey(getBankName(investment))
             bankTotals[bankKey] += value
         }
@@ -295,7 +206,7 @@ export default function PortfolioTimelineChart({ investments }) {
                 <CardDescription>
                     <b>Valor líquido</b> de todos seus investimento <small>(incluindo itens arquivados)</small>
                     <br />
-                    <small>As linhas de valores no gráfico mostram uma subida linear considerando o valor investido e o valor liquido no vencimento. Não considera os níveis das aliquotas de IR e IOF.</small>
+                    <small>As linhas de valores no gráfico consideram o valor inicial, o valor liquido atual e o valor final previsto no vencimento de cada investimento.</small>
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -389,7 +300,7 @@ export default function PortfolioTimelineChart({ investments }) {
                                 }}
                             />
                             <Area
-                                type="monotone"
+                                type="linear"
                                 dataKey="liquidValue"
                                 stroke={totalLineColor}
                                 strokeWidth={4}
@@ -402,7 +313,7 @@ export default function PortfolioTimelineChart({ investments }) {
                             {visibleBankSeries.map((series) => (
                                 <Area
                                     key={series.key}
-                                    type="monotone"
+                                    type="linear"
                                     dataKey={series.key}
                                     stroke={series.color}
                                     strokeWidth={2}
