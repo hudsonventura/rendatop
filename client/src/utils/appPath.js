@@ -1,4 +1,4 @@
-function getRouterBasename() {
+function getRouterBasenameFromFrontendUrl() {
     const frontendUrl = (import.meta.env.VITE_FRONTEND_URL || "").trim();
 
     if (!frontendUrl) {
@@ -13,7 +13,7 @@ function getRouterBasename() {
     }
 }
 
-const ROUTER_BASENAME = getRouterBasename();
+const ROUTER_BASENAME = getRouterBasenameFromFrontendUrl();
 
 export function appPath(path = "/") {
     if (/^https?:\/\//i.test(path)) {
