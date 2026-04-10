@@ -10,10 +10,12 @@ namespace server.Controllers;
 [ApiController]
 public class UserController : AuthenticatedController
 {
+    private const string TestEmailDestination = "hudsonventura@gmail.com";
     private readonly Context _context;
     private readonly INotification _notify;
     private readonly IWhatsAppNotification _whatsApp;
     private readonly IEmailNotification _email;
+    private readonly string? _clientBaseUrl;
 
     public UserController(
         IHttpContextAccessor httpContextAccessor,
@@ -26,6 +28,7 @@ public class UserController : AuthenticatedController
         _notify = notify;
         _whatsApp = whatsApp;
         _email = email;
+        _clientBaseUrl = Environment.GetEnvironmentVariable("BASE_URL_CLIENT");
     }
 
     /// <summary>
@@ -263,13 +266,12 @@ public class UserController : AuthenticatedController
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
 
         
-        ValidateEmail(user.email);
+        ValidateEmail(TestEmailDestination);
 
-        var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
-        var message = $"📈 RentaTop{Environment.NewLine}✅ Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
+        var message = TestEmailTemplate.Build(user, _clientBaseUrl);
         try
         {
-            await _email.Notify(user.email, "📈 RentaTop | Teste Email", message);
+            await _email.Notify(TestEmailDestination, "📈 RentaTop | Teste Email", message, isHtml: true);
         }
         catch (Exception ex)
         {
