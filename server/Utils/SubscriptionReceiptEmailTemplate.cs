@@ -5,6 +5,8 @@ namespace server.Utils;
 
 public static class SubscriptionReceiptEmailTemplate
 {
+    private static readonly TimeZoneInfo BrasiliaTimeZone = ResolveBrasiliaTimeZone();
+
     public static string Build(User user, SubscriptionCharge charge, string? clientBaseUrl)
     {
         var plan = Plans.GetById(charge.plan_id);
@@ -78,7 +80,7 @@ public static class SubscriptionReceiptEmailTemplate
                                         </tr>
                                         <tr>
                                           <td style="padding:8px 0; font-size:13px; color:#64748b;">Confirmado em</td>
-                                          <td align="right" style="padding:8px 0; font-size:14px; color:#111827;">{HtmlEncode(approvedAt)}</td>
+                                          <td align="right" style="padding:8px 0; font-size:14px; color:#111827;">{HtmlEncode(approvedAt)} (Brasília)</td>
                                         </tr>
                                         <tr>
                                           <td style="padding:8px 0; font-size:13px; color:#64748b;">Periodo vigente</td>
@@ -118,7 +120,8 @@ public static class SubscriptionReceiptEmailTemplate
 
     private static string FormatLocalDateTime(DateTime value)
     {
-        return value.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+        var brasiliaTime = TimeZoneInfo.ConvertTimeFromUtc(UtcDateTime.EnsureUtc(value), BrasiliaTimeZone);
+        return $"{brasiliaTime:dd/MM/yyyy HH:mm}";
     }
 
     private static string GetPaymentMethodLabel(string paymentMethod)
@@ -149,5 +152,30 @@ public static class SubscriptionReceiptEmailTemplate
             return null;
 
         return new Uri(baseUri, relativePath.TrimStart('/')).ToString();
+    }
+
+    private static TimeZoneInfo ResolveBrasiliaTimeZone()
+    {
+        string[] timeZoneIds =
+        [
+            "America/Sao_Paulo",
+            "E. South America Standard Time"
+        ];
+
+        foreach (var timeZoneId in timeZoneIds)
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+        }
+
+        return TimeZoneInfo.Utc;
     }
 }
