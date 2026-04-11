@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog"
 
 import { Button } from "@/components/ui/button"
+import axiosInstance from "@/utils/axiosConfig"
 
 const navItems = [
     {
@@ -77,10 +78,52 @@ const navItems = [
 export function AppSidebar({ ...props }) {
     const location = useLocation()
     const navigate = useNavigate()
-    const userName = sessionStorage.getItem('name') || 'Usuário'
-    const userEmail = sessionStorage.getItem('email') || ''
+    const [userName, setUserName] = useState(() => sessionStorage.getItem('name') || 'Usuário')
+    const [userEmail, setUserEmail] = useState(() => sessionStorage.getItem('email') || '')
 
     const [showLogoutDialog, setShowLogoutDialog] = useState(false)
+
+    React.useEffect(() => {
+        const storedName = sessionStorage.getItem("name") || ""
+        const storedEmail = sessionStorage.getItem("email") || ""
+
+        if (storedName) {
+            setUserName(storedName)
+        }
+
+        if (storedEmail) {
+            setUserEmail(storedEmail)
+        }
+
+        if (storedName && storedEmail) {
+            return
+        }
+
+        let cancelled = false
+
+        axiosInstance
+            .get("/User/Settings")
+            .then((response) => {
+                if (cancelled) return
+
+                const data = response?.data || {}
+                const nextName = data.name || "Usuário"
+                const nextEmail = data.email || ""
+
+                setUserName(nextName)
+                setUserEmail(nextEmail)
+
+                if (data.name) sessionStorage.setItem("name", data.name)
+                if (data.email) sessionStorage.setItem("email", data.email)
+            })
+            .catch(() => {
+                if (cancelled) return
+            })
+
+        return () => {
+            cancelled = true
+        }
+    }, [])
 
     const handleLogoutClick = (e) => {
         e.preventDefault()
