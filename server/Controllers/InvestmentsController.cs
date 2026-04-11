@@ -269,7 +269,7 @@ public class InvestmentsController : AuthenticatedController
             .Where(bank => bank.Active)
             .ToList();
 
-        return await extractor.ExtractAsync(request.file, banks, cancellationToken);
+        return await extractor.ExtractAsync(request.file, banks);
     }
 
 

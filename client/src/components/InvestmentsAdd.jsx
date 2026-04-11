@@ -633,7 +633,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 				headers: {
 					"Content-Type": "multipart/form-data",
 				},
-				timeout: 4000,
+				timeout: 60000,
 			});
 
 			applyExtractedValues(response.data ?? {});
