@@ -238,14 +238,14 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                 </DialogTrigger>
             )}
 
-            <DialogContent className="w-[95vw] sm:max-w-5xl md:w-[85vw] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[98vw] max-w-[98vw] sm:max-w-6xl lg:w-[92vw] xl:w-[88vw] max-h-[96vh] overflow-visible">
                 <DialogHeader>
                     <DialogTitle>Edição de investimento</DialogTitle>
                     <DialogDescription>Altere os dados do investimento abaixo.</DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="max-h-[calc(96vh-9rem)] space-y-6 overflow-y-auto pr-1">
 
                         <div className="flex flex-wrap gap-4">
                             <FormField
