@@ -65,6 +65,7 @@ const formatCurrency = (val) =>
     val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 const VALUE_LIQUID_CURRENT_HINT = "Valor líquido atual, já descontados os impostos, considerando o resgate hoje. Não reflete o valor no vencimento para investimentos sem liquidez diária."
+const OVERDUE_INVESTMENT_HINT = "Este investimento passou da data de vencimento e provavelmente foi resgatado automaticamente pelo banco. Informe o reinvestimento, o resgate total ou arquive este item."
 
 function parseDateValue(dateValue) {
     if (!dateValue) return null
@@ -94,14 +95,36 @@ const formatDate = (dateValue) => {
 
 const getDateSortValue = (dateValue) => parseDateValue(dateValue)?.getTime()
 
+function getTodayStart() {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return today
+}
+
 const isDueDateTodayOrPast = (dateStr) => {
     if (!dateStr) return false
     const due = parseDateValue(dateStr)
     if (!due) return false
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const today = getTodayStart()
     return due <= today
+}
+
+const isDueDatePast = (dateStr) => {
+    if (!dateStr) return false
+    const due = parseDateValue(dateStr)
+    if (!due) return false
+
+    return due < getTodayStart()
+}
+
+function getDueDateSortValue(dateValue) {
+    const todayTimestamp = getTodayStart().getTime()
+    const dueTimestamp = getDateSortValue(dateValue)
+
+    if (dueTimestamp == null) return todayTimestamp
+    if (dueTimestamp <= todayTimestamp) return dueTimestamp - 1
+    return dueTimestamp
 }
 
 const canShowReinvest = (dateStr) => {
@@ -110,8 +133,7 @@ const canShowReinvest = (dateStr) => {
     const due = parseDateValue(dateStr)
     if (!due) return false
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const today = getTodayStart()
 
     return due <= today
 }
@@ -829,8 +851,7 @@ function getColumns(onView, onEdit, onRedeem, onReinvest, onArchive, onDelete) {
         },
         {
             id: "due_date",
-            accessorFn: (row) => getDateSortValue(row.due_date),
-            sortUndefined: "first",
+            accessorFn: (row) => getDueDateSortValue(row.due_date),
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -843,11 +864,26 @@ function getColumns(onView, onEdit, onRedeem, onReinvest, onArchive, onDelete) {
             ),
             cell: ({ row }) =>
                 row.original.due_date ? (
-                    <span
-                        className={`whitespace-nowrap ${isDueDateTodayOrPast(row.original.due_date) ? "text-red-600 dark:text-red-400 font-medium" : ""}`}
-                    >
-                        {formatDate(row.original.due_date)}
-                    </span>
+                    isDueDatePast(row.original.due_date) ? (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span
+                                    className="whitespace-nowrap cursor-help font-medium text-red-600 dark:text-red-400"
+                                >
+                                    {formatDate(row.original.due_date)}
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                                {OVERDUE_INVESTMENT_HINT}
+                            </TooltipContent>
+                        </Tooltip>
+                    ) : (
+                        <span
+                            className={`whitespace-nowrap ${isDueDateTodayOrPast(row.original.due_date) ? "text-red-600 dark:text-red-400 font-medium" : ""}`}
+                        >
+                            {formatDate(row.original.due_date)}
+                        </span>
+                    )
                 ) : (
                     <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
                         Liquidez diária
@@ -876,7 +912,7 @@ function getColumns(onView, onEdit, onRedeem, onReinvest, onArchive, onDelete) {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function InvestmentsDataTable({ investments, setReload, onReinvest }) {
-    const [sorting, setSorting] = useState([])
+    const [sorting, setSorting] = useState([{ id: "due_date", desc: false }])
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
 
     // Shared dialog state (for double-click + actions menu)
