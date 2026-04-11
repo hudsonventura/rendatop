@@ -309,6 +309,7 @@ public class UserController : AuthenticatedController
     {
         var whatsappNotificationsEnabled = CanUseWhatsAppNotifications(user.id);
         var calendarIcsEnabled = CanUseCalendarIcs(user.id);
+        var aiDocumentExtraction = GetAiDocumentExtractionAccess(user.id);
 
         return new UserSettingsResponse(
             user.name,
@@ -325,7 +326,11 @@ public class UserController : AuthenticatedController
                 : null,
             user.totp_enabled,
             whatsappNotificationsEnabled,
-            calendarIcsEnabled
+            calendarIcsEnabled,
+            aiDocumentExtraction.enabled,
+            aiDocumentExtraction.current_usage,
+            aiDocumentExtraction.monthly_limit,
+            aiDocumentExtraction.restriction_message
         );
     }
 
@@ -349,6 +354,27 @@ public class UserController : AuthenticatedController
 
     private bool CanUseCalendarIcs(Guid userId) =>
         GetActiveSubscriptionPlan(userId)?.calendar_ics == true;
+
+    private AiDocumentExtractionAccessResponse GetAiDocumentExtractionAccess(Guid userId)
+    {
+        var plan = SubscriptionFeatureAccess.GetEffectivePlan(_context, userId);
+        var currentUsage = SubscriptionFeatureAccess.GetAiUsageCountInMonth(
+            _context,
+            userId,
+            SubscriptionFeatureAccess.InvestmentDocumentExtractionFeature,
+            DateTime.UtcNow);
+
+        var enabled = currentUsage < plan.ai_monthly_limit;
+        var restrictionMessage = enabled
+            ? null
+            : $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por IA por mês. Faça upgrade para continuar usando este recurso.";
+
+        return new AiDocumentExtractionAccessResponse(
+            enabled,
+            currentUsage,
+            plan.ai_monthly_limit,
+            restrictionMessage);
+    }
 
     private string? BuildPublicCalendarUrl(Guid? token)
     {
@@ -401,7 +427,18 @@ public record UserSettingsResponse(
     string? calendar_public_url,
     bool totp_enabled,
     bool whatsapp_notifications_enabled,
-    bool calendar_ics_enabled
+    bool calendar_ics_enabled,
+    bool ai_document_extraction_enabled,
+    int ai_document_extraction_current_usage,
+    int ai_document_extraction_monthly_limit,
+    string? ai_document_extraction_restriction_message
+);
+
+public record AiDocumentExtractionAccessResponse(
+    bool enabled,
+    int current_usage,
+    int monthly_limit,
+    string? restriction_message
 );
 
 public record TotpSetupResponse(

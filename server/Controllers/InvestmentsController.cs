@@ -236,6 +236,22 @@ public class InvestmentsController : AuthenticatedController
     [HttpPost("Investments")]
     public Guid Insert([FromBody] InvestmentRequest request)
     {
+        var now = DateTime.UtcNow;
+        if (request.ai_extracted)
+        {
+            var plan = SubscriptionFeatureAccess.GetEffectivePlan(_context, _user.id);
+            var aiUsageCount = SubscriptionFeatureAccess.GetAiUsageCountInMonth(
+                _context,
+                _user.id,
+                SubscriptionFeatureAccess.InvestmentDocumentExtractionFeature,
+                now);
+
+            if (aiUsageCount >= plan.ai_monthly_limit)
+                throw new ExpectedException(
+                    $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por IA por mês. Faça upgrade para continuar usando este recurso.",
+                    System.Net.HttpStatusCode.Forbidden);
+        }
+
         var bank = _context.banks.FirstOrDefault(b => b.Code == (ushort)request.bank_code)
             ?? throw new ExpectedException($"Banco com código {request.bank_code} não encontrado.");
         var moneyBox = ResolveMoneyBox(request.money_box_id);
@@ -246,6 +262,19 @@ public class InvestmentsController : AuthenticatedController
         _context.Entry(investment.bank).State = EntityState.Unchanged;
         investment.money_box = moneyBox;
         _context.investments.Add(investment);
+
+        if (request.ai_extracted)
+        {
+            var provider = (Environment.GetEnvironmentVariable("LLM_PROVIDER") ?? "openai").Trim().ToLowerInvariant();
+            _context.ai_usages.Add(new AiUsage
+            {
+                user_id = _user.id,
+                feature = SubscriptionFeatureAccess.InvestmentDocumentExtractionFeature,
+                provider = provider,
+                created_at = now
+            });
+        }
+
         _context.SaveChanges();
 
         return investment.id;
@@ -264,12 +293,25 @@ public class InvestmentsController : AuthenticatedController
         CancellationToken cancellationToken
     )
     {
+        var now = DateTime.UtcNow;
+        var plan = SubscriptionFeatureAccess.GetEffectivePlan(_context, _user.id);
+        var aiUsageCount = SubscriptionFeatureAccess.GetAiUsageCountInMonth(
+            _context,
+            _user.id,
+            SubscriptionFeatureAccess.InvestmentDocumentExtractionFeature,
+            now);
+
+        if (aiUsageCount >= plan.ai_monthly_limit)
+            throw new ExpectedException(
+                $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por IA por mês. Faça upgrade para continuar usando este recurso.",
+                System.Net.HttpStatusCode.Forbidden);
+
         var banks = _context.banks
             .AsNoTracking()
             .Where(bank => bank.Active)
             .ToList();
 
-        return await extractor.ExtractAsync(request.file, banks);
+        return await extractor.ExtractAsync(request.file, banks, cancellationToken);
     }
 
 

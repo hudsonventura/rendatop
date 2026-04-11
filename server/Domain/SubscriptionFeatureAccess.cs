@@ -5,6 +5,7 @@ namespace server.Domain;
 public static class SubscriptionFeatureAccess
 {
     public const int FreeMoneyBoxesLimit = 3;
+    public const string InvestmentDocumentExtractionFeature = "investment_document_extraction";
 
     public static Plan? GetActivePlan(Context context, Guid userId)
     {
@@ -40,5 +41,24 @@ public static class SubscriptionFeatureAccess
             return true;
 
         return existingCount <= FreeMoneyBoxesLimit;
+    }
+
+    public static int GetAiMonthlyLimit(Context context, Guid userId) =>
+        GetEffectivePlan(context, userId).ai_monthly_limit;
+
+    public static int GetAiUsageCountInMonth(
+        Context context,
+        Guid userId,
+        string feature,
+        DateTime referenceUtc)
+    {
+        var monthStart = new DateTime(referenceUtc.Year, referenceUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var nextMonthStart = monthStart.AddMonths(1);
+
+        return context.ai_usages.Count(item =>
+            item.user_id == userId &&
+            item.feature == feature &&
+            item.created_at >= monthStart &&
+            item.created_at < nextMonthStart);
     }
 }

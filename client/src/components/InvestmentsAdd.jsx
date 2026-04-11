@@ -437,9 +437,33 @@ function parseApiDate(value) {
 	return Number.isNaN(normalized.getTime()) ? undefined : normalized
 }
 
+function extractErrorMessage(error, fallbackMessage) {
+	const candidates = [
+		error?.response?.data?.message,
+		error?.response?.data?.Message,
+		error?.response?.data?.error,
+		error?.message,
+	]
+
+	for (const candidate of candidates) {
+		if (typeof candidate === "string" && candidate.trim()) {
+			return candidate.trim()
+		}
+	}
+
+	return fallbackMessage
+}
+
 const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValues }) => {
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [isExtracting, setIsExtracting] = useState(false);
+	const [hasAiExtraction, setHasAiExtraction] = useState(false);
+	const [aiDocumentExtractionAccess, setAiDocumentExtractionAccess] = useState({
+		enabled: true,
+		current_usage: 0,
+		monthly_limit: 0,
+		restriction_message: null,
+	});
 	const fileInputRef = useRef(null);
 	const autoDetectedInvestmentTypeRef = useRef(detectInvestmentTypeFromTitle(initialValues?.title ?? "") ?? INVESTMENT_TYPE_NONE);
 	const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
@@ -485,6 +509,30 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			});
 	}, [isOpen]);
 
+	useEffect(() => {
+		if (!isOpen) return;
+
+		axiosInstance
+			.get("/User/Settings")
+			.then((response) => {
+				const data = response?.data || {};
+				setAiDocumentExtractionAccess({
+					enabled: data.ai_document_extraction_enabled !== false,
+					current_usage: Number(data.ai_document_extraction_current_usage ?? 0),
+					monthly_limit: Number(data.ai_document_extraction_monthly_limit ?? 0),
+					restriction_message: data.ai_document_extraction_restriction_message ?? null,
+				});
+			})
+			.catch(() => {
+				setAiDocumentExtractionAccess({
+					enabled: true,
+					current_usage: 0,
+					monthly_limit: 0,
+					restriction_message: null,
+				});
+			});
+	}, [isOpen]);
+
 
 	const form = useForm({
 		resolver: zodResolver(formSchema),
@@ -521,6 +569,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			index_percent: initialValues?.index_percent ?? "",
 		});
 		setLiquidezDiaria(initialValues?.liquidez_diaria ?? false);
+		setHasAiExtraction(false);
 	}, [form, initialValues, isOpen]);
 
 	const syncInvestmentTypeWithTitle = (nextTitle) => {
@@ -549,6 +598,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			money_box_id: values.money_box_id ?? null,
 			index: Number(values.index),
 			index_percent: Number(values.index_percent),
+			ai_extracted: hasAiExtraction,
 		}
 
 		axiosInstance
@@ -576,13 +626,16 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 					index_percent: "",
 				});
 				setLiquidezDiaria(false);
+				setHasAiExtraction(false);
 				setReload(Math.floor(Math.random() * 10000) + 1);
 			})
 			.catch((err) => {
-				//setError(err.message);
-				//setLoading(false);
-			}
-			);
+				toast({
+					title: "Falha ao salvar investimento",
+					description: extractErrorMessage(err, "Não foi possível salvar o investimento."),
+					variant: "destructive",
+				});
+			});
 	}
 
 	const applyExtractedValues = (data) => {
@@ -637,12 +690,13 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			});
 
 			applyExtractedValues(response.data ?? {});
+			setHasAiExtraction(true);
 			toast({
 				title: "Campos preenchidos",
 				description: response.data?.notes ?? "A IA preencheu os campos encontrados no documento.",
 			});
 		} catch (error) {
-			const message = error?.response?.data?.message ?? "Não foi possível extrair os dados do arquivo.";
+			const message = extractErrorMessage(error, "Não foi possível extrair os dados do arquivo.");
 			toast({
 				title: "Falha ao ler documento",
 				description: message,
@@ -707,6 +761,16 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 									<p className="text-xs text-muted-foreground">
 										Não armazenamos os arquivos enviados em nosso servidores. Após a adição do seu investimento, o arquivo é deletado imediatamente.
 									</p>
+									<p className="text-xs text-muted-foreground">
+										{aiDocumentExtractionAccess.monthly_limit > 0
+											? `${aiDocumentExtractionAccess.current_usage}/${aiDocumentExtractionAccess.monthly_limit} leituras por IA usadas neste mês.`
+											: "Seu plano define um limite mensal de leituras por IA."}
+									</p>
+									{aiDocumentExtractionAccess.restriction_message && (
+										<p className="text-xs text-destructive">
+											{aiDocumentExtractionAccess.restriction_message}
+										</p>
+									)}
 								</div>
 								<div className="flex items-center gap-2">
 									<input
@@ -720,7 +784,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 										type="button"
 										variant="outline"
 										onClick={() => fileInputRef.current?.click()}
-										disabled={isExtracting}
+										disabled={isExtracting || !aiDocumentExtractionAccess.enabled}
 									>
 										{isExtracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
 										{isExtracting ? "Lendo arquivo..." : "Processar com IA"}

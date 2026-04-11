@@ -32,6 +32,9 @@ public class Context : DbContext
 
         modelBuilder.Entity<LandingVisit>()
             .HasIndex(x => x.created_at);
+
+        modelBuilder.Entity<AiUsage>()
+            .HasIndex(x => new { x.user_id, x.feature, x.created_at });
     }
 
     public override int SaveChanges()
@@ -81,6 +84,11 @@ public class Context : DbContext
     }
 
  
+    /// <summary>
+    /// Tabela de consumo de recursos de IA
+    /// </summary>
+    public DbSet<AiUsage> ai_usages { get; set; }
+
     /// <summary>
     /// Tabela de usuarios do sistema
     /// </summary>

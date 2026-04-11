@@ -136,6 +136,53 @@ public class InvestmentsControllerTests
     }
 
     [Fact]
+    public void Insert_BlocksAiAssistedSaveWhenMonthlyAiLimitIsReached()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        fixture.Context.ai_usages.AddRange(
+            new AiUsage
+            {
+                user_id = fixture.User.id,
+                user = fixture.User,
+                feature = SubscriptionFeatureAccess.InvestmentDocumentExtractionFeature,
+                provider = "openai",
+                created_at = DateTime.UtcNow.AddDays(-1)
+            },
+            new AiUsage
+            {
+                user_id = fixture.User.id,
+                user = fixture.User,
+                feature = SubscriptionFeatureAccess.InvestmentDocumentExtractionFeature,
+                provider = "openai",
+                created_at = DateTime.UtcNow.AddDays(-2)
+            });
+        fixture.Context.SaveChanges();
+
+        var request = fixture.CreateInvestmentRequest();
+        request.ai_extracted = true;
+
+        var exception = Assert.Throws<ExpectedException>(() => fixture.Controller.Insert(request));
+
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, exception.StatusCode);
+    }
+
+    [Fact]
+    public void Insert_RecordsAiUsageAfterAiAssistedSave()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var request = fixture.CreateInvestmentRequest();
+        request.ai_extracted = true;
+
+        var investmentId = fixture.Controller.Insert(request);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        Assert.NotEqual(Guid.Empty, investmentId);
+        var usage = Assert.Single(assertionContext.ai_usages);
+        Assert.Equal(fixture.User.id, usage.user_id);
+        Assert.Equal(SubscriptionFeatureAccess.InvestmentDocumentExtractionFeature, usage.feature);
+    }
+
+    [Fact]
     public void Update_ChangesExistingInvestmentFields()
     {
         using var fixture = new InvestmentsControllerFixture();
@@ -273,6 +320,17 @@ public class InvestmentsControllerTests
         Assert.Equal("Somente investimentos vencidos podem ser arquivados.", exception.Message);
         using var assertionContext = fixture.CreateAssertionContext();
         Assert.False(assertionContext.investments.Single(i => i.id == investment.id).archived);
+    }
+
+    private static FormFile BuildFormFile(string fileName, string contentType, string content)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var stream = new MemoryStream(bytes);
+        return new FormFile(stream, 0, bytes.Length, "file", fileName)
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = contentType
+        };
     }
 
     private sealed class InvestmentsControllerFixture : IDisposable
@@ -415,5 +473,22 @@ public class InvestmentsControllerTests
     private sealed class FakeNotification : INotification
     {
         public Task Notify(string title, string message, string? chatId = null) => Task.CompletedTask;
+    }
+
+    private sealed class FakeInvestmentDocumentExtractor : IInvestmentDocumentExtractor
+    {
+        public int Calls { get; private set; }
+
+        public Task<InvestmentDocumentExtractionResult> ExtractAsync(
+            IFormFile file,
+            IReadOnlyCollection<Bank> banks,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            return Task.FromResult(new InvestmentDocumentExtractionResult
+            {
+                title = "Extraido"
+            });
+        }
     }
 }

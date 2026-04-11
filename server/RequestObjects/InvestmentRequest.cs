@@ -82,4 +82,10 @@ public class InvestmentRequest
     /// </summary>
     public bool archived { get; set; } = false;
 
+    /// <summary>
+    /// Indica se o preenchimento inicial deste investimento usou a extração por IA.
+    /// Campo transitório para contabilização de uso no momento do salvamento.
+    /// </summary>
+    public bool ai_extracted { get; set; } = false;
+
 }
