@@ -64,6 +64,8 @@ import axiosInstance from "@/utils/axiosConfig"
 const formatCurrency = (val) =>
     val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+const VALUE_LIQUID_CURRENT_HINT = "Valor líquido atual, já descontados os impostos, considerando o resgate hoje. Não reflete o valor no vencimento para investimentos sem liquidez diária."
+
 function parseDateValue(dateValue) {
     if (!dateValue) return null
 
@@ -793,14 +795,37 @@ function getColumns(onView, onEdit, onRedeem, onReinvest, onArchive, onDelete) {
         },
         {
             id: "value_liq",
-            header: "Valor líquido",
-            cell: ({ row }) => (
-                <span className="text-green-600 dark:text-green-400 whitespace-nowrap">
-                    R$ {formatCurrency(getTableCalculated(row.original)?.value_liq ?? 0)}
-                </span>
+            accessorFn: (row) => getTableCalculated(row)?.value_liq ?? 0,
+            sortDescFirst: false,
+            header: ({ column }) => (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            className="cursor-pointer -ml-3 h-auto py-1 text-left whitespace-normal"
+                            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                        >
+                            Valor líquido
+                            <ArrowUpDown className="ml-1 h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                        {VALUE_LIQUID_CURRENT_HINT}
+                    </TooltipContent>
+                </Tooltip>
             ),
-            sortingFn: (rowA, rowB) =>
-                (getTableCalculated(rowA.original)?.value_liq ?? 0) - (getTableCalculated(rowB.original)?.value_liq ?? 0),
+            cell: ({ row }) => (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span className="text-green-600 dark:text-green-400 whitespace-nowrap cursor-help">
+                            R$ {formatCurrency(getTableCalculated(row.original)?.value_liq ?? 0)}
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                        {VALUE_LIQUID_CURRENT_HINT}
+                    </TooltipContent>
+                </Tooltip>
+            ),
         },
         {
             id: "due_date",
