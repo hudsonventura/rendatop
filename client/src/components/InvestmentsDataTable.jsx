@@ -21,7 +21,6 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
-    TrendingUp,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -47,6 +46,7 @@ import {
     Table,
     TableBody,
     TableCell,
+    TableFooter,
     TableHead,
     TableHeader,
     TableRow,
@@ -58,34 +58,82 @@ import RedemptionEdit from "@/components/RedemptionEdit"
 import IrBadge from "@/components/IrBadge"
 import IofBadge from "@/components/IofBadge"
 import axiosInstance from "@/utils/axiosConfig"
-import { getIrBadgeClass } from "@/utils/ir-level"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const formatCurrency = (val) =>
     val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-const formatDate = (dateStr) =>
-    new Date(dateStr).toLocaleDateString("pt-BR")
+const VALUE_LIQUID_CURRENT_HINT = "Valor líquido atual, já descontados os impostos, considerando o resgate hoje. Não reflete o valor no vencimento para investimentos sem liquidez diária."
+const OVERDUE_INVESTMENT_HINT = "Este investimento passou da data de vencimento e provavelmente foi resgatado automaticamente pelo banco. Informe o reinvestimento, o resgate total ou arquive este item."
+
+function parseDateValue(dateValue) {
+    if (!dateValue) return null
+
+    if (dateValue instanceof Date) {
+        return Number.isNaN(dateValue.getTime())
+            ? null
+            : new Date(dateValue.getFullYear(), dateValue.getMonth(), dateValue.getDate())
+    }
+
+    const match = String(dateValue).match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (match) {
+        const [, year, month, day] = match
+        return new Date(Number(year), Number(month) - 1, Number(day))
+    }
+
+    const parsed = new Date(dateValue)
+    if (Number.isNaN(parsed.getTime())) return null
+
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+}
+
+const formatDate = (dateValue) => {
+    const parsed = parseDateValue(dateValue)
+    return parsed ? parsed.toLocaleDateString("pt-BR") : "-"
+}
+
+const getDateSortValue = (dateValue) => parseDateValue(dateValue)?.getTime()
+
+function getTodayStart() {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return today
+}
 
 const isDueDateTodayOrPast = (dateStr) => {
     if (!dateStr) return false
-    const due = new Date(dateStr)
-    due.setHours(0, 0, 0, 0)
+    const due = parseDateValue(dateStr)
+    if (!due) return false
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const today = getTodayStart()
     return due <= today
+}
+
+const isDueDatePast = (dateStr) => {
+    if (!dateStr) return false
+    const due = parseDateValue(dateStr)
+    if (!due) return false
+
+    return due < getTodayStart()
+}
+
+function getDueDateSortValue(dateValue) {
+    const todayTimestamp = getTodayStart().getTime()
+    const dueTimestamp = getDateSortValue(dateValue)
+
+    if (dueTimestamp == null) return todayTimestamp
+    if (dueTimestamp <= todayTimestamp) return dueTimestamp - 1
+    return dueTimestamp
 }
 
 const canShowReinvest = (dateStr) => {
     if (!dateStr) return false
 
-    const due = new Date(dateStr)
-    due.setHours(0, 0, 0, 0)
+    const due = parseDateValue(dateStr)
+    if (!due) return false
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const today = getTodayStart()
 
     return due <= today
 }
@@ -115,6 +163,28 @@ function getTableCalculated(investment, index = 0) {
 
 function getTableValue(investment) {
     return investment.table_value ?? investment.value
+}
+
+function sumInvestments(investments) {
+    return investments.reduce((totals, investment) => {
+        const calc = getTableCalculated(investment)
+
+        return {
+            value: totals.value + (getTableValue(investment) ?? 0),
+            redeemed_value: totals.redeemed_value + getRedeemedValue(investment),
+            ir: totals.ir + (calc?.IR_value ?? 0),
+            iof: totals.iof + (calc?.IOF_value ?? 0),
+            profit_liq: totals.profit_liq + (calc?.profit_liq ?? 0),
+            value_liq: totals.value_liq + (calc?.value_liq ?? 0),
+        }
+    }, {
+        value: 0,
+        redeemed_value: 0,
+        ir: 0,
+        iof: 0,
+        profit_liq: 0,
+        value_liq: 0,
+    })
 }
 
 function getRedemptionComposition(investment, redemption) {
@@ -587,7 +657,7 @@ function ActionsCell({ investment, onView, onEdit, onRedeem, onReinvest, onArchi
 
 // ── Column definitions ────────────────────────────────────────────────────────
 
-function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onArchive, onDelete) {
+function getColumns(onView, onEdit, onRedeem, onReinvest, onArchive, onDelete) {
     return [
         {
             accessorKey: "title",
@@ -656,6 +726,7 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onArchive, 
         },
         {
             id: "date_buy",
+            accessorFn: (row) => getDateSortValue(row.date_buy) ?? 0,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -671,8 +742,6 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onArchive, 
                     {formatDate(row.original.date_buy)}
                 </span>
             ),
-            sortingFn: (rowA, rowB) =>
-                new Date(rowA.original.date_buy).getTime() - new Date(rowB.original.date_buy).getTime(),
         },
         {
             id: "redeemed_value",
@@ -729,8 +798,6 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onArchive, 
             header: "Lucro líquido",
             cell: ({ row }) => {
                 const profit = getTableCalculated(row.original)?.profit_liq ?? 0
-                const invested = getTableValue(row.original)
-                const pct = invested > 0 ? (profit / invested * 100) : 0
                 return (
                     <div className="flex items-center gap-1.5 whitespace-nowrap">
                         <span className="text-green-600 dark:text-green-400">
@@ -750,17 +817,41 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onArchive, 
         },
         {
             id: "value_liq",
-            header: "Valor líquido",
-            cell: ({ row }) => (
-                <span className="text-green-600 dark:text-green-400 whitespace-nowrap">
-                    R$ {formatCurrency(getTableCalculated(row.original)?.value_liq ?? 0)}
-                </span>
+            accessorFn: (row) => getTableCalculated(row)?.value_liq ?? 0,
+            sortDescFirst: false,
+            header: ({ column }) => (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            className="cursor-pointer -ml-3 h-auto py-1 text-left whitespace-normal"
+                            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                        >
+                            Valor líquido
+                            <ArrowUpDown className="ml-1 h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                        {VALUE_LIQUID_CURRENT_HINT}
+                    </TooltipContent>
+                </Tooltip>
             ),
-            sortingFn: (rowA, rowB) =>
-                (getTableCalculated(rowA.original)?.value_liq ?? 0) - (getTableCalculated(rowB.original)?.value_liq ?? 0),
+            cell: ({ row }) => (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span className="text-green-600 dark:text-green-400 whitespace-nowrap cursor-help">
+                            R$ {formatCurrency(getTableCalculated(row.original)?.value_liq ?? 0)}
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                        {VALUE_LIQUID_CURRENT_HINT}
+                    </TooltipContent>
+                </Tooltip>
+            ),
         },
         {
             id: "due_date",
+            accessorFn: (row) => getDueDateSortValue(row.due_date),
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -773,21 +864,31 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onArchive, 
             ),
             cell: ({ row }) =>
                 row.original.due_date ? (
-                    <span
-                        className={`whitespace-nowrap ${isDueDateTodayOrPast(row.original.due_date) ? "text-red-600 dark:text-red-400 font-medium" : ""}`}
-                    >
-                        {formatDate(row.original.due_date)}
-                    </span>
+                    isDueDatePast(row.original.due_date) ? (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span
+                                    className="whitespace-nowrap cursor-help font-medium text-red-600 dark:text-red-400"
+                                >
+                                    {formatDate(row.original.due_date)}
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                                {OVERDUE_INVESTMENT_HINT}
+                            </TooltipContent>
+                        </Tooltip>
+                    ) : (
+                        <span
+                            className={`whitespace-nowrap ${isDueDateTodayOrPast(row.original.due_date) ? "text-red-600 dark:text-red-400 font-medium" : ""}`}
+                        >
+                            {formatDate(row.original.due_date)}
+                        </span>
+                    )
                 ) : (
                     <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
                         Liquidez diária
                     </Badge>
                 ),
-            sortingFn: (rowA, rowB) => {
-                const a = rowA.original.due_date ? new Date(rowA.original.due_date).getTime() : 0
-                const b = rowB.original.due_date ? new Date(rowB.original.due_date).getTime() : 0
-                return a - b
-            },
         },
         {
             id: "actions",
@@ -811,8 +912,8 @@ function getColumns(setReload, onView, onEdit, onRedeem, onReinvest, onArchive, 
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function InvestmentsDataTable({ investments, setReload, onReinvest }) {
-    const [sorting, setSorting] = useState([])
-    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
+    const [sorting, setSorting] = useState([{ id: "due_date", desc: false }])
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
 
     // Shared dialog state (for double-click + actions menu)
     const [selectedInvestment, setSelectedInvestment] = useState(null)
@@ -833,6 +934,10 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
     const openDeleteRedemption = (redemption) => { setSelectedRedemption(redemption); setDeleteRedemptionOpen(true) }
     const openDelete = (inv) => { setSelectedInvestment(inv); setDeleteOpen(true) }
     const openArchive = (inv) => { setSelectedInvestment(inv); setArchiveOpen(true) }
+
+    React.useEffect(() => {
+        setPagination((current) => ({ ...current, pageIndex: 0 }))
+    }, [investments])
 
     const handleDelete = () => {
         if (!selectedInvestment) return
@@ -876,10 +981,9 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
             .catch((err) => console.error("Erro ao excluir resgate:", err))
     }
 
-    const columns = React.useMemo(
-        () => getColumns(setReload, openView, openEdit, openRedeem, handleReinvest, openArchive, openDelete),
-        [setReload, onReinvest]
-    )
+    const columns = getColumns(openView, openEdit, openRedeem, handleReinvest, openArchive, openDelete)
+
+    const totals = React.useMemo(() => sumInvestments(investments), [investments])
 
     const table = useReactTable({
         data: investments,
@@ -960,11 +1064,35 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
                             </TableRow>
                         )}
                     </TableBody>
+                    {investments.length > 0 && (
+                        <TableFooter>
+                            <TableRow className="hover:bg-transparent">
+                                <TableCell className="font-semibold">Totais</TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {investments.length} investimento(s)
+                                </TableCell>
+                                <TableCell />
+                                <TableCell>R$ {formatCurrency(totals.value)}</TableCell>
+                                <TableCell />
+                                <TableCell>R$ {formatCurrency(totals.redeemed_value)}</TableCell>
+                                <TableCell>R$ {formatCurrency(totals.ir)}</TableCell>
+                                <TableCell>R$ {formatCurrency(totals.iof)}</TableCell>
+                                <TableCell className="text-green-600 dark:text-green-400">
+                                    R$ {formatCurrency(totals.profit_liq)}
+                                </TableCell>
+                                <TableCell className="text-green-600 dark:text-green-400">
+                                    R$ {formatCurrency(totals.value_liq)}
+                                </TableCell>
+                                <TableCell />
+                                <TableCell />
+                            </TableRow>
+                        </TableFooter>
+                    )}
                 </Table>
             </div>
 
             {/* Pagination */}
-            {investments.length > 10 && (
+            {table.getPageCount() > 1 && (
                 <div className="flex items-center justify-between px-2">
                     <div className="text-muted-foreground text-sm hidden lg:block">
                         {investments.length} investimento(s)
@@ -974,11 +1102,11 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
                             <Label htmlFor="rows-per-page" className="text-sm font-medium">
                                 Linhas por página
                             </Label>
-                            <Select
-                                value={`${table.getState().pagination.pageSize}`}
-                                onValueChange={(value) => table.setPageSize(Number(value))}
-                            >
-                                <SelectTrigger size="sm" className="w-20 cursor-pointer" id="rows-per-page">
+                                <Select
+                                    value={`${table.getState().pagination.pageSize}`}
+                                    onValueChange={(value) => table.setPageSize(Number(value))}
+                                >
+                                    <SelectTrigger size="sm" className="w-20 cursor-pointer" id="rows-per-page">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent side="top">

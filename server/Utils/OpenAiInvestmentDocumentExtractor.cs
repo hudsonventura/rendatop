@@ -123,6 +123,7 @@ public class OpenAiInvestmentDocumentExtractor : IInvestmentDocumentExtractor
             properties = new
             {
                 title = new { type = new[] { "string", "null" } },
+                investment_type = new { type = new[] { "integer", "null" }, @enum = new int?[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, null } },
                 bank_code = new { type = new[] { "integer", "null" } },
                 bank_name = new { type = new[] { "string", "null" } },
                 date_buy = new { type = new[] { "string", "null" }, description = "Data de compra no formato YYYY-MM-DD." },
@@ -136,7 +137,7 @@ public class OpenAiInvestmentDocumentExtractor : IInvestmentDocumentExtractor
             },
             required = new[]
             {
-                "title", "bank_code", "bank_name", "date_buy", "due_date", "value",
+                "title", "investment_type", "bank_code", "bank_name", "date_buy", "due_date", "value",
                 "index", "index_percent", "taxes", "liquidez_diaria", "notes"
             }
         };
@@ -187,8 +188,13 @@ Retorne somente os campos do schema solicitado.
 Regras:
 - Preencha apenas quando o documento trouxer a informação com boa confiança.
 - Use null quando estiver ausente, ilegível ou ambígua.
-- `index`: 0 para CDI, 1 para IPCA+, 2 para percentual ao ano (% a.a.), 3 para CDI + spread (% a.a.).
+- `investment_type`: 0=CDB, 1=LCI, 2=LCA, 3=RCI, 4=RCA, 5=Tesouro, 6=Debentures, 7=TitulosPublicos, 8=CRI, 9=CRA, 10=RDB.
+- `index`: 0 para percentual do CDI (ex.: 110% do CDI), 1 para IPCA+ (ex.: IPCA + 7,25%), 2 para percentual ao ano fixo (% a.a., prefixado), 3 para CDI + spread (% a.a.) (ex.: CDI + 2,00% a.a.).
 - `index_percent`: use somente o percentual principal do indexador. Exemplos: 110% do CDI => 110; IPCA+7,25% => 7.25; 13,40% a.a. => 13.40; CDI+2,00% a.a. => 2.00.
+- Diferencie com cuidado `110% do CDI` de `CDI + 2,00% a.a.`: o primeiro é `index` 0 e o segundo é `index` 3.
+- Interprete números no padrão brasileiro quando isso aparecer no documento: vírgula como separador decimal e ponto como separador de milhar. Exemplos: `1.234,56` => 1234.56; `13,40%` => 13.40; `100.000,00` => 100000.00.
+- Podem aparecem alguns valores. Tenha certeza de extrair o valor investido/aplicado no recibo ou comprovante.
+- Para `value`, priorize o valor efetivamente investido/aplicado no recibo ou comprovante, e normalize para número decimal no JSON.
 - `taxes`: false para investimentos isentos como LCI, LCA, CRI, CRA, debênture incentivada; true para CDB, RDB e casos tributáveis; null se não der para inferir.
 - `liquidez_diaria`: true apenas se o documento indicar liquidez diária/resgate diário; false se indicar vencimento fixo sem liquidez diária; null se não der para inferir.
 - `title`: gere um título curto e útil quando houver dados suficientes, como produto + banco.
@@ -210,6 +216,9 @@ Regras:
 Extraia os campos do investimento a partir do documento enviado.
 Lista de bancos cadastrados para mapear `bank_code`: {bankOptions}
 Se houver conflito entre múltiplos investimentos no mesmo arquivo, priorize o investimento principal/mais destacado.
+Identifique também o `investment_type` quando o documento mencionar claramente CDB, LCI, LCA, RCI, RCA, Tesouro, Debêntures, Títulos Públicos, CRI, CRA ou RDB.
+Ao identificar o indexador, diferencie percentual do CDI (ex.: 110% do CDI) de CDI + spread anual (ex.: CDI + 2,00% a.a.).
+Considere que recibos brasileiros costumam usar vírgula como separador decimal em valores e percentuais.
 """;
     }
 

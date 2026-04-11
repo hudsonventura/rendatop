@@ -6,6 +6,8 @@ namespace server.Utils;
 
 public static class SubscriptionCancellationEmailTemplate
 {
+    private static readonly TimeZoneInfo BrasiliaTimeZone = ResolveBrasiliaTimeZone();
+
     public static string Build(
         User user,
         Subscription subscription,
@@ -36,7 +38,7 @@ public static class SubscriptionCancellationEmailTemplate
             ? $"R$ {result.refunded_amount.Value:N2}"
             : "Sem estorno";
         var refundGuidance = result.refunded_amount.HasValue && result.refunded_amount.Value > 0
-            ? $"O estorno proporcional de R$ {result.refunded_amount.Value:N2} foi solicitado. O prazo de visualizacao depende da operadora do cartao, banco ou instituicao financeira responsavel pelo pagamento original. Se o pgamento foi feito via cartão de crédito, pode levar até cinco dias úteis."
+            ? $"O estorno proporcional de R$ {result.refunded_amount.Value:N2} foi solicitado. O prazo de visualizacao depende da operadora do cartao, banco ou instituicao financeira responsavel pelo pagamento original. Se o pgamento foi feito via cartão de crédito, pode levar até cinco dias úteis. Se o pagamento foi feito via PIX, em geral o estorno é instantâneo. Cheque o extrato da conta do seu banco ou histórico do cartão de credito onde o pagamento foi feito."
             : result.scheduled
                 ? "Nao havera estorno imediato. O acesso segue ativo atá o fim do periodo vigente informado abaixo."
                 : "Nao havia saldo proporcional disponivel para estorno no momento do cancelamento.";
@@ -91,7 +93,7 @@ public static class SubscriptionCancellationEmailTemplate
                                         </tr>
                                         <tr>
                                           <td style="padding:8px 0; font-size:13px; color:#64748b;">Solicitado em</td>
-                                          <td align="right" style="padding:8px 0; font-size:14px; color:#111827;">{HtmlEncode(requestedAt)}</td>
+                                          <td align="right" style="padding:8px 0; font-size:14px; color:#111827;">{HtmlEncode(requestedAt)} (Brasília)</td>
                                         </tr>
                                         <tr>
                                           <td style="padding:8px 0; font-size:13px; color:#64748b;">Efetivado em</td>
@@ -137,7 +139,8 @@ public static class SubscriptionCancellationEmailTemplate
 
     private static string FormatLocalDateTime(DateTime value)
     {
-        return value.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+        var brasiliaTime = TimeZoneInfo.ConvertTimeFromUtc(UtcDateTime.EnsureUtc(value), BrasiliaTimeZone);
+        return $"{brasiliaTime:dd/MM/yyyy HH:mm}";
     }
 
     private static string GetPaymentMethodLabel(string paymentMethod)
@@ -164,5 +167,30 @@ public static class SubscriptionCancellationEmailTemplate
             return null;
 
         return new Uri(baseUri, relativePath.TrimStart('/')).ToString();
+    }
+
+    private static TimeZoneInfo ResolveBrasiliaTimeZone()
+    {
+        string[] timeZoneIds =
+        [
+            "America/Sao_Paulo",
+            "E. South America Standard Time"
+        ];
+
+        foreach (var timeZoneId in timeZoneIds)
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+        }
+
+        return TimeZoneInfo.Utc;
     }
 }

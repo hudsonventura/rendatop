@@ -5,6 +5,7 @@ namespace server.Utils;
 public class InvestmentDocumentExtractionResult
 {
     public string? title { get; set; }
+    public int? investment_type { get; set; }
     public int? bank_code { get; set; }
     public string? bank_name { get; set; }
     public DateTime? date_buy { get; set; }

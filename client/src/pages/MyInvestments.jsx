@@ -16,6 +16,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getInvestmentTypeLabel } from "@/utils/investment-types";
 import { ALL_MONEY_BOXES, MONEY_BOX_UNCATEGORIZED } from "@/utils/money-boxes";
 
+function parseDateValue(dateValue) {
+    if (!dateValue) return null;
+
+    const match = String(dateValue).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        const [, year, month, day] = match;
+        return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+
+    const parsed = new Date(dateValue);
+    return Number.isNaN(parsed.getTime())
+        ? null
+        : new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
 function InvestmentsTableSkeleton() {
     return (
         <div className="space-y-4">
@@ -46,17 +61,19 @@ const MyInvestments = () => {
     const ALL_TYPES = "__all_types__";
     const UNCATEGORIZED_TYPE = "__uncategorized__";
     const ALL_INDEXES = "__all_indexes__";
+    const ALL_REDEMPTION_STATUSES = "__all_redemption_statuses__";
     const [investments, setInvestments] = useState([]);
     const [loadingInvestments, setLoadingInvestments] = useState(true);
     const [reload, setReload] = useState(0);
     const [reinvestOpen, setReinvestOpen] = useState(false);
     const [reinvestInitialValues, setReinvestInitialValues] = useState(null);
     const [showArchived, setShowArchived] = useState(false);
-    const [activeTab, setActiveTab] = useState("available");
+    const [activeTab, setActiveTab] = useState("portfolio");
     const [selectedBank, setSelectedBank] = useState(ALL_BANKS);
     const [selectedType, setSelectedType] = useState(ALL_TYPES);
     const [selectedIndex, setSelectedIndex] = useState(ALL_INDEXES);
     const [selectedMoneyBox, setSelectedMoneyBox] = useState(ALL_MONEY_BOXES);
+    const [selectedRedemptionStatus, setSelectedRedemptionStatus] = useState(ALL_REDEMPTION_STATUSES);
 
     useEffect(() => {
         let cancelled = false;
@@ -88,40 +105,33 @@ const MyInvestments = () => {
         setReinvestOpen(true);
     };
 
-    const { available, locked } = useMemo(() => {
+    const investmentsWithAvailability = useMemo(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const available = [];
-        const locked = [];
+        return investments
+            .filter((investment) => showArchived || !investment.archived)
+            .map((investment) => {
+                if (!investment.due_date) {
+                    return {
+                        ...investment,
+                        redemption_status: "available",
+                    };
+                }
 
-        for (const inv of investments) {
-            if (!showArchived && inv.archived) {
-                continue;
-            }
+                const due = parseDateValue(investment.due_date);
 
-            if (!inv.due_date) {
-                available.push(inv);
-                continue;
-            }
-
-            const due = new Date(inv.due_date);
-            due.setHours(0, 0, 0, 0);
-
-            if (due <= today) {
-                available.push(inv);
-            } else {
-                locked.push(inv);
-            }
-        }
-
-        return { available, locked };
+                return {
+                    ...investment,
+                    redemption_status: due && due <= today ? "available" : "locked",
+                };
+            });
     }, [investments, showArchived]);
 
     const bankOptions = useMemo(() => {
         const map = new Map();
 
-        for (const investment of investments) {
+        for (const investment of investmentsWithAvailability) {
             const bankName = investment?.bank?.name;
             if (!bankName) continue;
 
@@ -135,11 +145,11 @@ const MyInvestments = () => {
         }
 
         return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
-    }, [investments]);
+    }, [investmentsWithAvailability]);
 
     const typeOptions = useMemo(() => {
         const uniqueTypes = Array.from(new Set(
-            investments
+            investmentsWithAvailability
                 .map((investment) => investment?.investment_type)
                 .filter(Boolean)
         ));
@@ -153,11 +163,11 @@ const MyInvestments = () => {
             }))
             .sort((a, b) => a.label.localeCompare(b.label)),
         ];
-    }, [investments]);
+    }, [investmentsWithAvailability]);
 
     const indexOptions = useMemo(() => {
         const uniqueIndexes = Array.from(new Set(
-            investments
+            investmentsWithAvailability
                 .map((investment) => investment?.index)
                 .filter(Boolean)
         ));
@@ -183,12 +193,12 @@ const MyInvestments = () => {
                 label: getIndexLabel(index),
             }))
             .sort((a, b) => a.label.localeCompare(b.label));
-    }, [investments]);
+    }, [investmentsWithAvailability]);
 
     const moneyBoxOptions = useMemo(() => {
         const map = new Map();
 
-        for (const investment of investments) {
+        for (const investment of investmentsWithAvailability) {
             if (!investment?.money_box?.id || !investment?.money_box?.name) continue;
             map.set(investment.money_box.id, {
                 value: investment.money_box.id,
@@ -200,10 +210,10 @@ const MyInvestments = () => {
             { value: MONEY_BOX_UNCATEGORIZED, label: "Sem cofrinho" },
             ...Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label)),
         ];
-    }, [investments]);
+    }, [investmentsWithAvailability]);
 
-    const filteredAvailable = useMemo(
-        () => available.filter((investment) => {
+    const filteredInvestments = useMemo(
+        () => investmentsWithAvailability.filter((investment) => {
             const matchesBank = selectedBank === ALL_BANKS || investment?.bank?.name === selectedBank;
             const matchesType =
                 selectedType === ALL_TYPES ||
@@ -216,28 +226,20 @@ const MyInvestments = () => {
                 (selectedMoneyBox === MONEY_BOX_UNCATEGORIZED
                     ? !investment?.money_box?.id
                     : investment?.money_box?.id === selectedMoneyBox);
-            return matchesBank && matchesType && matchesIndex && matchesMoneyBox;
-        }),
-        [available, selectedBank, selectedType, selectedIndex, selectedMoneyBox]
-    );
+            const matchesRedemptionStatus =
+                selectedRedemptionStatus === ALL_REDEMPTION_STATUSES ||
+                investment.redemption_status === selectedRedemptionStatus;
 
-    const filteredLocked = useMemo(
-        () => locked.filter((investment) => {
-            const matchesBank = selectedBank === ALL_BANKS || investment?.bank?.name === selectedBank;
-            const matchesType =
-                selectedType === ALL_TYPES ||
-                (selectedType === UNCATEGORIZED_TYPE
-                    ? !investment?.investment_type
-                    : investment?.investment_type === selectedType);
-            const matchesIndex = selectedIndex === ALL_INDEXES || investment?.index === selectedIndex;
-            const matchesMoneyBox =
-                selectedMoneyBox === ALL_MONEY_BOXES ||
-                (selectedMoneyBox === MONEY_BOX_UNCATEGORIZED
-                    ? !investment?.money_box?.id
-                    : investment?.money_box?.id === selectedMoneyBox);
-            return matchesBank && matchesType && matchesIndex && matchesMoneyBox;
+            return matchesBank && matchesType && matchesIndex && matchesMoneyBox && matchesRedemptionStatus;
         }),
-        [locked, selectedBank, selectedType, selectedIndex, selectedMoneyBox]
+        [
+            investmentsWithAvailability,
+            selectedBank,
+            selectedType,
+            selectedIndex,
+            selectedMoneyBox,
+            selectedRedemptionStatus,
+        ]
     );
 
     return (
@@ -272,22 +274,13 @@ const MyInvestments = () => {
                     ) : (
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                                <TabsList>
+                                    <TabsList>
                                     <TabsTrigger
-                                        value="available"
-                                        className="cursor-pointer text-green-700 dark:text-green-400 data-[state=active]:bg-green-100 data-[state=active]:text-green-800 dark:data-[state=active]:bg-green-900/30 dark:data-[state=active]:text-green-300"
+                                        value="portfolio"
+                                        className="cursor-pointer"
                                     >
-                                        Disponíveis para resgate
-                                        <Badge
-                                            variant="outline"
-                                            className="ml-1.5 border-green-200 bg-green-100 text-green-800 dark:border-green-800 dark:bg-green-900/40 dark:text-green-300"
-                                        >
-                                            {filteredAvailable.length}
-                                        </Badge>
-                                    </TabsTrigger>
-                                    <TabsTrigger value="locked" className="cursor-pointer">
-                                        Bloqueados até o vencimento
-                                        <Badge variant="secondary" className="ml-1.5">{filteredLocked.length}</Badge>
+                                        Investimentos
+                                        <Badge variant="secondary" className="ml-1.5">{filteredInvestments.length}</Badge>
                                     </TabsTrigger>
                                     <TabsTrigger value="recurring" className="cursor-pointer">
                                         Recorrentes
@@ -350,13 +343,21 @@ const MyInvestments = () => {
                                             ))}
                                         </SelectContent>
                                     </Select>
+
+                                    <Select value={selectedRedemptionStatus} onValueChange={setSelectedRedemptionStatus}>
+                                        <SelectTrigger className="w-full sm:w-52">
+                                            <SelectValue placeholder="Filtrar por resgate" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL_REDEMPTION_STATUSES}>Todos os status</SelectItem>
+                                            <SelectItem value="available">Disponíveis para resgate</SelectItem>
+                                            <SelectItem value="locked">Bloqueados até o vencimento</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
-                            <TabsContent value="available">
-                                <InvestmentsDataTable investments={filteredAvailable} setReload={setReload} onReinvest={handleReinvest} />
-                            </TabsContent>
-                            <TabsContent value="locked">
-                                <InvestmentsDataTable investments={filteredLocked} setReload={setReload} onReinvest={handleReinvest} />
+                            <TabsContent value="portfolio">
+                                <InvestmentsDataTable investments={filteredInvestments} setReload={setReload} onReinvest={handleReinvest} />
                             </TabsContent>
                             <TabsContent value="recurring">
                                 <RecurringInvestmentsManager />
