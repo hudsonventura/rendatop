@@ -98,6 +98,45 @@ public class UserControllerTests
         Assert.Null(savedUser.telegram_chat_id);
     }
 
+    [Fact]
+    public void GetBrowserPushPublicKey_ReturnsConfiguredPublicKey()
+    {
+        using var fixture = new UserControllerFixture();
+
+        var result = fixture.Controller.GetBrowserPushPublicKey();
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<BrowserPushPublicKeyResponse>(okResult.Value);
+
+        Assert.True(response.enabled);
+        Assert.Equal("public-key", response.public_key);
+    }
+
+    [Fact]
+    public void SubscribeBrowserPush_PersistsSubscriptionAndEnablesBrowserNotifications()
+    {
+        using var fixture = new UserControllerFixture();
+
+        var result = fixture.Controller.SubscribeBrowserPush(new BrowserPushSubscriptionRequest(
+            "https://push.example.test/subscriptions/1",
+            "p256dh-key",
+            "auth-key",
+            "Test Browser"
+        ));
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<GenericMessageResponse>(okResult.Value);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var savedUser = assertionContext.users.Single(x => x.id == fixture.User.id);
+        var subscription = assertionContext.browser_push_subscriptions.Single(x => x.user_id == fixture.User.id);
+
+        Assert.True(savedUser.notify_browser);
+        Assert.Equal("https://push.example.test/subscriptions/1", subscription.endpoint);
+        Assert.Equal("p256dh-key", subscription.p256dh);
+        Assert.Equal("auth-key", subscription.auth);
+    }
+
     private sealed class UserControllerFixture : IDisposable
     {
         private readonly DbContextOptions<Context> _options;
@@ -137,7 +176,8 @@ public class UserControllerTests
                 new TestContextFactory(_options),
                 Notification,
                 new FakeWhatsAppNotification(),
-                new FakeEmailNotification());
+                new FakeEmailNotification(),
+                new FakeBrowserPushNotification());
         }
 
         public Context CreateAssertionContext() => new(_options);
@@ -182,5 +222,14 @@ public class UserControllerTests
     private sealed class FakeEmailNotification : IEmailNotification
     {
         public Task Notify(string destination, string title, string message, bool isHtml = false) => Task.CompletedTask;
+    }
+
+    private sealed class FakeBrowserPushNotification : IBrowserPushNotification
+    {
+        public bool IsConfigured => true;
+        public string PublicKey => "public-key";
+
+        public Task SendAsync(BrowserPushSubscription subscription, BrowserPushMessage message, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 }

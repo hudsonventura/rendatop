@@ -59,6 +59,12 @@ public class User
     public bool notify_email { get; set; } = false;
 
     /// <summary>
+    /// Preferência para receber notificações via navegador neste dispositivo.
+    /// A entrega efetiva depende de ao menos uma inscrição Web Push ativa.
+    /// </summary>
+    public bool notify_browser { get; set; } = false;
+
+    /// <summary>
     /// Habilita o compartilhamento público do calendário de vencimentos (.ics)
     /// </summary>
     public bool calendar_public_enabled { get; set; } = false;

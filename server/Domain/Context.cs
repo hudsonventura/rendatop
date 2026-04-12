@@ -35,6 +35,13 @@ public class Context : DbContext
 
         modelBuilder.Entity<AiUsage>()
             .HasIndex(x => new { x.user_id, x.feature, x.created_at });
+
+        modelBuilder.Entity<BrowserPushSubscription>()
+            .HasIndex(x => x.user_id);
+
+        modelBuilder.Entity<BrowserPushSubscription>()
+            .HasIndex(x => x.endpoint)
+            .IsUnique();
     }
 
     public override int SaveChanges()
@@ -88,6 +95,11 @@ public class Context : DbContext
     /// Tabela de consumo de recursos de IA
     /// </summary>
     public DbSet<AiUsage> ai_usages { get; set; }
+
+    /// <summary>
+    /// Tabela de inscrições Web Push para notificações no navegador
+    /// </summary>
+    public DbSet<BrowserPushSubscription> browser_push_subscriptions { get; set; }
 
     /// <summary>
     /// Tabela de usuarios do sistema

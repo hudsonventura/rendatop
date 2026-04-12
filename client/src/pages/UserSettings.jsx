@@ -11,6 +11,14 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2, MessageCircleMore, Sparkles } from "lucide-react"
+import {
+    getBrowserPushServerConfiguration,
+    getCurrentBrowserPushSubscription,
+    isBrowserPushSupported,
+    subscribeCurrentBrowserToPush,
+    syncCurrentBrowserPushSubscription,
+    unsubscribeCurrentBrowserFromPush,
+} from "@/utils/browserPush"
 import { formatCpf } from "@/utils/cpf"
 
 const frontendBaseUrl = (import.meta.env.VITE_FRONTEND_URL || "").replace(/\/+$/, "")
@@ -44,6 +52,7 @@ const UserSettings = () => {
     const [whatsAppError, setWhatsAppError] = useState("")
     const [telegramError, setTelegramError] = useState("")
     const [emailError, setEmailError] = useState("")
+    const [browserError, setBrowserError] = useState("")
 
     const [name, setName] = useState("")
     const [email, setEmail] = useState("")
@@ -55,10 +64,14 @@ const UserSettings = () => {
     const [notifyWhatsapp, setNotifyWhatsapp] = useState(false)
     const [notifyTelegram, setNotifyTelegram] = useState(true)
     const [notifyEmail, setNotifyEmail] = useState(true)
+    const [notifyBrowser, setNotifyBrowser] = useState(false)
     const [calendarPublicEnabled, setCalendarPublicEnabled] = useState(false)
     const [calendarPublicUrl, setCalendarPublicUrl] = useState("")
     const [whatsappNotificationsEnabled, setWhatsappNotificationsEnabled] = useState(false)
     const [calendarIcsEnabled, setCalendarIcsEnabled] = useState(false)
+    const [browserPushSupported, setBrowserPushSupported] = useState(false)
+    const [browserPushAvailable, setBrowserPushAvailable] = useState(false)
+    const [syncingBrowserPush, setSyncingBrowserPush] = useState(false)
     const [totpEnabled, setTotpEnabled] = useState(false)
     const [totpSecret, setTotpSecret] = useState("")
     const [totpUri, setTotpUri] = useState("")
@@ -68,6 +81,9 @@ const UserSettings = () => {
         : ""
 
     useEffect(() => {
+        const browserPushIsSupported = isBrowserPushSupported()
+        setBrowserPushSupported(browserPushIsSupported)
+
         axiosInstance
             .get("/User/Settings")
             .then((response) => {
@@ -85,6 +101,7 @@ const UserSettings = () => {
                 setNotifyWhatsapp(canUseWhatsAppNotifications && Boolean(data.notify_whatsapp))
                 setNotifyTelegram(Boolean(data.notify_telegram))
                 setNotifyEmail(Boolean(data.notify_email))
+                setNotifyBrowser(Boolean(data.notify_browser))
                 setCalendarPublicEnabled(canUseCalendarIcs && Boolean(data.calendar_public_enabled))
                 setCalendarPublicUrl(canUseCalendarIcs ? data.calendar_public_url || "" : "")
                 setTotpEnabled(Boolean(data.totp_enabled))
@@ -94,6 +111,33 @@ const UserSettings = () => {
             })
             .finally(() => {
                 setLoading(false)
+            })
+
+        if (!browserPushIsSupported) {
+            return
+        }
+
+        getBrowserPushServerConfiguration()
+            .then(async (data) => {
+                const enabled = Boolean(data?.enabled && data?.public_key)
+                setBrowserPushAvailable(enabled)
+
+                if (!enabled) {
+                    setNotifyBrowser(false)
+                    return
+                }
+
+                const subscription = await getCurrentBrowserPushSubscription()
+                if (!subscription) {
+                    setNotifyBrowser(false)
+                    return
+                }
+
+                setNotifyBrowser(true)
+                await syncCurrentBrowserPushSubscription()
+            })
+            .catch(() => {
+                setBrowserPushAvailable(false)
             })
     }, [])
 
@@ -106,6 +150,7 @@ const UserSettings = () => {
         setWhatsAppError("")
         setTelegramError("")
         setEmailError("")
+        setBrowserError("")
     }
 
     const setChannelAwareError = (message) => {
@@ -128,6 +173,12 @@ const UserSettings = () => {
 
         if (normalized.includes("email") || normalized.includes("e-mail")) {
             setEmailError(text)
+            setError("")
+            return
+        }
+
+        if (normalized.includes("navegador") || normalized.includes("browser")) {
+            setBrowserError(text)
             setError("")
             return
         }
@@ -156,6 +207,40 @@ const UserSettings = () => {
         setError("")
         setTelegramError("")
         setNotifyTelegram(checked)
+    }
+
+    const handleToggleBrowser = async (checked) => {
+        setError("")
+        setSuccess("")
+        setBrowserError("")
+        setSyncingBrowserPush(true)
+
+        try {
+            if (!browserPushSupported) {
+                throw new Error("Seu navegador não suporta notificações push.")
+            }
+
+            if (!browserPushAvailable) {
+                throw new Error("Notificações no navegador ainda não estão configuradas no servidor.")
+            }
+
+            if (checked) {
+                await subscribeCurrentBrowserToPush()
+                setNotifyBrowser(true)
+                setSuccess("Notificações do navegador habilitadas neste dispositivo.")
+            } else {
+                await unsubscribeCurrentBrowserFromPush()
+                setNotifyBrowser(false)
+                setSuccess("Notificações do navegador desabilitadas neste dispositivo.")
+            }
+        } catch (err) {
+            const message = err instanceof Error
+                ? err.message
+                : "Não foi possível atualizar as notificações do navegador."
+            setChannelAwareError(message)
+        } finally {
+            setSyncingBrowserPush(false)
+        }
     }
 
     const handleSubmit = (event) => {
@@ -601,6 +686,43 @@ const UserSettings = () => {
                                             >
                                                 {testingEmail ? "Enviando..." : "Test Email"}
                                             </Button>
+                                        </div>
+
+                                        <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+                                            <div>
+                                                <p className="text-sm font-medium">Navegador</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {browserPushSupported
+                                                        ? browserPushAvailable
+                                                            ? "Receber notificações neste navegador, mesmo com o site fechado."
+                                                            : "O servidor ainda não foi configurado para Web Push."
+                                                        : "Seu navegador atual não suporta notificações push."}
+                                                </p>
+                                                {browserError && (
+                                                    <Alert variant="destructive" className="mt-3">
+                                                        <AlertCircle className="h-4 w-4" />
+                                                        <AlertTitle>Navegador</AlertTitle>
+                                                        <AlertDescription>{browserError}</AlertDescription>
+                                                    </Alert>
+                                                )}
+                                                <p className="mt-3 text-xs text-muted-foreground">
+                                                    Ao ativar, o navegador solicitará permissão para exibir notificações. Você pode revogar isso depois nas configurações do próprio navegador.
+                                                </p>
+                                            </div>
+                                            <div className="md:justify-self-center">
+                                                <Switch
+                                                    checked={notifyBrowser}
+                                                    onCheckedChange={handleToggleBrowser}
+                                                    disabled={!browserPushSupported || !browserPushAvailable || syncingBrowserPush}
+                                                />
+                                            </div>
+                                            <div className="md:w-36 md:justify-self-end text-xs text-muted-foreground">
+                                                {syncingBrowserPush
+                                                    ? "Sincronizando..."
+                                                    : notifyBrowser
+                                                        ? "Ativo neste navegador"
+                                                        : "Desativado"}
+                                            </div>
                                         </div>
                                     </div>
 
