@@ -400,9 +400,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        {moneyBoxesOverview.restriction_message && (
-                                            <p className="text-xs text-muted-foreground">{moneyBoxesOverview.restriction_message}</p>
-                                        )}
+                                        
                                         <FormMessage />
                                     </FormItem>
                                 )}

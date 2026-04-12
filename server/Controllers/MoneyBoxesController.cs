@@ -171,9 +171,9 @@ public class MoneyBoxesController : AuthenticatedController
             return "Seu plano atual e Free e permite ate 3 cofrinhos. Como sua conta possui mais do que isso, a selecao de cofrinho fica bloqueada na criacao e edicao de investimentos ate voce reduzir a quantidade ou voltar para um plano pago.";
 
         if (!canCreate && limit != int.MaxValue)
-            return $"Seu plano atual permite ate {limit} cofrinhos. Exclua um cofrinho ou faca upgrade para criar novos.";
+            return $"Seu plano atual permite até {limit} cofrinhos. Exclua um cofrinho ou faca upgrade para criar novos.";
 
-        return $"Seu plano atual permite ate {limit} cofrinhos. Voce esta usando {count} de {limit}.";
+        return $"Seu plano atual permite até {limit} cofrinhos. Voce esta usando {count} de {limit}.";
     }
 
     private decimal GetDisplayLiquidValue(Investment investment)
