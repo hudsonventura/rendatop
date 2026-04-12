@@ -11,6 +11,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
     private readonly INotification _telegram;
     private readonly IWhatsAppNotification _whatsApp;
     private readonly IEmailNotification _email;
+    private readonly string? _clientBaseUrl;
 
     public DueTomorrowNotificationBackgroundService(
         ILogger<DueTomorrowNotificationBackgroundService> logger,
@@ -24,6 +25,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
         _telegram = telegram;
         _whatsApp = whatsApp;
         _email = email;
+        _clientBaseUrl = Environment.GetEnvironmentVariable("BASE_URL_CLIENT");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -110,7 +112,8 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
                 continue;
 
             var title = "📈 RentaTop | Vencimento amanhã";
-            var message = BuildMessage(user, investment);
+            var notificationSummary = BuildNotificationSummary(context, investment);
+            var message = BuildMessage(user, investment, notificationSummary);
             context.notifications.Add(new Notification
             {
                 id = SnowflakeGuid.NewGuid(),
@@ -129,7 +132,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
             {
                 try
                 {
-                    await _telegram.Notify(title, message, user.telegram_chat_id);
+                    await _telegram.Notify(title, BuildTelegramMessage(user, investment, notificationSummary), user.telegram_chat_id);
                 }
                 catch (Exception ex)
                 {
@@ -141,7 +144,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
             {
                 try
                 {
-                    await _whatsApp.Notify(user.phone, title, message);
+                    await _whatsApp.Notify(user.phone, title, BuildWhatsAppMessage(user, investment, notificationSummary));
                 }
                 catch (Exception ex)
                 {
@@ -153,7 +156,8 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
             {
                 try
                 {
-                    await _email.Notify(user.email, title, message);
+                    var emailMessage = DueTomorrowEmailTemplate.Build(user, investment, notificationSummary, _clientBaseUrl);
+                    await _email.Notify(user.email, title, emailMessage, isHtml: true);
                 }
                 catch (Exception ex)
                 {
@@ -167,16 +171,66 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
         _logger.LogInformation("Verificação de vencimentos concluída às {time}.", DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
     }
 
-    private static string BuildMessage(User user, Investment investment)
+    internal static DueTomorrowNotificationSummary BuildNotificationSummary(Context context, Investment investment)
+    {
+        var calcType = typeof(ICalculator).Assembly.GetType(
+            $"server.Domain.Calculator_{investment.index}"
+        );
+
+        if (calcType is null)
+        {
+            return new DueTomorrowNotificationSummary(0m, 0m, investment.value);
+        }
+
+        var calculator = (ICalculator)Activator.CreateInstance(calcType, context)!;
+        var calculated = calculator.Calculate(investment.ToRequest()).LastOrDefault();
+
+        if (calculated is null)
+            return new DueTomorrowNotificationSummary(0m, 0m, investment.value);
+
+        return new DueTomorrowNotificationSummary(
+            calculated.profit_brute,
+            calculated.IR_value,
+            calculated.value_liq);
+    }
+
+    internal static string BuildMessage(User user, Investment investment, DueTomorrowNotificationSummary summary)
+        => BuildMessage(user, investment, summary, DueTomorrowTextStyle.Plain);
+
+    internal static string BuildTelegramMessage(User user, Investment investment, DueTomorrowNotificationSummary summary)
+        => BuildMessage(user, investment, summary, DueTomorrowTextStyle.TelegramHtml);
+
+    internal static string BuildWhatsAppMessage(User user, Investment investment, DueTomorrowNotificationSummary summary)
+        => BuildMessage(user, investment, summary, DueTomorrowTextStyle.WhatsAppMarkdown);
+
+    private static string BuildMessage(User user, Investment investment, DueTomorrowNotificationSummary summary, DueTomorrowTextStyle textStyle)
     {
         var bankName = investment.bank?.Name ?? "Banco não informado";
         var due = investment.due_date?.ToLocalTime().ToString("dd/MM/yyyy") ?? "-";
+        var netValue = textStyle switch
+        {
+            DueTomorrowTextStyle.TelegramHtml => $"<b>R$ {summary.NetValue:N2}</b>",
+            DueTomorrowTextStyle.WhatsAppMarkdown => $"*R$ {summary.NetValue:N2}*",
+            _ => $"R$ {summary.NetValue:N2}"
+        };
+
         return
             $"Usuário: {user.name}{Environment.NewLine}" +
             $"Investimento: {investment.title}{Environment.NewLine}" +
             $"Banco: {bankName}{Environment.NewLine}" +
             $"Valor investido: R$ {investment.value:N2}{Environment.NewLine}" +
+            $"Rendimento bruto: R$ {summary.GrossProfit:N2}{Environment.NewLine}" +
+            $"IR: R$ {summary.IncomeTax:N2}{Environment.NewLine}" +
+            $"Valor líquido: {netValue}{Environment.NewLine}" +
             $"Vencimento: {due}{Environment.NewLine}{Environment.NewLine}" +
             "Revise seus resgates no RentaTop.";
     }
+}
+
+internal sealed record DueTomorrowNotificationSummary(decimal GrossProfit, decimal IncomeTax, decimal NetValue);
+internal enum DueTomorrowTextStyle
+{
+    Plain,
+    TelegramHtml,
+    WhatsAppMarkdown
 }
