@@ -26,6 +26,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -43,11 +44,11 @@ import {
     SUPPORT_ATTACHMENT_ACCEPT,
     SUPPORT_ATTACHMENT_MAX_BYTES,
     SUPPORT_SCOPE,
+    SUPPORT_SCOPE_OPTIONS,
     SUPPORT_STATUS_OPTIONS,
     formatAttachmentSize,
     formatSupportDateTime,
     getSupportChangeSourceLabel,
-    getSupportPendingLabel,
     getSupportPendingTone,
     getSupportSenderTypeLabel,
     getSupportStatusLabel,
@@ -65,13 +66,6 @@ function StatusBadge({ status }) {
     )
 }
 
-function PendingBadge({ pendingFor }) {
-    return (
-        <span className={cn("inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium", getSupportPendingTone(pendingFor))}>
-            {getSupportPendingLabel(pendingFor)}
-        </span>
-    )
-}
 
 function SupportImagePreview({ attachment, onDownload, compact = false }) {
     const [previewUrl, setPreviewUrl] = useState("")
@@ -302,6 +296,74 @@ function EmptyThreadState({ isAdmin, onStartCreate }) {
     )
 }
 
+function EmptyListState({ isAdmin, onStartCreate }) {
+    return (
+        <div className="px-6 py-10 text-center">
+            <p className="font-medium">Nenhum chamado encontrado</p>
+            <p className="text-muted-foreground mt-2 text-sm">
+                {isAdmin
+                    ? "Ajuste os filtros ou pesquise por outros termos."
+                    : "Você ainda não possui chamados com esses filtros."}
+            </p>
+            {!isAdmin ? (
+                <div className="mt-4">
+                    <Button type="button" onClick={onStartCreate}>
+                        <Plus className="size-4" />
+                        Novo chamado
+                    </Button>
+                </div>
+            ) : null}
+        </div>
+    )
+}
+
+function isSameIteration(message, historyItem) {
+    if (!message || !historyItem) return false
+
+    const messageTime = new Date(message.created_at).getTime()
+    const historyTime = new Date(historyItem.created_at).getTime()
+    const sameActor =
+        String(message.sender_user_id || "") === String(historyItem.actor_user_id || "") &&
+        String(message.sender_user_name || "").trim().toLowerCase() === String(historyItem.actor_user_name || "").trim().toLowerCase()
+
+    return sameActor && Math.abs(messageTime - historyTime) <= 1000
+}
+
+function buildSupportTimeline(ticketDetail) {
+    if (!ticketDetail) return []
+
+    const remainingHistory = [...(ticketDetail.status_history || [])]
+    const items = (ticketDetail.messages || []).map((message) => {
+        const statusChanges = remainingHistory.filter((historyItem) => isSameIteration(message, historyItem))
+
+        statusChanges.forEach((historyItem) => {
+            const index = remainingHistory.findIndex((item) => item.id === historyItem.id)
+            if (index >= 0) {
+                remainingHistory.splice(index, 1)
+            }
+        })
+
+        return {
+            type: "message",
+            id: `message-${message.id}`,
+            created_at: message.created_at,
+            message,
+            statusChanges,
+        }
+    })
+
+    remainingHistory.forEach((historyItem) => {
+        items.push({
+            type: "status",
+            id: `status-${historyItem.id}`,
+            created_at: historyItem.created_at,
+            historyItem,
+        })
+    })
+
+    return items.sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
+}
+
 function getErrorMessage(error, fallbackMessage) {
     if (typeof error?.response?.data === "string" && error.response.data.trim()) {
         return error.response.data
@@ -354,6 +416,7 @@ export default function SupportPage() {
 
     const isAdmin = isAdminUserType(userType)
     const counts = listData.counts
+    const mergedTimeline = buildSupportTimeline(ticketDetail)
     const scopeCards = [
         {
             value: SUPPORT_SCOPE.OPEN,
@@ -551,6 +614,13 @@ export default function SupportPage() {
         setIsCreating(false)
         setActionError("")
         setSelectedTicketId(ticketId)
+    }
+
+    const closeTicketModal = () => {
+        setSelectedTicketId(null)
+        setTicketDetail(null)
+        setActionError("")
+        resetReplyComposer()
     }
 
     const startCreateTicket = () => {
@@ -761,22 +831,6 @@ export default function SupportPage() {
                     ))}
                 </CardContent>
             </Card>
-
-            <Card className="gap-4">
-                <CardHeader className="gap-2">
-                    <CardTitle>Indicadores rápidos</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-3">
-                    <div className="flex items-center justify-between rounded-xl border p-3">
-                        <span className="text-sm">Pendente dos admins</span>
-                        <Badge variant="secondary">{counts.waiting_admin_count}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between rounded-xl border p-3">
-                        <span className="text-sm">Aguardando usuário</span>
-                        <Badge variant="secondary">{counts.waiting_user_count}</Badge>
-                    </div>
-                </CardContent>
-            </Card>
         </div>
     )
 
@@ -789,6 +843,28 @@ export default function SupportPage() {
                 </div>
 
                 <div className="grid gap-3">
+                    {!isAdmin ? (
+                        <div className="flex flex-wrap gap-2">
+                            <Button type="button" onClick={startCreateTicket}>
+                                <SquarePen className="size-4" />
+                                Novo chamado
+                            </Button>
+                        </div>
+                    ) : null}
+
+                    <Select value={scope} onValueChange={setScope}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Escopo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {SUPPORT_SCOPE_OPTIONS.map((item) => (
+                                <SelectItem key={item.value} value={item.value}>
+                                    {item.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
                     <div className="relative">
                         <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
                         <Input
@@ -830,12 +906,7 @@ export default function SupportPage() {
                         </Alert>
                     </div>
                 ) : listData.items.length === 0 ? (
-                    <div className="px-6 py-10 text-center">
-                        <p className="font-medium">Nenhum chamado encontrado</p>
-                        <p className="text-muted-foreground mt-2 text-sm">
-                            Ajuste os filtros ou pesquise por outros termos.
-                        </p>
-                    </div>
+                    <EmptyListState isAdmin={isAdmin} onStartCreate={startCreateTicket} />
                 ) : (
                     <ScrollArea className="h-[30rem] lg:h-[70vh]">
                         <div className="space-y-2 px-3 pb-3">
@@ -859,10 +930,6 @@ export default function SupportPage() {
                                                 {isAdmin ? `${ticket.requester_user_name} · ${ticket.requester_user_email}` : ticket.requester_user_email}
                                             </p>
                                         </div>
-                                        <div className="flex flex-wrap justify-end gap-2">
-                                            <StatusBadge status={ticket.status} />
-                                            <PendingBadge pendingFor={ticket.pending_for} />
-                                        </div>
                                     </div>
 
                                     <div className="space-y-2">
@@ -884,20 +951,7 @@ export default function SupportPage() {
         </Card>
     )
 
-    const renderThreadPane = () => {
-        if (loadingBootstrap) {
-            return <Skeleton className="h-[32rem] rounded-xl lg:h-[70vh]" />
-        }
-
-        if (bootstrapError) {
-            return (
-                <Alert variant="destructive">
-                    <AlertTitle>Falha ao carregar</AlertTitle>
-                    <AlertDescription>{bootstrapError}</AlertDescription>
-                </Alert>
-            )
-        }
-
+    const renderCreatePane = () => {
         if (isCreating) {
             return (
                 <Composer
@@ -925,27 +979,22 @@ export default function SupportPage() {
             )
         }
 
-        if (detailLoading) {
-            return <Skeleton className="h-[32rem] rounded-xl lg:h-[70vh]" />
-        }
+        return null
+    }
 
-        if (!ticketDetail) {
-            return <EmptyThreadState isAdmin={isAdmin} onStartCreate={startCreateTicket} />
-        }
-
+    const renderTicketDetail = () => {
         return (
-            <Card className="gap-4">
-                <CardHeader className="gap-4 border-b pb-5">
+            <div className="space-y-6">
+                <div className="space-y-4 border-b pb-5">
                     <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                         <div className="space-y-2">
                             <div className="flex flex-wrap items-center gap-2">
-                                <CardTitle>{ticketDetail.subject}</CardTitle>
+                                <h3 className="text-xl font-semibold">{ticketDetail.subject}</h3>
                                 <StatusBadge status={ticketDetail.status} />
-                                <PendingBadge pendingFor={ticketDetail.pending_for} />
                             </div>
-                            <CardDescription>
+                            <p className="text-muted-foreground text-sm">
                                 {ticketDetail.requester_user_name} · {ticketDetail.requester_user_email}
-                            </CardDescription>
+                            </p>
                             <div className="text-muted-foreground flex flex-wrap gap-3 text-xs">
                                 <span>Criado em {formatSupportDateTime(ticketDetail.created_at)}</span>
                                 <span>Última interação em {formatSupportDateTime(ticketDetail.last_message_at)}</span>
@@ -986,18 +1035,41 @@ export default function SupportPage() {
                             <AlertDescription>{actionError}</AlertDescription>
                         </Alert>
                     ) : null}
-                </CardHeader>
+                </div>
 
-                <CardContent className="space-y-6">
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <MailOpen className="size-4" />
-                            <h3 className="font-semibold">Conversa</h3>
-                        </div>
+                <section className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <MailOpen className="size-4" />
+                        <h3 className="font-semibold">Conversa e status</h3>
+                    </div>
 
-                        <div className="space-y-4">
-                            {ticketDetail.messages.map((message) => (
-                                <div key={message.id} className="rounded-2xl border p-4">
+                    <div className="space-y-4">
+                        {mergedTimeline.map((item) => {
+                            if (item.type === "status") {
+                                const historyItem = item.historyItem
+
+                                return (
+                                    <div key={item.id} className="rounded-2xl border border-dashed bg-muted/20 p-4">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium">{historyItem.actor_user_name}</p>
+                                                <p className="text-muted-foreground text-xs">{getSupportChangeSourceLabel(historyItem.source)}</p>
+                                            </div>
+                                            <p className="text-muted-foreground text-xs">{formatSupportDateTime(historyItem.created_at)}</p>
+                                        </div>
+                                        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                                            {historyItem.from_status ? <StatusBadge status={historyItem.from_status} /> : <Badge variant="outline">Inicial</Badge>}
+                                            <span className="text-muted-foreground">→</span>
+                                            <StatusBadge status={historyItem.to_status} />
+                                        </div>
+                                    </div>
+                                )
+                            }
+
+                            const { message, statusChanges } = item
+
+                            return (
+                                <div key={item.id} className="rounded-2xl border p-4">
                                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                                         <div className="flex min-w-0 items-center gap-3">
                                             <div className="rounded-full bg-muted p-2">
@@ -1017,6 +1089,21 @@ export default function SupportPage() {
                                         <p className="text-muted-foreground text-xs">{formatSupportDateTime(message.created_at)}</p>
                                     </div>
 
+                                    {statusChanges.length ? (
+                                        <div className="mb-4 space-y-2 rounded-xl border bg-muted/20 p-3">
+                                            {statusChanges.map((historyItem) => (
+                                                <div key={historyItem.id} className="space-y-2">
+                                                    <p className="text-muted-foreground text-xs">{getSupportChangeSourceLabel(historyItem.source)}</p>
+                                                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                                                        {historyItem.from_status ? <StatusBadge status={historyItem.from_status} /> : <Badge variant="outline">Inicial</Badge>}
+                                                        <span className="text-muted-foreground">→</span>
+                                                        <StatusBadge status={historyItem.to_status} />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : null}
+
                                     <div
                                         className={cn(
                                             "text-sm leading-7",
@@ -1027,7 +1114,7 @@ export default function SupportPage() {
                                     />
 
                                     {message.attachments.length ? (
-                                        <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                                        <div className="mt-4 grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
                                             {message.attachments.map((attachment) => (
                                                 <AttachmentCard
                                                     key={attachment.id}
@@ -1038,66 +1125,40 @@ export default function SupportPage() {
                                         </div>
                                     ) : null}
                                 </div>
-                            ))}
-                        </div>
-                    </section>
+                            )
+                        })}
+                    </div>
+                </section>
 
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <Clock3 className="size-4" />
-                            <h3 className="font-semibold">Histórico de status</h3>
-                        </div>
-
-                        <div className="space-y-3">
-                            {ticketDetail.status_history.map((item) => (
-                                <div key={item.id} className="rounded-2xl border p-4">
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-medium">{item.actor_user_name}</p>
-                                            <p className="text-muted-foreground text-xs">{getSupportChangeSourceLabel(item.source)}</p>
-                                        </div>
-                                        <p className="text-muted-foreground text-xs">{formatSupportDateTime(item.created_at)}</p>
-                                    </div>
-                                    <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                                        {item.from_status ? <StatusBadge status={item.from_status} /> : <Badge variant="outline">Inicial</Badge>}
-                                        <span className="text-muted-foreground">→</span>
-                                        <StatusBadge status={item.to_status} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    {ticketDetail.can_current_user_reply ? (
-                        <Composer
-                            title="Responder chamado"
-                            description={
-                                isAdmin
-                                    ? "Sua resposta ficará registrada com seu nome para todos os admins."
-                                    : "Assim que você responder, o chamado volta automaticamente para a fila dos admins."
-                            }
-                            html={replyHtml}
-                            onHtmlChange={setReplyHtml}
-                            attachments={replyAttachments}
-                            onAppendFiles={(files) => appendFiles(files, setReplyAttachments, setReplyError)}
-                            onRemoveAttachment={(index) => removeDraftAttachment(index, setReplyAttachments)}
-                            onSubmit={handleReply}
-                            submitLabel="Enviar resposta"
-                            busy={submittingReply}
-                            error={replyError}
-                        />
-                    ) : (
-                        <Alert>
-                            <AlertTitle>Resposta indisponível no momento</AlertTitle>
-                            <AlertDescription>
-                                {ticketDetail.is_archived
-                                    ? "Chamados encerrados ou cancelados ficam arquivados e não recebem novas mensagens."
-                                    : "Este chamado ainda não está aguardando sua resposta."}
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                </CardContent>
-            </Card>
+                {ticketDetail.can_current_user_reply ? (
+                    <Composer
+                        title="Responder chamado"
+                        description={
+                            isAdmin
+                                ? "Sua resposta ficará registrada com seu nome para todos os admins."
+                                : "Assim que você responder, o chamado volta automaticamente para a fila dos admins."
+                        }
+                        html={replyHtml}
+                        onHtmlChange={setReplyHtml}
+                        attachments={replyAttachments}
+                        onAppendFiles={(files) => appendFiles(files, setReplyAttachments, setReplyError)}
+                        onRemoveAttachment={(index) => removeDraftAttachment(index, setReplyAttachments)}
+                        onSubmit={handleReply}
+                        submitLabel="Enviar resposta"
+                        busy={submittingReply}
+                        error={replyError}
+                    />
+                ) : (
+                    <Alert>
+                        <AlertTitle>Resposta indisponível no momento</AlertTitle>
+                        <AlertDescription>
+                            {ticketDetail.is_archived
+                                ? "Chamados encerrados ou cancelados ficam arquivados e não recebem novas mensagens."
+                                : "Este chamado ainda não está aguardando sua resposta."}
+                        </AlertDescription>
+                    </Alert>
+                )}
+            </div>
         )
     }
 
@@ -1109,31 +1170,76 @@ export default function SupportPage() {
                 description="Abra chamados, acompanhe o histórico completo e mantenha a conversa registrada com o time de atendimento."
             >
                 <div className="px-4 lg:px-6">
-                    <div className="space-y-6 lg:hidden">
-                        {renderFiltersPane()}
-                        {renderListPane()}
-                        {renderThreadPane()}
-                    </div>
+                    {bootstrapError ? (
+                        <Alert variant="destructive">
+                            <AlertTitle>Falha ao carregar</AlertTitle>
+                            <AlertDescription>{bootstrapError}</AlertDescription>
+                        </Alert>
+                    ) : loadingBootstrap ? (
+                        <Skeleton className="h-[32rem] rounded-xl lg:h-[72vh]" />
+                    ) : (
+                        <>
+                            {renderCreatePane()}
 
-                    <div className="hidden lg:block">
-                        <PanelGroup direction="horizontal" className="min-h-[72vh] rounded-2xl border bg-background">
-                            <Panel defaultSize={22} minSize={18}>
-                                <div className="h-full p-4">{renderFiltersPane()}</div>
-                            </Panel>
-                            <PanelResizeHandle className="w-px bg-border" />
-                            <Panel defaultSize={30} minSize={24}>
-                                <div className="h-full border-l p-4">{renderListPane()}</div>
-                            </Panel>
-                            <PanelResizeHandle className="w-px bg-border" />
-                            <Panel defaultSize={48} minSize={32}>
-                                <ScrollArea className="h-[72vh]">
-                                    <div className="p-4">{renderThreadPane()}</div>
-                                </ScrollArea>
-                            </Panel>
-                        </PanelGroup>
-                    </div>
+                            {!isCreating ? (
+                                <>
+                                    <div className="space-y-6 lg:hidden">
+                                        {isAdmin ? renderFiltersPane() : null}
+                                        {renderListPane()}
+                                    </div>
+
+                                    <div className="hidden lg:block">
+                                        {isAdmin ? (
+                                            <PanelGroup direction="horizontal" className="min-h-[72vh] rounded-2xl border bg-background">
+                                                <Panel defaultSize={24} minSize={18}>
+                                                    <div className="h-full p-4">{renderFiltersPane()}</div>
+                                                </Panel>
+                                                <PanelResizeHandle className="w-px bg-border" />
+                                                <Panel defaultSize={76} minSize={40}>
+                                                    <div className="h-full border-l p-4">{renderListPane()}</div>
+                                                </Panel>
+                                            </PanelGroup>
+                                        ) : (
+                                            renderListPane()
+                                        )}
+                                    </div>
+                                </>
+                            ) : null}
+                        </>
+                    )}
                 </div>
             </BaseLayout>
+
+            <Dialog open={Boolean(selectedTicketId) && !isCreating} onOpenChange={(open) => {
+                if (!open) {
+                    closeTicketModal()
+                }
+            }}>
+                <DialogContent className="max-h-[94vh] w-[96vw] max-w-[96vw] sm:max-w-[96vw] xl:max-w-[1500px] overflow-hidden p-0">
+                    <DialogHeader className="border-b px-6 py-5">
+                        <DialogTitle>Chamado</DialogTitle>
+                        <DialogDescription>
+                            Histórico completo, anexos e resposta centralizados em uma visualização ampla.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="max-h-[calc(92vh-5.5rem)] overflow-hidden">
+                        {detailLoading ? (
+                            <div className="p-6">
+                                <Skeleton className="h-[32rem] rounded-xl" />
+                            </div>
+                        ) : ticketDetail ? (
+                            <ScrollArea className="h-[calc(94vh-5.5rem)]">
+                                <div className="p-6 lg:p-8">{renderTicketDetail()}</div>
+                            </ScrollArea>
+                        ) : (
+                            <div className="p-6">
+                                <EmptyThreadState isAdmin={isAdmin} onStartCreate={startCreateTicket} />
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }

@@ -49,11 +49,7 @@ export function getSupportStatusLabel(status) {
     return SUPPORT_STATUS_OPTIONS.find((item) => item.value === status)?.label || status || "-"
 }
 
-export function getSupportPendingLabel(pendingFor) {
-    if (pendingFor === "admin") return "Pendente dos admins"
-    if (pendingFor === "user") return "Aguardando usuário"
-    return "Arquivado"
-}
+
 
 export function getSupportChangeSourceLabel(source) {
     if (source === "SystemOnCreate") return "Criação do chamado"
