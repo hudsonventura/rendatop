@@ -33,6 +33,7 @@ const navigationItems = [
     { name: 'Inicio', href: '#hero' },
     { name: 'Recursos', href: '#features', hasMegaMenu: true },
     { name: 'Capturas', href: '#screenshots' },
+    { name: 'Blog', href: '/blog' },
     { name: 'Planos', href: '#pricing' },
     { name: 'FAQ', href: '#faq' },
     { name: 'Contato', href: '#contact' },

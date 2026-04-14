@@ -3,15 +3,19 @@ FROM node:22-alpine AS deps
 WORKDIR /app/nextjs-version
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+ENV NPM_CONFIG_FUND=false
+ENV NPM_CONFIG_AUDIT=false
 
 COPY nextjs-version/package.json nextjs-version/package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 
 # ---- Build Stage ----
 FROM node:22-alpine AS build
 WORKDIR /app/nextjs-version
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 ENV NODE_OPTIONS=--max-old-space-size=2048
 
 COPY --from=deps /app/nextjs-version/node_modules ./node_modules
