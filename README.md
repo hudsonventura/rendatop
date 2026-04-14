@@ -62,6 +62,27 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 
 Se quiser validar rapidamente, abra a landing com `?visit=instagram` e confirme no backend se a tabela `landing_visits` recebeu o registro.
 
+### Integrações sociais do blog
+
+Para habilitar a publicação automática do blog nas redes sociais, configure também:
+
+```bash
+META_GRAPH_API_VERSION=v23.0
+FACEBOOK_PAGE_ID=
+FACEBOOK_PAGE_ACCESS_TOKEN=
+INSTAGRAM_BUSINESS_ACCOUNT_ID=
+INSTAGRAM_ACCESS_TOKEN=
+LINKEDIN_ORGANIZATION_ID=
+LINKEDIN_ACCESS_TOKEN=
+LINKEDIN_API_VERSION=202504
+```
+
+Observações:
+- Facebook usa `FACEBOOK_PAGE_ID` e `FACEBOOK_PAGE_ACCESS_TOKEN`
+- Instagram exige uma conta business e pelo menos uma imagem no post
+- LinkedIn publica em nome da organização definida em `LINKEDIN_ORGANIZATION_ID`
+- se uma rede não estiver configurada, o post continua sendo publicado no blog e o canal fica com status de falha no painel admin
+
 
 ### Migrations
 ``` bash

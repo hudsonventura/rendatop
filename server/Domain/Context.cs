@@ -79,6 +79,35 @@ public class Context : DbContext
         modelBuilder.Entity<SupportTicketStatusHistory>()
             .HasIndex(history => new { history.ticket_id, history.created_at });
 
+        modelBuilder.Entity<BlogPost>()
+            .Property(post => post.status)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<BlogPost>()
+            .HasIndex(post => post.slug)
+            .IsUnique();
+
+        modelBuilder.Entity<BlogPost>()
+            .HasIndex(post => new { post.status, post.published_at });
+
+        modelBuilder.Entity<BlogPost>()
+            .HasIndex(post => post.updated_at);
+
+        modelBuilder.Entity<BlogPostAsset>()
+            .HasIndex(asset => asset.blog_post_id);
+
+        modelBuilder.Entity<BlogPostSocialPublication>()
+            .Property(publication => publication.channel)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<BlogPostSocialPublication>()
+            .Property(publication => publication.status)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<BlogPostSocialPublication>()
+            .HasIndex(publication => new { publication.blog_post_id, publication.channel })
+            .IsUnique();
+
         modelBuilder.Entity<AiUsage>()
             .HasIndex(x => new { x.user_id, x.feature, x.created_at });
 
@@ -228,6 +257,20 @@ public class Context : DbContext
     /// Tabela de histórico de status dos chamados.
     /// </summary>
     public DbSet<SupportTicketStatusHistory> support_ticket_status_history { get; set; }
-    
+
+    /// <summary>
+    /// Tabela de postagens do blog.
+    /// </summary>
+    public DbSet<BlogPost> blog_posts { get; set; }
+
+    /// <summary>
+    /// Tabela de assets de imagem do blog.
+    /// </summary>
+    public DbSet<BlogPostAsset> blog_post_assets { get; set; }
+
+    /// <summary>
+    /// Tabela de status de publicações sociais do blog.
+    /// </summary>
+    public DbSet<BlogPostSocialPublication> blog_post_social_publications { get; set; }
 
 }

@@ -12,6 +12,7 @@ import {
     PiggyBank,
     ShieldCheck,
     LifeBuoy,
+    Newspaper,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
@@ -161,6 +162,11 @@ export function AppSidebar({ ...props }) {
                 title: "Admin",
                 url: "/admin",
                 icon: ShieldCheck,
+            },
+            {
+                title: "Blog",
+                url: "/admin/blog",
+                icon: Newspaper,
             },
         ]
         : navItems

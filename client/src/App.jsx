@@ -22,6 +22,7 @@ import SubscriptionPage from "@/pages/SubscriptionPage"
 import MoneyBoxesPage from "@/pages/MoneyBoxesPage"
 import AdminPage from "@/pages/AdminPage"
 import SupportPage from "@/pages/SupportPage"
+import BlogAdminPage from "@/pages/BlogAdminPage"
 
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
                                 <Route path="/reset-totp" element={<ResetTotp />} />
                                 <Route path="/subscription" element={<SubscriptionPage />} />
                                 <Route path="/admin" element={<AdminPage />} />
+                                <Route path="/admin/blog" element={<BlogAdminPage />} />
                                 <Route path="/atendimento" element={<SupportPage />} />
                                 <Route path="*" element={<NotFound />} />
                             </Routes>

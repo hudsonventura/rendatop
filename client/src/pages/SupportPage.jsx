@@ -1165,7 +1165,7 @@ export default function SupportPage() {
             <Logged />
             <BaseLayout
                 title="Atendimento"
-                description="Abra chamados, acompanhe o histórico completo e mantenha a conversa registrada com o time de atendimento."
+                description="Abra tickets para atendimento da equipe de suporte."
             >
                 <div className="px-4 lg:px-6">
                     {bootstrapError ? (
