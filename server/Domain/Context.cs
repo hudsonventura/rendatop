@@ -41,6 +41,44 @@ public class Context : DbContext
             .Property(user => user.auth_provider)
             .HasDefaultValue(AuthProvider.Password);
 
+        modelBuilder.Entity<SupportTicket>()
+            .Property(ticket => ticket.status)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SupportTicket>()
+            .HasIndex(ticket => new { ticket.status, ticket.last_message_at });
+
+        modelBuilder.Entity<SupportTicket>()
+            .HasIndex(ticket => new { ticket.requester_user_id, ticket.status });
+
+        modelBuilder.Entity<SupportTicket>()
+            .HasIndex(ticket => new { ticket.archived_at, ticket.last_message_at });
+
+        modelBuilder.Entity<SupportTicketMessage>()
+            .Property(message => message.sender_user_type)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SupportTicketMessage>()
+            .HasIndex(message => new { message.ticket_id, message.created_at });
+
+        modelBuilder.Entity<SupportTicketMessageAttachment>()
+            .HasIndex(attachment => attachment.message_id);
+
+        modelBuilder.Entity<SupportTicketStatusHistory>()
+            .Property(history => history.from_status)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SupportTicketStatusHistory>()
+            .Property(history => history.to_status)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SupportTicketStatusHistory>()
+            .Property(history => history.source)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SupportTicketStatusHistory>()
+            .HasIndex(history => new { history.ticket_id, history.created_at });
+
         modelBuilder.Entity<AiUsage>()
             .HasIndex(x => new { x.user_id, x.feature, x.created_at });
 
@@ -170,6 +208,26 @@ public class Context : DbContext
     /// Tabela de cobranças de assinatura
     /// </summary>
     public DbSet<SubscriptionCharge> subscription_charges { get; set; }
+
+    /// <summary>
+    /// Tabela de chamados de atendimento.
+    /// </summary>
+    public DbSet<SupportTicket> support_tickets { get; set; }
+
+    /// <summary>
+    /// Tabela de mensagens dos chamados.
+    /// </summary>
+    public DbSet<SupportTicketMessage> support_ticket_messages { get; set; }
+
+    /// <summary>
+    /// Tabela de anexos das mensagens dos chamados.
+    /// </summary>
+    public DbSet<SupportTicketMessageAttachment> support_ticket_message_attachments { get; set; }
+
+    /// <summary>
+    /// Tabela de histórico de status dos chamados.
+    /// </summary>
+    public DbSet<SupportTicketStatusHistory> support_ticket_status_history { get; set; }
     
 
 }

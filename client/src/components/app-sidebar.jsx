@@ -11,6 +11,7 @@ import {
     CreditCard,
     PiggyBank,
     ShieldCheck,
+    LifeBuoy,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
@@ -64,6 +65,11 @@ const navItems = [
         title: "Notificações",
         url: "/notifications",
         icon: Bell,
+    },
+    {
+        title: "Atendimento",
+        url: "/atendimento",
+        icon: LifeBuoy,
     },
     {
         title: "Configurações",
