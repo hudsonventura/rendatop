@@ -20,6 +20,7 @@ import ResetTotp from "@/pages/ResetTotp"
 import NotFound from "@/pages/NotFound"
 import SubscriptionPage from "@/pages/SubscriptionPage"
 import MoneyBoxesPage from "@/pages/MoneyBoxesPage"
+import AdminPage from "@/pages/AdminPage"
 
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
                                 <Route path="/forgot-totp" element={<ForgotTotp />} />
                                 <Route path="/reset-totp" element={<ResetTotp />} />
                                 <Route path="/subscription" element={<SubscriptionPage />} />
+                                <Route path="/admin" element={<AdminPage />} />
                                 <Route path="*" element={<NotFound />} />
                             </Routes>
                         </Router>

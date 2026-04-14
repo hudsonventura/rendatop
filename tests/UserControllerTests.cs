@@ -31,6 +31,7 @@ public class UserControllerTests
 
         Assert.Equal("Nome Atualizado", response.name);
         Assert.Equal("updated@example.com", response.email);
+        Assert.Equal(UserType.Common, response.user_type);
 
         using var assertionContext = fixture.CreateAssertionContext();
         var savedUser = assertionContext.users.Single(x => x.id == fixture.User.id);

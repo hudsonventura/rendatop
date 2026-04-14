@@ -20,6 +20,7 @@ import {
     unsubscribeCurrentBrowserFromPush,
 } from "@/utils/browserPush"
 import { formatCpf } from "@/utils/cpf"
+import { persistSessionUser } from "@/utils/userSession"
 
 const frontendBaseUrl = (import.meta.env.VITE_FRONTEND_URL || "").replace(/\/+$/, "")
 const buildFrontendAssetUrl = (relativePath) =>
@@ -105,6 +106,11 @@ const UserSettings = () => {
                 setCalendarPublicEnabled(canUseCalendarIcs && Boolean(data.calendar_public_enabled))
                 setCalendarPublicUrl(canUseCalendarIcs ? data.calendar_public_url || "" : "")
                 setTotpEnabled(Boolean(data.totp_enabled))
+                persistSessionUser({
+                    name: data.name,
+                    email: data.email,
+                    user_type: data.user_type,
+                })
             })
             .catch(() => {
                 setError("Não foi possível carregar suas configurações.")
@@ -298,8 +304,11 @@ const UserSettings = () => {
             .then((response) => {
                 const data = response.data
                 setName(data.name || "")
-                sessionStorage.setItem("email", data.email)
-                if (data.name) sessionStorage.setItem("name", data.name)
+                persistSessionUser({
+                    name: data.name,
+                    email: data.email,
+                    user_type: data.user_type,
+                })
                 setPhone(data.phone || "")
                 setTelegramChatId(data.telegram_chat_id || "")
                 setWhatsappNotificationsEnabled(Boolean(data.whatsapp_notifications_enabled))

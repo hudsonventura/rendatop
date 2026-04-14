@@ -57,9 +57,8 @@ public class HomeController​ : AuthenticatedController
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [HttpGet("authenticated_admin")]
-    [Authorize(Policy = "Somente_Admin")]
     public string Authenticated_Admin(){
-
+        EnsureAdmin();
         return _user.email;
         //return Ok(claims.Where(x => x.Type == "Sou admin").FirstOrDefault().Value);
     } 

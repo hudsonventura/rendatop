@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, TrendingUp, Eye, EyeOff, UserPlus } from "lucide-react"
 import axiosInstance from "@/utils/axiosConfig";
 import { appPath } from "@/utils/appPath";
+import { persistSessionUser } from "@/utils/userSession";
 
 const Signup = () => {
 
@@ -96,9 +97,8 @@ const Signup = () => {
         axiosInstance
             .post("/signup/verify", { email: pendingEmail, code: verificationCode })
             .then((response) => {
-                const { name: userName, email: userEmail } = response.data;
-                sessionStorage.setItem('name', userName);
-                sessionStorage.setItem('email', userEmail);
+                const { name: userName, email: userEmail, user_type: userType } = response.data;
+                persistSessionUser({ name: userName, email: userEmail, user_type: userType });
                 window.location.href = appPath('/home');
             })
             .catch((error) => {

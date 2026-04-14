@@ -33,6 +33,14 @@ public class Context : DbContext
         modelBuilder.Entity<LandingVisit>()
             .HasIndex(x => x.created_at);
 
+        modelBuilder.Entity<User>()
+            .Property(user => user.user_type)
+            .HasDefaultValue(UserType.Common);
+
+        modelBuilder.Entity<User>()
+            .Property(user => user.auth_provider)
+            .HasDefaultValue(AuthProvider.Password);
+
         modelBuilder.Entity<AiUsage>()
             .HasIndex(x => new { x.user_id, x.feature, x.created_at });
 

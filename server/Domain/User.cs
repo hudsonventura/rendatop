@@ -6,6 +6,19 @@ using System.Text.Json.Serialization;
 
 namespace server.Domain;
 
+public enum UserType
+{
+    Common = 1,
+    Admin = 2
+}
+
+public enum AuthProvider
+{
+    Password = 1,
+    Google = 2,
+    Microsoft = 3
+}
+
 /// <summary>
 /// Objeto do tipo usuário
 /// </summary>
@@ -27,6 +40,16 @@ public class User
     /// Email de uso único para o usuário
     /// </summary>
     public string email { get; set; }
+
+    /// <summary>
+    /// Tipo de usuário usado para controle de permissões.
+    /// </summary>
+    public UserType user_type { get; set; } = UserType.Common;
+
+    /// <summary>
+    /// Provedor usado para criação/autenticação principal da conta.
+    /// </summary>
+    public AuthProvider auth_provider { get; set; } = AuthProvider.Password;
 
     /// <summary>
     /// Telefone do usuário no formato 99999999999

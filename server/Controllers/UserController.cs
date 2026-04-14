@@ -432,7 +432,8 @@ public class UserController : AuthenticatedController
             aiDocumentExtraction.enabled,
             aiDocumentExtraction.current_usage,
             aiDocumentExtraction.monthly_limit,
-            aiDocumentExtraction.restriction_message
+            aiDocumentExtraction.restriction_message,
+            user.user_type
         );
     }
 
@@ -534,7 +535,8 @@ public record UserSettingsResponse(
     bool ai_document_extraction_enabled,
     int ai_document_extraction_current_usage,
     int ai_document_extraction_monthly_limit,
-    string? ai_document_extraction_restriction_message
+    string? ai_document_extraction_restriction_message,
+    UserType user_type
 );
 
 public record AiDocumentExtractionAccessResponse(

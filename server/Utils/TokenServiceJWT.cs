@@ -14,18 +14,21 @@ public class TokenServiceJWT : ITokenService
 
     public string Generate(User user, string role)
     {
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim("Name", user.name),
             new Claim("Email", user.email),
-            new Claim(ClaimTypes.Role, role),
-            new Claim("Sou admin", "verdade")
+            new Claim("UserType", user.user_type.ToString()),
+            new Claim(ClaimTypes.Role, user.user_type == UserType.Admin ? "Admin" : role)
         };
+
+        if (user.user_type == UserType.Admin)
+            claims.Add(new Claim("Sou admin", "verdade"));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret_key));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var token = GetJwtSecurityToken(claims, creds);
+        var token = GetJwtSecurityToken(claims.ToArray(), creds);
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
