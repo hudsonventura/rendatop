@@ -29,6 +29,8 @@ public class LoginControllerTests
         using var assertionContext = fixture.CreateAssertionContext();
         var savedUser = assertionContext.users.Single(x => x.email == "novo@example.com");
         Assert.False(savedUser.email_verified);
+        Assert.Equal(UserType.Common, savedUser.user_type);
+        Assert.Equal(AuthProvider.Password, savedUser.auth_provider);
         Assert.False(string.IsNullOrWhiteSpace(savedUser.email_verification_secret));
         Assert.NotNull(savedUser.email_verification_sent_at);
 
@@ -57,6 +59,7 @@ public class LoginControllerTests
         var response = Assert.IsType<LoginResponse>(okResult.Value);
 
         Assert.Equal(user.email, response.email);
+        Assert.Equal(UserType.Common, response.user_type);
         Assert.Single(fixture.DatabaseStringSetAsyncCalls);
 
         using var assertionContext = fixture.CreateAssertionContext();

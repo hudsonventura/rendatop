@@ -8,6 +8,7 @@ import { AlertCircle, Eye, EyeOff } from "lucide-react"
 import axiosInstance from "@/utils/axiosConfig";
 import { appPath } from "@/utils/appPath";
 import LoginCandleWallpaper from "@/components/LoginCandleWallpaper";
+import { persistSessionUser } from "@/utils/userSession";
 
 const apiBaseUrl = (import.meta.env.VITE_API_URL || "/api").replace(/\/+$/, "") || "/api";
 
@@ -42,9 +43,9 @@ const Login = () => {
         if (ssoStatus === "google_success" || ssoStatus === "microsoft_success") {
             const name = params.get("name");
             const email = params.get("email");
+            const userType = params.get("user_type");
 
-            if (name) sessionStorage.setItem("name", name);
-            if (email) sessionStorage.setItem("email", email);
+            persistSessionUser({ name, email, user_type: userType });
             window.location.href = appPath("/home");
             return;
         }
@@ -116,9 +117,8 @@ const Login = () => {
                 }
 
                 // Server sets the HttpOnly cookie — we only store display info
-                const { name, email: userEmail } = data;
-                sessionStorage.setItem('name', name);
-                sessionStorage.setItem('email', userEmail);
+                const { name, email: userEmail, user_type: userType } = data;
+                persistSessionUser({ name, email: userEmail, user_type: userType });
                 window.location.href = appPath('/home');
             })
             .catch((error) => {

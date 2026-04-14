@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using server.Domain;
@@ -12,9 +13,11 @@ using server.Domain;
 namespace server.Migrations
 {
     [DbContext(typeof(Context))]
-    partial class ContextModelSnapshot : ModelSnapshot
+    [Migration("20260412024425_browser_push_notifications")]
+    partial class browser_push_notifications
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -557,180 +560,11 @@ namespace server.Migrations
                     b.ToTable("subscription_charges");
                 });
 
-            modelBuilder.Entity("server.Domain.SupportTicket", b =>
-                {
-                    b.Property<Guid>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("archived_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("last_message_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("requester_user_email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("requester_user_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("requester_user_name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("subject")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("updated_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("archived_at", "last_message_at");
-
-                    b.HasIndex("requester_user_id", "status");
-
-                    b.HasIndex("status", "last_message_at");
-
-                    b.ToTable("support_tickets");
-                });
-
-            modelBuilder.Entity("server.Domain.SupportTicketMessage", b =>
-                {
-                    b.Property<Guid>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("body_html")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("body_text")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("sender_user_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("sender_user_name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("sender_user_type")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("ticket_id")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("sender_user_id");
-
-                    b.HasIndex("ticket_id", "created_at");
-
-                    b.ToTable("support_ticket_messages");
-                });
-
-            modelBuilder.Entity("server.Domain.SupportTicketMessageAttachment", b =>
-                {
-                    b.Property<Guid>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<byte[]>("content")
-                        .IsRequired()
-                        .HasColumnType("bytea");
-
-                    b.Property<string>("content_type")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("file_name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("is_image")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("message_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<long>("size_bytes")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("message_id");
-
-                    b.ToTable("support_ticket_message_attachments");
-                });
-
-            modelBuilder.Entity("server.Domain.SupportTicketStatusHistory", b =>
-                {
-                    b.Property<Guid>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("actor_user_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("actor_user_name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("from_status")
-                        .HasColumnType("text");
-
-                    b.Property<string>("source")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("ticket_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("to_status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("actor_user_id");
-
-                    b.HasIndex("ticket_id", "created_at");
-
-                    b.ToTable("support_ticket_status_history");
-                });
-
             modelBuilder.Entity("server.Domain.User", b =>
                 {
                     b.Property<Guid>("id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<int>("auth_provider")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
 
                     b.Property<bool>("calendar_public_enabled")
                         .HasColumnType("boolean");
@@ -791,11 +625,6 @@ namespace server.Migrations
 
                     b.Property<string>("totp_secret")
                         .HasColumnType("text");
-
-                    b.Property<int>("user_type")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
 
                     b.HasKey("id");
 
@@ -931,66 +760,6 @@ namespace server.Migrations
                     b.Navigation("user");
                 });
 
-            modelBuilder.Entity("server.Domain.SupportTicket", b =>
-                {
-                    b.HasOne("server.Domain.User", "requester_user")
-                        .WithMany()
-                        .HasForeignKey("requester_user_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("requester_user");
-                });
-
-            modelBuilder.Entity("server.Domain.SupportTicketMessage", b =>
-                {
-                    b.HasOne("server.Domain.User", "sender_user")
-                        .WithMany()
-                        .HasForeignKey("sender_user_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("server.Domain.SupportTicket", "ticket")
-                        .WithMany("messages")
-                        .HasForeignKey("ticket_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("sender_user");
-
-                    b.Navigation("ticket");
-                });
-
-            modelBuilder.Entity("server.Domain.SupportTicketMessageAttachment", b =>
-                {
-                    b.HasOne("server.Domain.SupportTicketMessage", "message")
-                        .WithMany("attachments")
-                        .HasForeignKey("message_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("message");
-                });
-
-            modelBuilder.Entity("server.Domain.SupportTicketStatusHistory", b =>
-                {
-                    b.HasOne("server.Domain.User", "actor_user")
-                        .WithMany()
-                        .HasForeignKey("actor_user_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("server.Domain.SupportTicket", "ticket")
-                        .WithMany("status_history")
-                        .HasForeignKey("ticket_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("actor_user");
-
-                    b.Navigation("ticket");
-                });
-
             modelBuilder.Entity("server.Domain.Investment", b =>
                 {
                     b.Navigation("redemptions");
@@ -999,18 +768,6 @@ namespace server.Migrations
             modelBuilder.Entity("server.Domain.Subscription", b =>
                 {
                     b.Navigation("subscription_charges");
-                });
-
-            modelBuilder.Entity("server.Domain.SupportTicket", b =>
-                {
-                    b.Navigation("messages");
-
-                    b.Navigation("status_history");
-                });
-
-            modelBuilder.Entity("server.Domain.SupportTicketMessage", b =>
-                {
-                    b.Navigation("attachments");
                 });
 #pragma warning restore 612, 618
         }

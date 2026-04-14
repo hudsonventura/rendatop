@@ -15,6 +15,7 @@ public class UserController : AuthenticatedController
     private readonly INotification _notify;
     private readonly IWhatsAppNotification _whatsApp;
     private readonly IEmailNotification _email;
+    private readonly IBrowserPushNotification _browserPush;
     private readonly string? _clientBaseUrl;
 
     public UserController(
@@ -22,12 +23,14 @@ public class UserController : AuthenticatedController
         IDbContextFactory<Context> contextFactory,
         INotification notify,
         IWhatsAppNotification whatsApp,
-        IEmailNotification email) : base(httpContextAccessor)
+        IEmailNotification email,
+        IBrowserPushNotification browserPush) : base(httpContextAccessor)
     {
         _context = contextFactory.CreateDbContext();
         _notify = notify;
         _whatsApp = whatsApp;
         _email = email;
+        _browserPush = browserPush;
         _clientBaseUrl = Environment.GetEnvironmentVariable("BASE_URL_CLIENT");
     }
 
@@ -281,6 +284,104 @@ public class UserController : AuthenticatedController
         return Ok(new GenericMessageResponse("Mensagem de teste enviada por Email."));
     }
 
+    [HttpGet("User/Settings/BrowserPush/PublicKey")]
+    [ProducesResponseType(typeof(BrowserPushPublicKeyResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult GetBrowserPushPublicKey()
+    {
+        return Ok(new BrowserPushPublicKeyResponse(
+            _browserPush.IsConfigured,
+            _browserPush.IsConfigured ? _browserPush.PublicKey : null
+        ));
+    }
+
+    [HttpPost("User/Settings/BrowserPush/Subscribe")]
+    [ProducesResponseType(typeof(GenericMessageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult SubscribeBrowserPush([FromBody] BrowserPushSubscriptionRequest request)
+    {
+        if (!_browserPush.IsConfigured)
+            throw new ExpectedException("Notificações no navegador não estão configuradas no servidor.");
+
+        if (string.IsNullOrWhiteSpace(request.endpoint) ||
+            string.IsNullOrWhiteSpace(request.p256dh) ||
+            string.IsNullOrWhiteSpace(request.auth))
+        {
+            throw new ExpectedException("Inscrição do navegador inválida.");
+        }
+
+        var user = _context.users.FirstOrDefault(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        var endpoint = request.endpoint.Trim();
+        var subscription = _context.browser_push_subscriptions
+            .FirstOrDefault(x => x.endpoint == endpoint);
+
+        if (subscription is null)
+        {
+            subscription = new BrowserPushSubscription
+            {
+                user_id = user.id,
+                endpoint = endpoint,
+                p256dh = request.p256dh.Trim(),
+                auth = request.auth.Trim(),
+                user_agent = request.user_agent?.Trim(),
+                created_at = DateTime.UtcNow,
+                updated_at = DateTime.UtcNow
+            };
+
+            _context.browser_push_subscriptions.Add(subscription);
+        }
+        else
+        {
+            subscription.user_id = user.id;
+            subscription.p256dh = request.p256dh.Trim();
+            subscription.auth = request.auth.Trim();
+            subscription.user_agent = request.user_agent?.Trim();
+            subscription.updated_at = DateTime.UtcNow;
+        }
+
+        user.notify_browser = true;
+        _context.SaveChanges();
+
+        return Ok(new GenericMessageResponse("Notificações do navegador habilitadas neste dispositivo."));
+    }
+
+    [HttpPost("User/Settings/BrowserPush/Unsubscribe")]
+    [ProducesResponseType(typeof(GenericMessageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult UnsubscribeBrowserPush([FromBody] BrowserPushUnsubscribeRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.endpoint))
+            throw new ExpectedException("Endpoint da inscrição do navegador é obrigatório.");
+
+        var user = _context.users.FirstOrDefault(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        var endpoint = request.endpoint.Trim();
+        var subscriptions = _context.browser_push_subscriptions
+            .Where(x => x.user_id == user.id && x.endpoint == endpoint)
+            .ToList();
+
+        if (subscriptions.Count > 0)
+            _context.browser_push_subscriptions.RemoveRange(subscriptions);
+
+        var hasAnySubscription = _context.browser_push_subscriptions
+            .AsNoTracking()
+            .Any(x => x.user_id == user.id && x.endpoint != endpoint);
+
+        if (!hasAnySubscription)
+            user.notify_browser = false;
+
+        _context.SaveChanges();
+
+        return Ok(new GenericMessageResponse("Notificações do navegador desabilitadas neste dispositivo."));
+    }
+
     private static void ValidateEmail(string email)
     {
         try
@@ -320,6 +421,7 @@ public class UserController : AuthenticatedController
             user.notify_telegram,
             user.telegram_chat_id,
             user.notify_email,
+            user.notify_browser,
             calendarIcsEnabled && user.calendar_public_enabled,
             calendarIcsEnabled && user.calendar_public_enabled
                 ? BuildPublicCalendarUrl(user.calendar_public_token)
@@ -330,7 +432,8 @@ public class UserController : AuthenticatedController
             aiDocumentExtraction.enabled,
             aiDocumentExtraction.current_usage,
             aiDocumentExtraction.monthly_limit,
-            aiDocumentExtraction.restriction_message
+            aiDocumentExtraction.restriction_message,
+            user.user_type
         );
     }
 
@@ -423,6 +526,7 @@ public record UserSettingsResponse(
     bool notify_telegram,
     string? telegram_chat_id,
     bool notify_email,
+    bool notify_browser,
     bool calendar_public_enabled,
     string? calendar_public_url,
     bool totp_enabled,
@@ -431,7 +535,8 @@ public record UserSettingsResponse(
     bool ai_document_extraction_enabled,
     int ai_document_extraction_current_usage,
     int ai_document_extraction_monthly_limit,
-    string? ai_document_extraction_restriction_message
+    string? ai_document_extraction_restriction_message,
+    UserType user_type
 );
 
 public record AiDocumentExtractionAccessResponse(
@@ -458,4 +563,20 @@ public record TotpDisableRequest(
 
 public record GenericMessageResponse(
     string message
+);
+
+public record BrowserPushSubscriptionRequest(
+    string endpoint,
+    string p256dh,
+    string auth,
+    string? user_agent
+);
+
+public record BrowserPushUnsubscribeRequest(
+    string endpoint
+);
+
+public record BrowserPushPublicKeyResponse(
+    bool enabled,
+    string? public_key
 );

@@ -10,6 +10,8 @@ import {
     Bell,
     CreditCard,
     PiggyBank,
+    ShieldCheck,
+    LifeBuoy,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
@@ -36,6 +38,7 @@ import {
 
 import { Button } from "@/components/ui/button"
 import axiosInstance from "@/utils/axiosConfig"
+import { getStoredUserType, isAdminUserType, persistSessionUser } from "@/utils/userSession"
 
 const navItems = [
     {
@@ -73,6 +76,11 @@ const navItems = [
         url: "/subscription",
         icon: CreditCard,
     },
+    {
+        title: "Atendimento",
+        url: "/atendimento",
+        icon: LifeBuoy,
+    },
 ]
 
 export function AppSidebar({ ...props }) {
@@ -80,12 +88,14 @@ export function AppSidebar({ ...props }) {
     const navigate = useNavigate()
     const [userName, setUserName] = useState(() => sessionStorage.getItem('name') || 'Usuário')
     const [userEmail, setUserEmail] = useState(() => sessionStorage.getItem('email') || '')
+    const [userType, setUserType] = useState(() => getStoredUserType())
 
     const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
     React.useEffect(() => {
         const storedName = sessionStorage.getItem("name") || ""
         const storedEmail = sessionStorage.getItem("email") || ""
+        const storedUserType = getStoredUserType()
 
         if (storedName) {
             setUserName(storedName)
@@ -95,7 +105,11 @@ export function AppSidebar({ ...props }) {
             setUserEmail(storedEmail)
         }
 
-        if (storedName && storedEmail) {
+        if (storedUserType) {
+            setUserType(storedUserType)
+        }
+
+        if (storedName && storedEmail && storedUserType) {
             return
         }
 
@@ -109,12 +123,17 @@ export function AppSidebar({ ...props }) {
                 const data = response?.data || {}
                 const nextName = data.name || "Usuário"
                 const nextEmail = data.email || ""
+                const nextUserType = data.user_type || ""
 
                 setUserName(nextName)
                 setUserEmail(nextEmail)
+                setUserType(nextUserType)
 
-                if (data.name) sessionStorage.setItem("name", data.name)
-                if (data.email) sessionStorage.setItem("email", data.email)
+                persistSessionUser({
+                    name: data.name,
+                    email: data.email,
+                    user_type: nextUserType,
+                })
             })
             .catch(() => {
                 if (cancelled) return
@@ -134,6 +153,17 @@ export function AppSidebar({ ...props }) {
         setShowLogoutDialog(false)
         navigate('/logout')
     }
+
+    const items = isAdminUserType(userType)
+        ? [
+            ...navItems,
+            {
+                title: "Admin",
+                url: "/admin",
+                icon: ShieldCheck,
+            },
+        ]
+        : navItems
 
     return (
         <>
@@ -159,7 +189,7 @@ export function AppSidebar({ ...props }) {
                     <SidebarGroup>
                         <SidebarGroupLabel>Menu</SidebarGroupLabel>
                         <SidebarMenu>
-                            {navItems.map((item) => (
+                            {items.map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton
                                         asChild

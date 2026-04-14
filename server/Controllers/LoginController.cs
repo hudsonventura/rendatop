@@ -65,11 +65,11 @@ public class LoginController : ControllerBase
 
             var challengeId = Guid.NewGuid().ToString("N");
             _redis.StringSet(GetTotpChallengeKey(challengeId), user.id.ToString(), TimeSpan.FromMinutes(5));
-            return Ok(new LoginStartResponse(true, challengeId, null, null));
+            return Ok(new LoginStartResponse(true, challengeId, null, null, null));
         }
 
         var login = SetSession(user);
-        return Ok(new LoginStartResponse(false, null, login.name, login.email));
+        return Ok(new LoginStartResponse(false, null, login.name, login.email, login.user_type));
     }
 
     [HttpPost("login/totp")]
@@ -153,6 +153,8 @@ public class LoginController : ControllerBase
             name = name,
             email = email,
             password = password,
+            user_type = UserType.Common,
+            auth_provider = AuthProvider.Password,
             email_verified = false,
             email_verification_secret = TotpUtility.GenerateBase32Secret(),
             email_verification_sent_at = DateTime.UtcNow
@@ -448,7 +450,7 @@ Se você não solicitou essa alteração, ignore este email.";
             if (!userInfo.EmailVerified || string.IsNullOrWhiteSpace(userInfo.Email))
                 return Redirect(BuildFrontLoginRedirect("google_error", "Conta Google sem email verificado."));
 
-            var login = EnsureUserAndCreateSession(userInfo.Email, userInfo.Name);
+            var login = EnsureUserAndCreateSession(userInfo.Email, userInfo.Name, AuthProvider.Google);
             return Redirect(BuildFrontLoginRedirect("google_success", null, login));
         }
         catch (Exception ex)
@@ -517,7 +519,7 @@ Se você não solicitou essa alteração, ignore este email.";
             if (string.IsNullOrWhiteSpace(userInfo.Email))
                 return Redirect(BuildFrontLoginRedirect("microsoft_error", "Não foi possível identificar o email da conta Microsoft."));
 
-            var login = EnsureUserAndCreateSession(userInfo.Email, userInfo.Name);
+            var login = EnsureUserAndCreateSession(userInfo.Email, userInfo.Name, AuthProvider.Microsoft);
             return Redirect(BuildFrontLoginRedirect("microsoft_success", null, login));
         }
         catch (Exception ex)
@@ -530,7 +532,7 @@ Se você não solicitou essa alteração, ignore este email.";
 
     private static string GetTotpChallengeKey(string challengeId) => $"login:totp:challenge:{challengeId}";
 
-    private LoginResponse EnsureUserAndCreateSession(string emailInput, string? nameInput)
+    private LoginResponse EnsureUserAndCreateSession(string emailInput, string? nameInput, AuthProvider authProvider)
     {
         var email = emailInput.Trim().ToLowerInvariant();
         var name = string.IsNullOrWhiteSpace(nameInput) ? email : nameInput.Trim();
@@ -544,17 +546,33 @@ Se você não solicitou essa alteração, ignore este email.";
                 name = name,
                 email = email,
                 password = Guid.NewGuid().ToString("N"),
+                user_type = UserType.Common,
+                auth_provider = authProvider,
                 email_verified = true
             };
             _context.users.Add(user);
             _context.SaveChanges();
         }
-        else if (!user.email_verified || !string.IsNullOrWhiteSpace(user.email_verification_secret))
+        else
         {
-            user.email_verified = true;
-            user.email_verification_secret = null;
-            user.email_verification_sent_at = null;
-            _context.SaveChanges();
+            var changed = false;
+
+            if (user.auth_provider != authProvider)
+            {
+                user.auth_provider = authProvider;
+                changed = true;
+            }
+
+            if (!user.email_verified || !string.IsNullOrWhiteSpace(user.email_verification_secret))
+            {
+                user.email_verified = true;
+                user.email_verification_secret = null;
+                user.email_verification_sent_at = null;
+                changed = true;
+            }
+
+            if (changed)
+                _context.SaveChanges();
         }
 
         return SetSession(user);
@@ -577,7 +595,7 @@ Se você não solicitou essa alteração, ignore este email.";
             Path = "/"
         });
 
-        return new LoginResponse(user.name, user.email);
+        return new LoginResponse(user.name, user.email, user.user_type);
     }
 
     private bool IsSecureCookie()
@@ -788,6 +806,7 @@ Se você não solicitou esse cadastro, ignore este email.";
         {
             parameters.Add($"name={Uri.EscapeDataString(login.name)}");
             parameters.Add($"email={Uri.EscapeDataString(login.email)}");
+            parameters.Add($"user_type={Uri.EscapeDataString(login.user_type.ToString())}");
         }
 
         return $"{baseUrl}?{string.Join("&", parameters)}";
@@ -951,8 +970,8 @@ Se você não solicitou esse cadastro, ignore este email.";
     }
 }
 
-public record LoginResponse(string name, string email);
-public record LoginStartResponse(bool requires_totp, string? challenge_id, string? name, string? email);
+public record LoginResponse(string name, string email, UserType user_type);
+public record LoginStartResponse(bool requires_totp, string? challenge_id, string? name, string? email, UserType? user_type);
 public record TotpLoginRequest(string challenge_id, string code);
 public record SignUpRequest(string name, string email, string password);
 public record SignupPendingResponse(string message, string email, bool email_sent);

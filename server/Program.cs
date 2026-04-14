@@ -3,6 +3,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using DotNetEnv;
+using Lib.AspNetCore.WebPush;
+using Lib.Net.Http.WebPush;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.RateLimiting;
@@ -63,6 +65,19 @@ Log.Logger = new LoggerConfiguration()
 Log.Information("Starting web application");
 
 builder.Services.AddSerilog();
+builder.Services.AddMemoryCache();
+builder.Services.AddMemoryVapidTokenCache();
+builder.Services.AddPushServiceClient(options =>
+{
+    options.Subject = Environment.GetEnvironmentVariable("WEB_PUSH_SUBJECT");
+    options.PublicKey = Environment.GetEnvironmentVariable("WEB_PUSH_PUBLIC_KEY");
+    options.PrivateKey = Environment.GetEnvironmentVariable("WEB_PUSH_PRIVATE_KEY");
+});
+builder.Services.AddSingleton<IBrowserPushNotification>(provider =>
+    new BrowserPushNotification(
+        provider.GetRequiredService<PushServiceClient>(),
+        Environment.GetEnvironmentVariable("WEB_PUSH_PUBLIC_KEY"),
+        Environment.GetEnvironmentVariable("WEB_PUSH_PRIVATE_KEY")));
 
 builder.Services.AddLogging(logging =>
 {
