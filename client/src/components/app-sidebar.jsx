@@ -67,11 +67,6 @@ const navItems = [
         icon: Bell,
     },
     {
-        title: "Atendimento",
-        url: "/atendimento",
-        icon: LifeBuoy,
-    },
-    {
         title: "Configurações",
         url: "/settings",
         icon: Settings,
@@ -80,6 +75,11 @@ const navItems = [
         title: "Assinatura",
         url: "/subscription",
         icon: CreditCard,
+    },
+    {
+        title: "Atendimento",
+        url: "/atendimento",
+        icon: LifeBuoy,
     },
 ]
 

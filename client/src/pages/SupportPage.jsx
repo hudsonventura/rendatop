@@ -540,7 +540,7 @@ export default function SupportPage() {
                         return currentId
                     }
 
-                    return nextItems[0]?.id || null
+                    return null
                 })
 
                 if (!nextItems.length && !isCreating) {
@@ -843,51 +843,51 @@ export default function SupportPage() {
                 </div>
 
                 <div className="grid gap-3">
-                    {!isAdmin ? (
-                        <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                        {!isAdmin ? (
                             <Button type="button" onClick={startCreateTicket}>
                                 <SquarePen className="size-4" />
                                 Novo chamado
                             </Button>
+                        ) : null}
+
+                        <Select value={scope} onValueChange={setScope}>
+                            <SelectTrigger className="w-full sm:w-[12rem]">
+                                <SelectValue placeholder="Escopo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {SUPPORT_SCOPE_OPTIONS.map((item) => (
+                                    <SelectItem key={item.value} value={item.value}>
+                                        {item.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <div className="relative min-w-[14rem] flex-1">
+                            <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+                            <Input
+                                value={searchInput}
+                                onChange={(event) => setSearchInput(event.target.value)}
+                                className="pl-9"
+                                placeholder={isAdmin ? "Buscar por assunto, texto, nome ou email" : "Buscar por assunto ou mensagem"}
+                            />
                         </div>
-                    ) : null}
 
-                    <Select value={scope} onValueChange={setScope}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Escopo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {SUPPORT_SCOPE_OPTIONS.map((item) => (
-                                <SelectItem key={item.value} value={item.value}>
-                                    {item.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
-                    <div className="relative">
-                        <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
-                        <Input
-                            value={searchInput}
-                            onChange={(event) => setSearchInput(event.target.value)}
-                            className="pl-9"
-                            placeholder={isAdmin ? "Buscar por assunto, texto, nome ou email" : "Buscar por assunto ou mensagem"}
-                        />
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-full sm:w-[14rem]">
+                                <SelectValue placeholder="Todos os status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={STATUS_FILTER_ALL}>Todos os status</SelectItem>
+                                {SUPPORT_STATUS_OPTIONS.map((item) => (
+                                    <SelectItem key={item.value} value={item.value}>
+                                        {item.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
-
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Todos os status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value={STATUS_FILTER_ALL}>Todos os status</SelectItem>
-                            {SUPPORT_STATUS_OPTIONS.map((item) => (
-                                <SelectItem key={item.value} value={item.value}>
-                                    {item.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
                 </div>
             </CardHeader>
 
@@ -971,9 +971,7 @@ export default function SupportPage() {
                     onCancel={() => {
                         setIsCreating(false)
                         resetCreateComposer()
-                        if (listData.items[0]?.id) {
-                            setSelectedTicketId(listData.items[0].id)
-                        }
+                        setSelectedTicketId(null)
                     }}
                 />
             )
