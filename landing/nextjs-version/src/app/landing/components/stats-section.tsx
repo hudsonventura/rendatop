@@ -12,21 +12,25 @@ import { DotPattern } from '@/components/dot-pattern'
 const stats = [
   {
     icon: CalendarClock,
+    value: 'Agenda viva',
     label: 'Investimentos a vencer',
     description: 'Acompanhe os vencimentos previstos para os proximos dias.',
   },
   {
     icon: LineChart,
+    value: 'CDI + IPCA',
     label: 'Indexadores principais',
     description: 'CDI, IPCA+ e %a.a para acompanhar a renda fixa.',
   },
   {
     icon: Bell,
+    value: 'Multicanal',
     label: 'Notificações',
     description: 'Seja avisado sobre vencimentos, via app, e-mail, Telegram e WhatsApp.',
   },
   {
     icon: Layers3,
+    value: 'Escalável',
     label: 'Planos',
     description: 'Free, Plus e Pro para adaptar notificacoes, IA e calendário ao seu uso.',
   },

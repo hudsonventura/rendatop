@@ -90,6 +90,11 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<OpenAiInvestmentDocumentExtractor>();
 builder.Services.AddScoped<IInvestmentDocumentExtractor, InvestmentDocumentExtractorRouter>();
 builder.Services.AddScoped<SubscriptionBillingService>();
+builder.Services.AddScoped<ISocialPostPublisher, FacebookPostPublisher>();
+builder.Services.AddScoped<ISocialPostPublisher, InstagramPostPublisher>();
+builder.Services.AddScoped<ISocialPostPublisher, LinkedInPostPublisher>();
+builder.Services.AddScoped<IBlogSocialPublisher, CompositeSocialPostPublisher>();
+builder.Services.AddSingleton<ITemporarySocialAssetService, TemporarySocialAssetService>();
 
 
 // Add services to the container.
