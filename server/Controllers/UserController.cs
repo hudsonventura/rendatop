@@ -596,18 +596,9 @@ public class UserController : AuthenticatedController
             periodSeconds: EmailVerificationPeriodSeconds,
             digits: EmailVerificationDigits);
 
-        var message =
-$@"Olá, {user.name}.
+        var message = EmailVerificationEmailTemplate.BuildEmailChange(user, user.pending_email, code, _clientBaseUrl);
 
-Use o código abaixo para confirmar a alteração do email da sua conta no RendaTop:
-
-{code}
-
-Esse código é temporário e deve ser informado na tela de configurações para concluir a troca do email.
-
-Se você não solicitou essa alteração, ignore este email.";
-
-        await _email.Notify(user.pending_email, "RendaTop | Verificação de alteração de email", message);
+        await _email.Notify(user.pending_email, "RendaTop | Verificação de alteração de email", message, isHtml: true);
     }
 
     private Plan? GetActiveSubscriptionPlan(Guid userId)

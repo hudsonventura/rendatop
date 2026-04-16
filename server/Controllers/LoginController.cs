@@ -26,6 +26,7 @@ public class LoginController : ControllerBase
     private readonly IDatabase _redis;
     private readonly IWebHostEnvironment _env;
     private readonly IEmailNotification _email;
+    private readonly string? _clientBaseUrl;
 
     public LoginController(
         IDbContextFactory<Context> contextFactory,
@@ -37,6 +38,7 @@ public class LoginController : ControllerBase
         _redis = muxer_redis.GetDatabase();
         _env = env;
         _email = email;
+        _clientBaseUrl = Environment.GetEnvironmentVariable("BASE_URL_CLIENT");
     }
 
     /// <summary>
@@ -702,18 +704,9 @@ Se você não solicitou essa alteração, ignore este email.";
             periodSeconds: EmailVerificationPeriodSeconds,
             digits: EmailVerificationDigits);
 
-        var message =
-$@"Olá, {user.name}.
+        var message = EmailVerificationEmailTemplate.BuildSignup(user, code, _clientBaseUrl);
 
-Use o código abaixo para ativar sua conta no RendaTop:
-
-{code}
-
-Esse código é temporário e deve ser informado na tela de cadastro para concluir a ativação.
-
-Se você não solicitou esse cadastro, ignore este email.";
-
-        await _email.Notify(user.email, "RendaTop | Verificação de email", message);
+        await _email.Notify(user.email, "RendaTop | Verificação de email", message, isHtml: true);
     }
 
     private static void ValidateEmail(string email)
