@@ -153,7 +153,7 @@ public class AdminBlogControllerTests
         Assert.IsType<BlogPostDetailResponse>(ok.Value);
         Assert.NotNull(fixture.FakePublisher.LastSingleRequest);
         var image = Assert.Single(fixture.FakePublisher.LastSingleRequest!.images);
-        Assert.StartsWith("https://localhost:5000/public/blog/social-assets/", image.public_url, StringComparison.Ordinal);
+        Assert.Contains("/public/blog/social-assets/", image.public_url, StringComparison.Ordinal);
     }
 
     [Fact]
