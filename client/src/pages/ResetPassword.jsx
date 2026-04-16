@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
+import { PasswordRequirements } from "@/components/PasswordRequirements";
 import axiosInstance from "@/utils/axiosConfig";
 import { appPath } from "@/utils/appPath";
+import { getPasswordValidationMessage } from "@/utils/passwordPolicy";
 
 const ResetPassword = () => {
     const token = useMemo(() => {
@@ -19,6 +21,8 @@ const ResetPassword = () => {
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -26,16 +30,14 @@ const ResetPassword = () => {
         setSuccessMessage("");
 
         const formData = new FormData(event.target);
-        const password = (formData.get("password") || "").toString();
-        const confirmPassword = (formData.get("confirm_password") || "").toString();
-
         if (!token) {
             setErrorMessage("Link de redefinição ausente ou inválido.");
             return;
         }
 
-        if (password.length < 6) {
-            setErrorMessage("A senha deve ter pelo menos 6 caracteres.");
+        const passwordError = getPasswordValidationMessage(password);
+        if (passwordError) {
+            setErrorMessage(passwordError);
             return;
         }
 
@@ -50,6 +52,8 @@ const ResetPassword = () => {
             .then((response) => {
                 setSuccessMessage(response?.data?.message || "Senha redefinida com sucesso.");
                 event.target.reset();
+                setPassword("");
+                setConfirmPassword("");
                 window.setTimeout(() => {
                     window.location.href = appPath("/login");
                 }, 1500);
@@ -88,7 +92,10 @@ const ResetPassword = () => {
                                         id="password"
                                         type={showPassword ? "text" : "password"}
                                         name="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
                                         required
+                                        minLength={9}
                                         className="h-11 pr-10"
                                     />
                                     <button
@@ -108,7 +115,10 @@ const ResetPassword = () => {
                                         id="confirm_password"
                                         type={showConfirmPassword ? "text" : "password"}
                                         name="confirm_password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
                                         required
+                                        minLength={9}
                                         className="h-11 pr-10"
                                     />
                                     <button
@@ -120,6 +130,12 @@ const ResetPassword = () => {
                                     </button>
                                 </div>
                             </div>
+
+                            <PasswordRequirements
+                                password={password}
+                                confirmPassword={confirmPassword}
+                                visible={password.length > 0 || confirmPassword.length > 0}
+                            />
 
                             <Button type="submit" className="w-full h-11 font-medium" disabled={loading}>
                                 {loading ? "Salvando..." : "Salvar nova senha"}

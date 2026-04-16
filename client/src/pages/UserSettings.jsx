@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2, MessageCircleMore, Sparkles } from "lucide-react"
+import { PasswordRequirements } from "@/components/PasswordRequirements"
 import {
     getBrowserPushServerConfiguration,
     getCurrentBrowserPushSubscription,
@@ -21,6 +22,7 @@ import {
 } from "@/utils/browserPush"
 import { formatCpf } from "@/utils/cpf"
 import { persistSessionUser } from "@/utils/userSession"
+import { getPasswordValidationMessage } from "@/utils/passwordPolicy"
 
 const frontendBaseUrl = (import.meta.env.VITE_FRONTEND_URL || "").replace(/\/+$/, "")
 const buildFrontendAssetUrl = (relativePath) =>
@@ -275,8 +277,9 @@ const UserSettings = () => {
             return
         }
 
-        if (password && password.length < 6) {
-            setError("A senha deve ter pelo menos 6 caracteres.")
+        const passwordError = password ? getPasswordValidationMessage(password) : ""
+        if (passwordError) {
+            setError(passwordError)
             return
         }
 
@@ -664,6 +667,12 @@ const UserSettings = () => {
                                             />
                                         </div>
                                     </div>
+
+                                    <PasswordRequirements
+                                        password={password}
+                                        confirmPassword={confirmPassword}
+                                        visible={password.length > 0 || confirmPassword.length > 0}
+                                    />
 
                                     <div className="space-y-3 rounded-md border p-4">
                                         <h4 className="text-sm font-medium">Notificações</h4>
