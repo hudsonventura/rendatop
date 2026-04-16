@@ -62,6 +62,51 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 
 Se quiser validar rapidamente, abra a landing com `?visit=instagram` e confirme no backend se a tabela `landing_visits` recebeu o registro.
 
+### Integrações sociais do blog
+
+Para habilitar a publicação automática do blog nas redes sociais, configure também:
+
+```bash
+META_GRAPH_API_VERSION=v23.0
+FACEBOOK_PAGE_ID=
+FACEBOOK_PAGE_ACCESS_TOKEN=
+FACEBOOK_LONG_LIVED_USER_ACCESS_TOKEN=
+INSTAGRAM_BUSINESS_ACCOUNT_ID=
+INSTAGRAM_ACCESS_TOKEN=
+LINKEDIN_ORGANIZATION_ID=
+LINKEDIN_ACCESS_TOKEN=
+LINKEDIN_API_VERSION=202504
+```
+
+Observações:
+- Facebook usa `FACEBOOK_PAGE_ID` e `FACEBOOK_PAGE_ACCESS_TOKEN`
+- se `FACEBOOK_PAGE_ACCESS_TOKEN` falhar, o backend também tenta `FACEBOOK_LONG_LIVED_USER_ACCESS_TOKEN` e depois `FACEBOOK_USER_ACCESS_TOKEN`, nessa ordem
+- imagens enviadas às redes sociais são expostas por URLs temporárias do backend em vez de `data:` URL/base64
+- Instagram exige uma conta business e pelo menos uma imagem no post
+- LinkedIn publica em nome da organização definida em `LINKEDIN_ORGANIZATION_ID`
+- se uma rede não estiver configurada, o post continua sendo publicado no blog e o canal fica com status de falha no painel admin
+
+### Renovação do token da página do Facebook
+
+Para reemitir o `long-lived user token` e listar os `page access tokens` disponíveis:
+
+```bash
+export FACEBOOK_APP_ID=*** && \
+export FACEBOOK_APP_SECRET=*** && \
+export FACEBOOK_USER_ACCESS_TOKEN='***' && \
+bash scripts/facebook-refresh-page-token.sh
+```
+
+O script:
+- troca o `FACEBOOK_USER_ACCESS_TOKEN` por um `long-lived user token`
+- chama `GET /me/accounts`
+- imprime `FACEBOOK_PAGE_ID` e `FACEBOOK_PAGE_ACCESS_TOKEN` prontos para copiar no `.env`
+
+Observações:
+- o `FACEBOOK_USER_ACCESS_TOKEN` informado ao script deve ser um token de usuário válido
+- o `FACEBOOK_PAGE_ACCESS_TOKEN` retornado é o token que o backend usa para publicar na página
+- se o usuário perder acesso à página ou revogar permissões, será necessário rodar o fluxo novamente
+
 
 ### Migrations
 ``` bash

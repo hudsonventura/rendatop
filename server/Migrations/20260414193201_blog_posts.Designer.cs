@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using server.Domain;
@@ -12,9 +13,11 @@ using server.Domain;
 namespace server.Migrations
 {
     [DbContext(typeof(Context))]
-    partial class ContextModelSnapshot : ModelSnapshot
+    [Migration("20260414193201_blog_posts")]
+    partial class blog_posts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -113,9 +116,6 @@ namespace server.Migrations
 
                     b.Property<Guid?>("cover_asset_id")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("cover_image_data_url")
-                        .HasColumnType("text");
 
                     b.Property<DateTime>("created_at")
                         .HasColumnType("timestamp with time zone");
@@ -921,15 +921,6 @@ namespace server.Migrations
                     b.Property<string>("password")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<string>("pending_email")
-                        .HasColumnType("text");
-
-                    b.Property<string>("pending_email_verification_secret")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("pending_email_verification_sent_at")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("phone")
                         .IsRequired()

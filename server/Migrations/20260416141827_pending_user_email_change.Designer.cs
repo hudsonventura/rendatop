@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using server.Domain;
@@ -12,9 +13,11 @@ using server.Domain;
 namespace server.Migrations
 {
     [DbContext(typeof(Context))]
-    partial class ContextModelSnapshot : ModelSnapshot
+    [Migration("20260416141827_pending_user_email_change")]
+    partial class pending_user_email_change
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -88,153 +91,6 @@ namespace server.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("banks");
-                });
-
-            modelBuilder.Entity("server.Domain.BlogPost", b =>
-                {
-                    b.Property<Guid>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("author_user_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("author_user_name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("body_html")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("body_text")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("cover_asset_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("cover_image_data_url")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("excerpt")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("published_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("slug")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("title")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("updated_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("author_user_id");
-
-                    b.HasIndex("slug")
-                        .IsUnique();
-
-                    b.HasIndex("updated_at");
-
-                    b.HasIndex("status", "published_at");
-
-                    b.ToTable("blog_posts");
-                });
-
-            modelBuilder.Entity("server.Domain.BlogPostAsset", b =>
-                {
-                    b.Property<Guid>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("alt_text")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("blog_post_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<byte[]>("content")
-                        .IsRequired()
-                        .HasColumnType("bytea");
-
-                    b.Property<string>("content_type")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("file_name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<long>("size_bytes")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("blog_post_id");
-
-                    b.ToTable("blog_post_assets");
-                });
-
-            modelBuilder.Entity("server.Domain.BlogPostSocialPublication", b =>
-                {
-                    b.Property<Guid>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("blog_post_id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("channel")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("error_message")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("published_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("remote_post_id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("remote_url")
-                        .HasColumnType("text");
-
-                    b.Property<string>("status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("updated_at")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("blog_post_id", "channel")
-                        .IsUnique();
-
-                    b.ToTable("blog_post_social_publications");
                 });
 
             modelBuilder.Entity("server.Domain.BrowserPushSubscription", b =>
@@ -969,37 +825,6 @@ namespace server.Migrations
                     b.Navigation("user");
                 });
 
-            modelBuilder.Entity("server.Domain.BlogPost", b =>
-                {
-                    b.HasOne("server.Domain.User", "author_user")
-                        .WithMany()
-                        .HasForeignKey("author_user_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("author_user");
-                });
-
-            modelBuilder.Entity("server.Domain.BlogPostAsset", b =>
-                {
-                    b.HasOne("server.Domain.BlogPost", "blog_post")
-                        .WithMany("assets")
-                        .HasForeignKey("blog_post_id");
-
-                    b.Navigation("blog_post");
-                });
-
-            modelBuilder.Entity("server.Domain.BlogPostSocialPublication", b =>
-                {
-                    b.HasOne("server.Domain.BlogPost", "blog_post")
-                        .WithMany("social_publications")
-                        .HasForeignKey("blog_post_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("blog_post");
-                });
-
             modelBuilder.Entity("server.Domain.BrowserPushSubscription", b =>
                 {
                     b.HasOne("server.Domain.User", "user")
@@ -1176,13 +1001,6 @@ namespace server.Migrations
                     b.Navigation("actor_user");
 
                     b.Navigation("ticket");
-                });
-
-            modelBuilder.Entity("server.Domain.BlogPost", b =>
-                {
-                    b.Navigation("assets");
-
-                    b.Navigation("social_publications");
                 });
 
             modelBuilder.Entity("server.Domain.Investment", b =>

@@ -125,6 +125,22 @@ public class User
     public DateTime? email_verification_sent_at { get; set; }
 
     /// <summary>
+    /// Novo email aguardando confirmação antes de substituir o email principal da conta
+    /// </summary>
+    public string? pending_email { get; set; }
+
+    /// <summary>
+    /// Chave secreta temporária usada para validar o código enviado ao novo email pendente
+    /// </summary>
+    [JsonIgnore]
+    public string? pending_email_verification_secret { get; set; }
+
+    /// <summary>
+    /// Data e hora do último envio do código de verificação do novo email pendente
+    /// </summary>
+    public DateTime? pending_email_verification_sent_at { get; set; }
+
+    /// <summary>
     /// Salt para encriptação da senha
     /// </summary>
     public string salt { get; private set; } = Guid.NewGuid().ToString();
