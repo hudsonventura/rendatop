@@ -47,16 +47,23 @@ const UserSettings = () => {
     const [testingTelegram, setTestingTelegram] = useState(false)
     const [testingWhatsApp, setTestingWhatsApp] = useState(false)
     const [testingEmail, setTestingEmail] = useState(false)
+    const [verifyingPendingEmail, setVerifyingPendingEmail] = useState(false)
+    const [resendingPendingEmail, setResendingPendingEmail] = useState(false)
+    const [cancelingPendingEmail, setCancelingPendingEmail] = useState(false)
     const [telegramGuideOpen, setTelegramGuideOpen] = useState(false)
     const [success, setSuccess] = useState("")
     const [error, setError] = useState("")
     const [whatsAppError, setWhatsAppError] = useState("")
     const [telegramError, setTelegramError] = useState("")
     const [emailError, setEmailError] = useState("")
+    const [pendingEmailError, setPendingEmailError] = useState("")
     const [browserError, setBrowserError] = useState("")
 
     const [name, setName] = useState("")
     const [email, setEmail] = useState("")
+    const [currentEmail, setCurrentEmail] = useState("")
+    const [pendingEmail, setPendingEmail] = useState("")
+    const [emailVerificationCode, setEmailVerificationCode] = useState("")
     const [phone, setPhone] = useState("")
     const [telegramChatId, setTelegramChatId] = useState("")
     const [cpf, setCpf] = useState("")
@@ -91,9 +98,13 @@ const UserSettings = () => {
                 const data = response.data
                 const canUseWhatsAppNotifications = Boolean(data.whatsapp_notifications_enabled)
                 const canUseCalendarIcs = Boolean(data.calendar_ics_enabled)
+                const confirmedEmail = data.email || ""
+                const nextPendingEmail = data.pending_email || ""
 
                 setName(data.name || "")
-                setEmail(data.email || "")
+                setCurrentEmail(confirmedEmail)
+                setPendingEmail(nextPendingEmail)
+                setEmail(nextPendingEmail || confirmedEmail)
                 setPhone(data.phone || "")
                 setTelegramChatId(data.telegram_chat_id || "")
                 setCpf(data.cpf || "")
@@ -108,7 +119,7 @@ const UserSettings = () => {
                 setTotpEnabled(Boolean(data.totp_enabled))
                 persistSessionUser({
                     name: data.name,
-                    email: data.email,
+                    email: confirmedEmail,
                     user_type: data.user_type,
                 })
             })
@@ -156,6 +167,7 @@ const UserSettings = () => {
         setWhatsAppError("")
         setTelegramError("")
         setEmailError("")
+        setPendingEmailError("")
         setBrowserError("")
     }
 
@@ -303,10 +315,16 @@ const UserSettings = () => {
             })
             .then((response) => {
                 const data = response.data
+                const confirmedEmail = data.email || ""
+                const nextPendingEmail = data.pending_email || ""
+                const verificationSent = data.pending_email_verification_sent
                 setName(data.name || "")
+                setCurrentEmail(confirmedEmail)
+                setPendingEmail(nextPendingEmail)
+                setEmail(nextPendingEmail || confirmedEmail)
                 persistSessionUser({
                     name: data.name,
-                    email: data.email,
+                    email: confirmedEmail,
                     user_type: data.user_type,
                 })
                 setPhone(data.phone || "")
@@ -318,7 +336,19 @@ const UserSettings = () => {
                 setTotpEnabled(Boolean(data.totp_enabled))
                 setPassword("")
                 setConfirmPassword("")
-                setSuccess("Configurações salvas com sucesso.")
+                setEmailVerificationCode("")
+
+                if (nextPendingEmail) {
+                    if (verificationSent === false) {
+                        setSuccess("Seus dados foram salvos, mas não conseguimos enviar o código agora. Tente reenviar abaixo.")
+                    } else if (verificationSent === true) {
+                        setSuccess("Enviamos um código para o novo email. Confirme-o abaixo para concluir a alteração.")
+                    } else {
+                        setSuccess("Suas configurações foram salvas. O novo email ainda precisa ser confirmado.")
+                    }
+                } else {
+                    setSuccess("Configurações salvas com sucesso.")
+                }
             })
             .catch((err) => {
                 const message = typeof err?.response?.data === "string"
@@ -397,6 +427,90 @@ const UserSettings = () => {
             })
             .finally(() => {
                 setTestingEmail(false)
+            })
+    }
+
+    const handleVerifyPendingEmail = () => {
+        setError("")
+        setSuccess("")
+        setPendingEmailError("")
+        setVerifyingPendingEmail(true)
+
+        axiosInstance
+            .post("/User/Settings/Email/Verify", { code: emailVerificationCode })
+            .then((response) => {
+                const data = response.data || {}
+                const confirmedEmail = data.email || ""
+                setCurrentEmail(confirmedEmail)
+                setPendingEmail("")
+                setEmail(confirmedEmail)
+                setEmailVerificationCode("")
+                persistSessionUser({
+                    name: data.name,
+                    email: confirmedEmail,
+                    user_type: data.user_type,
+                })
+                setSuccess("Email atualizado e verificado com sucesso.")
+            })
+            .catch((err) => {
+                const message = typeof err?.response?.data === "string"
+                    ? err.response.data
+                    : "Não foi possível verificar o novo email."
+                setPendingEmailError(message)
+            })
+            .finally(() => {
+                setVerifyingPendingEmail(false)
+            })
+    }
+
+    const handleResendPendingEmail = () => {
+        setError("")
+        setSuccess("")
+        setPendingEmailError("")
+        setResendingPendingEmail(true)
+
+        axiosInstance
+            .post("/User/Settings/Email/Resend")
+            .then((response) => {
+                const message = response?.data?.message || "Novo código enviado para seu novo email."
+                setSuccess(message)
+            })
+            .catch((err) => {
+                const message = typeof err?.response?.data === "string"
+                    ? err.response.data
+                    : "Não foi possível reenviar o código."
+                setPendingEmailError(message)
+            })
+            .finally(() => {
+                setResendingPendingEmail(false)
+            })
+    }
+
+    const handleCancelPendingEmail = () => {
+        setError("")
+        setSuccess("")
+        setPendingEmailError("")
+        setCancelingPendingEmail(true)
+
+        axiosInstance
+            .post("/User/Settings/Email/Cancel")
+            .then((response) => {
+                const data = response.data || {}
+                const confirmedEmail = data.email || currentEmail
+                setCurrentEmail(confirmedEmail)
+                setPendingEmail("")
+                setEmail(confirmedEmail)
+                setEmailVerificationCode("")
+                setSuccess("Alteração de email cancelada.")
+            })
+            .catch((err) => {
+                const message = typeof err?.response?.data === "string"
+                    ? err.response.data
+                    : "Não foi possível cancelar a alteração de email."
+                setPendingEmailError(message)
+            })
+            .finally(() => {
+                setCancelingPendingEmail(false)
             })
     }
 
@@ -504,6 +618,15 @@ const UserSettings = () => {
                                             placeholder="seu@email.com"
                                             required
                                         />
+                                        {pendingEmail ? (
+                                            <p className="text-xs text-muted-foreground">
+                                                Seu email atual continua sendo <strong>{currentEmail}</strong> até você confirmar o código enviado para <strong>{pendingEmail}</strong>.
+                                            </p>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">
+                                                
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -864,6 +987,63 @@ const UserSettings = () => {
                                             </div>
                                         )}
                                     </div>
+
+                                    {pendingEmail && (
+                                        <div className="space-y-3 rounded-md border border-primary/20 bg-primary/5 p-4">
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium">Verificar novo email</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Para concluir a alteração que você salvou, informe o código enviado para <strong>{pendingEmail}</strong> ou cancele a solicitação abaixo.
+                                                </p>
+                                            </div>
+                                            {pendingEmailError && (
+                                                <Alert variant="destructive">
+                                                    <AlertCircle className="h-4 w-4" />
+                                                    <AlertTitle>Verificação de email</AlertTitle>
+                                                    <AlertDescription>{pendingEmailError}</AlertDescription>
+                                                </Alert>
+                                            )}
+                                            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="emailVerificationCode">Código de verificação</Label>
+                                                    <Input
+                                                        id="emailVerificationCode"
+                                                        type="text"
+                                                        value={emailVerificationCode}
+                                                        onChange={(e) => setEmailVerificationCode(e.target.value)}
+                                                        placeholder="Informe o código recebido"
+                                                        inputMode="numeric"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col gap-2 sm:flex-row lg:flex-wrap lg:justify-end">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={handleVerifyPendingEmail}
+                                                        disabled={verifyingPendingEmail || resendingPendingEmail || cancelingPendingEmail || !emailVerificationCode.trim()}
+                                                    >
+                                                        {verifyingPendingEmail ? "Verificando..." : "Confirmar"}
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                        onClick={handleResendPendingEmail}
+                                                        disabled={verifyingPendingEmail || resendingPendingEmail || cancelingPendingEmail}
+                                                    >
+                                                        {resendingPendingEmail ? "Reenviando..." : "Reenviar código"}
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={handleCancelPendingEmail}
+                                                        disabled={verifyingPendingEmail || resendingPendingEmail || cancelingPendingEmail}
+                                                    >
+                                                        {cancelingPendingEmail ? "Cancelando..." : "Cancelar alteração"}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {error && (
                                         <Alert variant="destructive">

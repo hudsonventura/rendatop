@@ -138,9 +138,12 @@ public class LoginController : ControllerBase
         if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
             throw new ExpectedException("A senha deve ter pelo menos 6 caracteres.");
 
-        var existingUser = _context.users.FirstOrDefault(x => x.email == email);
+        var existingUser = _context.users.FirstOrDefault(x => x.email == email || x.pending_email == email);
         if (existingUser is not null)
         {
+            if (existingUser.email != email)
+                throw new ExpectedException("Este email está reservado por uma alteração pendente em outra conta. Tente outro email.", HttpStatusCode.Conflict);
+
             if (existingUser.email_verified)
                 throw new ExpectedException("Já existe uma conta com esse email.", HttpStatusCode.Conflict);
 

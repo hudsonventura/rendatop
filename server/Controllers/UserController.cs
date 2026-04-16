@@ -11,6 +11,10 @@ namespace server.Controllers;
 public class UserController : AuthenticatedController
 {
     private const string TestEmailDestination = "hudsonventura@gmail.com";
+    private const int EmailVerificationDigits = 6;
+    private const int EmailVerificationPeriodSeconds = 300;
+    private const int EmailVerificationAllowedDriftSteps = 1;
+    private static readonly TimeSpan EmailVerificationResendInterval = TimeSpan.FromSeconds(60);
     private readonly Context _context;
     private readonly INotification _notify;
     private readonly IWhatsAppNotification _whatsApp;
@@ -56,7 +60,7 @@ public class UserController : AuthenticatedController
     [ProducesResponseType(typeof(UserSettingsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
-    public IActionResult UpdateSettings([FromBody] UserSettingsRequest request)
+    public async Task<IActionResult> UpdateSettings([FromBody] UserSettingsRequest request)
     {
         var user = _context.users.FirstOrDefault(x => x.id == _user.id);
         if (user is null)
@@ -71,12 +75,6 @@ public class UserController : AuthenticatedController
             throw new ExpectedException("Email é obrigatório.");
 
         ValidateEmail(email);
-
-        bool alreadyExists = _context.users
-            .AsNoTracking()
-            .Any(x => x.id != _user.id && x.email == email);
-        if (alreadyExists)
-            throw new ExpectedException("Já existe uma conta com esse email.", HttpStatusCode.Conflict);
 
         var phone = SanitizePhone(request.phone);
         if (request.notify_whatsapp && string.IsNullOrWhiteSpace(phone))
@@ -96,7 +94,6 @@ public class UserController : AuthenticatedController
             throw new ExpectedException("Compartilhamento público de calendário ICS exige um plano ativo que tenha esse recurso liberado.");
 
         user.name = name;
-        user.email = email;
         user.phone = phone;
         user.notify_whatsapp = request.notify_whatsapp;
         user.notify_telegram = request.notify_telegram;
@@ -114,6 +111,136 @@ public class UserController : AuthenticatedController
             user.password = newPassword;
         }
 
+        var pendingEmailVerificationSent = false;
+
+        if (email == user.email)
+        {
+            ClearPendingEmailChange(user);
+        }
+        else
+        {
+            EnsureEmailAvailable(email, user.id);
+
+            if (!string.Equals(user.pending_email, email, StringComparison.Ordinal))
+            {
+                user.pending_email = email;
+                user.pending_email_verification_secret = TotpUtility.GenerateBase32Secret();
+                user.pending_email_verification_sent_at = DateTime.UtcNow;
+                pendingEmailVerificationSent = true;
+            }
+            else if (string.IsNullOrWhiteSpace(user.pending_email_verification_secret))
+            {
+                user.pending_email_verification_secret = TotpUtility.GenerateBase32Secret();
+                pendingEmailVerificationSent = true;
+            }
+        }
+
+        _context.SaveChanges();
+
+        if (pendingEmailVerificationSent)
+        {
+            try
+            {
+                await SendPendingEmailVerificationEmail(user);
+            }
+            catch
+            {
+                return Ok(ToResponse(user, pendingEmailVerificationSent: false));
+            }
+        }
+
+        return Ok(ToResponse(
+            user,
+            pendingEmailVerificationSent: pendingEmailVerificationSent ? true : null));
+    }
+
+    [HttpPost("User/Settings/Email/Verify")]
+    [ProducesResponseType(typeof(UserSettingsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult VerifyPendingEmail([FromBody] PendingEmailVerificationRequest request)
+    {
+        var user = _context.users.FirstOrDefault(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        if (string.IsNullOrWhiteSpace(request.code))
+            throw new ExpectedException("Código de verificação é obrigatório.");
+
+        if (string.IsNullOrWhiteSpace(user.pending_email))
+            throw new ExpectedException("Não existe alteração de email pendente para esta conta.", HttpStatusCode.BadRequest);
+
+        if (string.IsNullOrWhiteSpace(user.pending_email_verification_secret) ||
+            !TotpUtility.ValidateCode(
+                user.pending_email_verification_secret,
+                request.code.Trim(),
+                allowedDriftSteps: EmailVerificationAllowedDriftSteps,
+                periodSeconds: EmailVerificationPeriodSeconds,
+                digits: EmailVerificationDigits))
+        {
+            throw new ExpectedException("Código de verificação inválido ou expirado.", HttpStatusCode.Unauthorized);
+        }
+
+        EnsureEmailAvailable(user.pending_email, user.id);
+
+        user.email = user.pending_email;
+        ClearPendingEmailChange(user);
+        _context.SaveChanges();
+
+        return Ok(ToResponse(user));
+    }
+
+    [HttpPost("User/Settings/Email/Resend")]
+    [ProducesResponseType(typeof(GenericMessageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ResendPendingEmailVerification()
+    {
+        var user = _context.users.FirstOrDefault(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        if (string.IsNullOrWhiteSpace(user.pending_email))
+            throw new ExpectedException("Não existe alteração de email pendente para esta conta.", HttpStatusCode.BadRequest);
+
+        EnsureEmailAvailable(user.pending_email, user.id);
+
+        if (user.pending_email_verification_sent_at.HasValue &&
+            DateTime.UtcNow - user.pending_email_verification_sent_at.Value < EmailVerificationResendInterval)
+        {
+            throw new ExpectedException("Aguarde 60 segundos antes de solicitar um novo código.");
+        }
+
+        user.pending_email_verification_secret = TotpUtility.GenerateBase32Secret();
+        user.pending_email_verification_sent_at = DateTime.UtcNow;
+        _context.SaveChanges();
+
+        try
+        {
+            await SendPendingEmailVerificationEmail(user);
+        }
+        catch (Exception ex)
+        {
+            throw new ExpectedException($"Falha ao enviar email de verificação: {ex.Message}", HttpStatusCode.BadGateway);
+        }
+
+        return Ok(new GenericMessageResponse("Novo código de verificação enviado para seu novo email."));
+    }
+
+    [HttpPost("User/Settings/Email/Cancel")]
+    [ProducesResponseType(typeof(UserSettingsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult CancelPendingEmailVerification()
+    {
+        var user = _context.users.FirstOrDefault(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        if (string.IsNullOrWhiteSpace(user.pending_email))
+            throw new ExpectedException("Não existe alteração de email pendente para esta conta.", HttpStatusCode.BadRequest);
+
+        ClearPendingEmailChange(user);
         _context.SaveChanges();
 
         return Ok(ToResponse(user));
@@ -406,7 +533,7 @@ public class UserController : AuthenticatedController
         return digits;
     }
 
-    private UserSettingsResponse ToResponse(User user)
+    private UserSettingsResponse ToResponse(User user, bool? pendingEmailVerificationSent = null)
     {
         var whatsappNotificationsEnabled = CanUseWhatsAppNotifications(user.id);
         var calendarIcsEnabled = CanUseCalendarIcs(user.id);
@@ -433,8 +560,54 @@ public class UserController : AuthenticatedController
             aiDocumentExtraction.current_usage,
             aiDocumentExtraction.monthly_limit,
             aiDocumentExtraction.restriction_message,
-            user.user_type
+            user.user_type,
+            user.pending_email,
+            pendingEmailVerificationSent
         );
+    }
+
+    private void EnsureEmailAvailable(string email, Guid currentUserId)
+    {
+        var alreadyExists = _context.users
+            .AsNoTracking()
+            .Any(x => x.id != currentUserId && (x.email == email || x.pending_email == email));
+
+        if (alreadyExists)
+            throw new ExpectedException("Já existe uma conta com esse email.", HttpStatusCode.Conflict);
+    }
+
+    private static void ClearPendingEmailChange(User user)
+    {
+        user.pending_email = null;
+        user.pending_email_verification_secret = null;
+        user.pending_email_verification_sent_at = null;
+    }
+
+    private async Task SendPendingEmailVerificationEmail(User user)
+    {
+        if (string.IsNullOrWhiteSpace(user.pending_email))
+            throw new ExpectedException("Novo email pendente não encontrado para esta conta.", HttpStatusCode.BadRequest);
+
+        if (string.IsNullOrWhiteSpace(user.pending_email_verification_secret))
+            throw new ExpectedException("Código de verificação indisponível para esta alteração de email.", HttpStatusCode.BadRequest);
+
+        var code = TotpUtility.GenerateCode(
+            user.pending_email_verification_secret,
+            periodSeconds: EmailVerificationPeriodSeconds,
+            digits: EmailVerificationDigits);
+
+        var message =
+$@"Olá, {user.name}.
+
+Use o código abaixo para confirmar a alteração do email da sua conta no RendaTop:
+
+{code}
+
+Esse código é temporário e deve ser informado na tela de configurações para concluir a troca do email.
+
+Se você não solicitou essa alteração, ignore este email.";
+
+        await _email.Notify(user.pending_email, "RendaTop | Verificação de alteração de email", message);
     }
 
     private Plan? GetActiveSubscriptionPlan(Guid userId)
@@ -517,6 +690,10 @@ public record NotificationTestRequest(
     string? telegram_chat_id
 );
 
+public record PendingEmailVerificationRequest(
+    string code
+);
+
 public record UserSettingsResponse(
     string name,
     string email,
@@ -536,7 +713,9 @@ public record UserSettingsResponse(
     int ai_document_extraction_current_usage,
     int ai_document_extraction_monthly_limit,
     string? ai_document_extraction_restriction_message,
-    UserType user_type
+    UserType user_type,
+    string? pending_email,
+    bool? pending_email_verification_sent = null
 );
 
 public record AiDocumentExtractionAccessResponse(

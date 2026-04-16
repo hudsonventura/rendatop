@@ -1,6 +1,7 @@
 using server.Domain;
 using server.Utils;
 using StackExchange.Redis;
+using Microsoft.EntityFrameworkCore;
 
 namespace server.Middlewares;
 
@@ -16,11 +17,16 @@ public static class AuthenticationMiddlewarePlugin
 public class AuthenticationMiddleware
 {
     private readonly RequestDelegate _next;
-    private StackExchange.Redis.IDatabase _redis;
+    private readonly StackExchange.Redis.IDatabase _redis;
+    private readonly IDbContextFactory<Context> _contextFactory;
 
-    public AuthenticationMiddleware(RequestDelegate next, IConnectionMultiplexer muxer_redis)
+    public AuthenticationMiddleware(
+        RequestDelegate next,
+        IConnectionMultiplexer muxer_redis,
+        IDbContextFactory<Context> contextFactory)
     {
         _redis = muxer_redis.GetDatabase();
+        _contextFactory = contextFactory;
         _next = next;
     }
 
@@ -63,7 +69,10 @@ public class AuthenticationMiddleware
             }
 
             // Inject the User into HttpContext.Items so controllers can access it
-            User user = User.Deserialize(json);
+            var cachedUser = User.Deserialize(json);
+            using var dbContext = _contextFactory.CreateDbContext();
+            var user = dbContext.users.AsNoTracking().FirstOrDefault(x => x.id == cachedUser.id)
+                ?? throw new ExpectedException("Usuário autenticado não encontrado.", System.Net.HttpStatusCode.Unauthorized);
             context.Items["User"] = user;
 
             // Slide the expiration so active users don't get kicked out
