@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using server.Domain;
 using server.Services;
 using server.Utils;
@@ -13,14 +14,17 @@ public class AdminBlogController : AuthenticatedController
 {
     private readonly Context _context;
     private readonly IBlogSocialPublisher _socialPublisher;
+    private readonly ILogger<AdminBlogController> _logger;
 
     public AdminBlogController(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<Context> contextFactory,
-        IBlogSocialPublisher socialPublisher) : base(httpContextAccessor)
+        IBlogSocialPublisher socialPublisher,
+        ILogger<AdminBlogController> logger) : base(httpContextAccessor)
     {
         _context = contextFactory.CreateDbContext();
         _socialPublisher = socialPublisher;
+        _logger = logger;
     }
 
     [HttpGet("admin/blog/posts")]
@@ -83,6 +87,7 @@ public class AdminBlogController : AuthenticatedController
             status = BlogPostStatus.Draft,
             author_user_id = _user.id,
             author_user_name = _user.name,
+            cover_image_data_url = normalized.CoverImageDataUrl,
             cover_asset_id = normalized.CoverAssetId,
             created_at = now,
             updated_at = now
@@ -114,6 +119,7 @@ public class AdminBlogController : AuthenticatedController
         post.excerpt = normalized.Excerpt;
         post.body_html = normalized.BodyHtml;
         post.body_text = normalized.BodyText;
+        post.cover_image_data_url = normalized.CoverImageDataUrl;
         post.cover_asset_id = normalized.CoverAssetId;
         post.updated_at = DateTime.UtcNow;
 
@@ -131,18 +137,13 @@ public class AdminBlogController : AuthenticatedController
 
         var post = GetBlogPostOrThrow(id);
         if (post.status == BlogPostStatus.Published)
-            throw new ExpectedException("A postagem já está publicada.", HttpStatusCode.BadRequest);
+            return Ok(BuildDetailResponse(post));
 
         var now = DateTime.UtcNow;
         post.status = BlogPostStatus.Published;
         post.published_at = now;
         post.updated_at = now;
 
-        await _context.SaveChangesAsync(cancellationToken);
-
-        var socialRequest = BuildSocialPublishRequest(post);
-        var results = await _socialPublisher.PublishAllAsync(socialRequest, cancellationToken);
-        UpsertSocialPublicationResults(post.id, results);
         await _context.SaveChangesAsync(cancellationToken);
 
         return Ok(BuildDetailResponse(post));
@@ -162,6 +163,15 @@ public class AdminBlogController : AuthenticatedController
             throw new ExpectedException("Somente postagens publicadas podem ser reenviadas às redes sociais.", HttpStatusCode.BadRequest);
 
         var result = await _socialPublisher.PublishAsync(channel, BuildSocialPublishRequest(post), cancellationToken);
+        if (result.status == SocialPublicationStatus.Failed)
+        {
+            _logger.LogWarning("Falha ao publicar post {PostId} na rede {Channel}. Motivo: {ErrorMessage}", post.id, channel, result.error_message);
+        }
+        else
+        {
+            _logger.LogInformation("Post {PostId} publicado com sucesso na rede {Channel}. RemoteId: {RemotePostId}", post.id, channel, result.remote_post_id);
+        }
+
         UpsertSocialPublicationResults(post.id, [result]);
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -225,6 +235,8 @@ public class AdminBlogController : AuthenticatedController
         else if (excerpt.Length > 320)
             excerpt = excerpt[..320].TrimEnd();
 
+        var normalizedCoverImageDataUrl = BlogRichTextSanitizer.NormalizeDataImageUrl(request.cover_image_data_url);
+
         var assetIds = BlogRichTextSanitizer.ExtractAssetIds(sanitizedHtml).ToHashSet();
         if (request.cover_asset_id.HasValue)
             assetIds.Add(request.cover_asset_id.Value);
@@ -252,6 +264,7 @@ public class AdminBlogController : AuthenticatedController
             bodyText,
             slug,
             assetIds.ToList(),
+            normalizedCoverImageDataUrl,
             request.cover_asset_id);
     }
 
@@ -322,6 +335,19 @@ public class AdminBlogController : AuthenticatedController
             .ThenBy(asset => asset.created_at)
             .ToList();
 
+        if (!string.IsNullOrWhiteSpace(post.cover_image_data_url))
+        {
+            var coverImage = TryCreateSocialImageFromDataUrl(post.cover_image_data_url);
+            if (coverImage is not null)
+                return [coverImage, .. assets.Select(asset => new SocialPublishImage(
+                    asset.id,
+                    asset.file_name,
+                    asset.content_type,
+                    asset.alt_text,
+                    asset.content,
+                    BlogUrlBuilder.BuildPublicAssetUrl(asset.id, Request)))];
+        }
+
         return assets
             .Select(asset => new SocialPublishImage(
                 asset.id,
@@ -358,23 +384,18 @@ public class AdminBlogController : AuthenticatedController
             }
 
             publication.status = result.status;
-            publication.remote_post_id = result.remote_post_id;
-            publication.remote_url = result.remote_url;
+            publication.remote_post_id = !string.IsNullOrWhiteSpace(result.remote_post_id) ? result.remote_post_id : publication.remote_post_id;
+            publication.remote_url = !string.IsNullOrWhiteSpace(result.remote_url) ? result.remote_url : publication.remote_url;
             publication.error_message = result.error_message;
             publication.updated_at = now;
-            publication.published_at = result.status == SocialPublicationStatus.Published ? now : null;
+            if (result.status == SocialPublicationStatus.Published)
+                publication.published_at = now;
         }
     }
 
     private BlogPostSummaryResponse BuildSummaryResponse(BlogPost post, IReadOnlyList<BlogPostSocialPublication> socialPublications)
     {
-        BlogPostAsset? coverAsset = null;
-        if (post.cover_asset_id.HasValue)
-        {
-            coverAsset = _context.blog_post_assets
-                .AsNoTracking()
-                .FirstOrDefault(asset => asset.id == post.cover_asset_id.Value);
-        }
+        var coverAssetResponse = BuildCoverResponse(post);
 
         return new BlogPostSummaryResponse(
             post.id,
@@ -383,7 +404,7 @@ public class AdminBlogController : AuthenticatedController
             post.excerpt,
             post.status,
             post.author_user_name,
-            coverAsset is null ? null : BuildAssetResponse(coverAsset),
+            coverAssetResponse,
             BuildSocialResponses(socialPublications),
             post.published_at,
             post.updated_at,
@@ -403,24 +424,20 @@ public class AdminBlogController : AuthenticatedController
             .Where(publication => publication.blog_post_id == post.id)
             .OrderBy(publication => publication.channel)
             .ToList();
-
-        var coverAsset = post.cover_asset_id.HasValue
-            ? assets.FirstOrDefault(asset => asset.id == post.cover_asset_id.Value) ??
-              _context.blog_post_assets.AsNoTracking().FirstOrDefault(asset => asset.id == post.cover_asset_id.Value)
-            : null;
+        var coverAssetResponse = BuildCoverResponse(post, assets);
 
         return new BlogPostDetailResponse(
             post.id,
             post.slug,
             post.title,
             post.excerpt,
-            post.body_html,
+            BlogRichTextSanitizer.ExpandAssetUrls(post.body_html, assetId => BlogUrlBuilder.BuildPublicAssetUrl(assetId, Request)),
             post.body_text,
             post.status,
             post.author_user_id,
             post.author_user_name,
             post.cover_asset_id,
-            coverAsset is null ? null : BuildAssetResponse(coverAsset),
+            coverAssetResponse,
             assets.Select(BuildAssetResponse).ToList(),
             BuildSocialResponses(socialPublications),
             post.published_at,
@@ -471,6 +488,87 @@ public class AdminBlogController : AuthenticatedController
             BlogUrlBuilder.BuildPublicAssetUrl(asset.id, Request),
             asset.created_at);
 
+    private BlogPostAssetResponse? BuildCoverResponse(BlogPost post, IReadOnlyList<BlogPostAsset>? loadedAssets = null)
+    {
+        var normalizedDataUrl = BlogRichTextSanitizer.NormalizeDataImageUrl(post.cover_image_data_url);
+        if (!string.IsNullOrWhiteSpace(normalizedDataUrl))
+        {
+            return new BlogPostAssetResponse(
+                Guid.Empty,
+                "cover-inline",
+                GetContentTypeFromDataUrl(normalizedDataUrl),
+                EstimateDataUrlBytes(normalizedDataUrl),
+                "Capa do post",
+                normalizedDataUrl,
+                post.updated_at);
+        }
+
+        BlogPostAsset? coverAsset = null;
+        if (post.cover_asset_id.HasValue)
+        {
+            coverAsset = loadedAssets?.FirstOrDefault(asset => asset.id == post.cover_asset_id.Value)
+                ?? _context.blog_post_assets.AsNoTracking().FirstOrDefault(asset => asset.id == post.cover_asset_id.Value);
+        }
+
+        return coverAsset is null ? null : BuildAssetResponse(coverAsset);
+    }
+
+    private static SocialPublishImage? TryCreateSocialImageFromDataUrl(string? dataUrl)
+    {
+        var normalized = BlogRichTextSanitizer.NormalizeDataImageUrl(dataUrl);
+        if (string.IsNullOrWhiteSpace(normalized))
+            return null;
+
+        var commaIndex = normalized.IndexOf(',');
+        if (commaIndex < 0 || commaIndex >= normalized.Length - 1)
+            return null;
+
+        var header = normalized[..commaIndex];
+        var base64 = normalized[(commaIndex + 1)..];
+        var contentType = GetContentTypeFromDataUrl(normalized);
+
+        try
+        {
+            var content = Convert.FromBase64String(base64);
+            return new SocialPublishImage(
+                Guid.Empty,
+                $"cover.{GetExtensionFromContentType(contentType)}",
+                contentType,
+                "Capa do post",
+                content,
+                normalized);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string GetContentTypeFromDataUrl(string dataUrl)
+    {
+        var match = Regex.Match(dataUrl, @"^data:(?<contentType>image\/[a-zA-Z0-9.+-]+);base64,", RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups["contentType"].Value : "image/png";
+    }
+
+    private static string GetExtensionFromContentType(string contentType) => contentType.ToLowerInvariant() switch
+    {
+        "image/jpeg" => "jpg",
+        "image/jpg" => "jpg",
+        "image/webp" => "webp",
+        "image/gif" => "gif",
+        _ => "png"
+    };
+
+    private static long EstimateDataUrlBytes(string dataUrl)
+    {
+        var commaIndex = dataUrl.IndexOf(',');
+        if (commaIndex < 0 || commaIndex >= dataUrl.Length - 1)
+            return 0;
+
+        var base64Length = dataUrl.Length - commaIndex - 1;
+        return (long)Math.Ceiling(base64Length * 3 / 4d);
+    }
+
     private static string Truncate(string value, int maxLength)
     {
         if (value.Length <= maxLength)
@@ -494,6 +592,7 @@ public sealed class SaveBlogPostRequest
     public string? title { get; set; }
     public string? excerpt { get; set; }
     public string? body_html { get; set; }
+    public string? cover_image_data_url { get; set; }
     public Guid? cover_asset_id { get; set; }
 }
 
@@ -510,6 +609,7 @@ internal sealed record NormalizedSaveBlogPostRequest(
     string BodyText,
     string Slug,
     IReadOnlyList<Guid> AssetIds,
+    string? CoverImageDataUrl,
     Guid? CoverAssetId);
 
 public record BlogPostListResponse(IReadOnlyList<BlogPostSummaryResponse> items);

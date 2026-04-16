@@ -43,6 +43,7 @@ public class BlogPost
     public Guid author_user_id { get; set; }
 
     public string author_user_name { get; set; } = string.Empty;
+    public string? cover_image_data_url { get; set; }
     public Guid? cover_asset_id { get; set; }
     public DateTime? published_at { get; set; }
     public DateTime created_at { get; set; } = DateTime.UtcNow;

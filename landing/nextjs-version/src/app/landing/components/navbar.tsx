@@ -86,7 +86,7 @@ export function LandingNavbar() {
                 </div>
 
                 {/* Desktop Navigation */}
-                <NavigationMenu className="hidden xl:flex">
+                <NavigationMenu className="hidden md:flex">
                     <NavigationMenuList>
                         {navigationItems.map((item) => (
                             <NavigationMenuItem key={item.name}>
@@ -120,7 +120,7 @@ export function LandingNavbar() {
                 </NavigationMenu>
 
                 {/* Desktop CTA */}
-                <div className="hidden xl:flex items-center space-x-2">
+                <div className="hidden lg:flex items-center space-x-2">
                     <ModeToggle variant="ghost" />
                     <Button variant="ghost" asChild className="cursor-pointer">
                         <Link href={clientBaseUrl+'/signup'}>Crie uma conta</Link>

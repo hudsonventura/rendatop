@@ -38,13 +38,16 @@ public class PublicBlogController : ControllerBase
         var items = posts.Select(post =>
         {
             coverAssets.TryGetValue(post.cover_asset_id ?? Guid.Empty, out var coverAsset);
+            var coverImageUrl = BlogRichTextSanitizer.NormalizeDataImageUrl(post.cover_image_data_url)
+                ?? (coverAsset is null ? null : BlogUrlBuilder.BuildPublicAssetUrl(coverAsset.id, Request));
+
             return new PublicBlogPostListItemResponse(
                 post.id,
                 post.slug,
                 post.title,
                 post.excerpt,
                 post.author_user_name,
-                coverAsset is null ? null : BlogUrlBuilder.BuildPublicAssetUrl(coverAsset.id, Request),
+                coverImageUrl,
                 post.published_at,
                 BlogUrlBuilder.BuildPublicPostUrl(post.slug));
         }).ToList();
@@ -74,16 +77,18 @@ public class PublicBlogController : ControllerBase
                 .AsNoTracking()
                 .FirstOrDefault(asset => asset.id == post.cover_asset_id.Value);
         }
+        var coverImageUrl = BlogRichTextSanitizer.NormalizeDataImageUrl(post.cover_image_data_url)
+            ?? (coverAsset is null ? null : BlogUrlBuilder.BuildPublicAssetUrl(coverAsset.id, Request));
 
         return Ok(new PublicBlogPostDetailResponse(
             post.id,
             post.slug,
             post.title,
             post.excerpt,
-            post.body_html,
+            BlogRichTextSanitizer.ExpandAssetUrls(post.body_html, assetId => BlogUrlBuilder.BuildPublicAssetUrl(assetId, Request)),
             post.body_text,
             post.author_user_name,
-            coverAsset is null ? null : BlogUrlBuilder.BuildPublicAssetUrl(coverAsset.id, Request),
+            coverImageUrl,
             post.published_at,
             post.created_at,
             post.updated_at,

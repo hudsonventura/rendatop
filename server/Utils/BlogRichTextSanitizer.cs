@@ -23,6 +23,8 @@ public static partial class BlogRichTextSanitizer
 
         var input = ScriptOrStyleRegex().Replace(html, string.Empty);
         input = HtmlCommentRegex().Replace(input, string.Empty);
+        input = input.Replace("&nbsp;", " ", StringComparison.OrdinalIgnoreCase);
+        input = input.Replace("&#160;", " ", StringComparison.OrdinalIgnoreCase);
 
         var result = new StringBuilder();
         var matches = HtmlTagRegex().Matches(input);
@@ -83,6 +85,31 @@ public static partial class BlogRichTextSanitizer
         return ids.ToList();
     }
 
+    public static string ExpandAssetUrls(string? html, Func<Guid, string> buildAssetUrl)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+            return string.Empty;
+
+        return AssetUrlReplaceRegex().Replace(html, match =>
+        {
+            if (!Guid.TryParse(match.Groups["id"].Value, out var assetId))
+                return match.Value;
+
+            return $"src=\"{WebUtility.HtmlEncode(buildAssetUrl(assetId))}\"";
+        });
+    }
+
+    public static string? NormalizeDataImageUrl(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var trimmed = value.Trim();
+        return Base64ImageSrcRegex().IsMatch(trimmed)
+            ? trimmed
+            : null;
+    }
+
     private static string SanitizeTag(string rawTag)
     {
         var tag = rawTag.Trim();
@@ -131,16 +158,12 @@ public static partial class BlogRichTextSanitizer
         if (tagName == "img" && !closing)
         {
             var src = ExtractAttribute(inner, "src");
-            var path = TryGetAssetPath(src);
-            if (string.IsNullOrWhiteSpace(path))
-                return string.Empty;
-
-            var assetMatch = AssetPathRegex().Match(path);
-            if (!assetMatch.Success)
-                return string.Empty;
-
             var alt = ExtractAttribute(inner, "alt") ?? string.Empty;
-            return $"<img src=\"{WebUtility.HtmlEncode(path)}\" alt=\"{WebUtility.HtmlEncode(alt)}\">";
+            var allowedSrc = NormalizeAllowedImageSrc(src);
+            var widthStyle = NormalizeImageStyle(ExtractAttribute(inner, "style"));
+            return string.IsNullOrWhiteSpace(allowedSrc)
+                ? string.Empty
+                : $"<img src=\"{WebUtility.HtmlEncode(allowedSrc)}\" alt=\"{WebUtility.HtmlEncode(alt)}\"{(string.IsNullOrWhiteSpace(widthStyle) ? string.Empty : $" style=\"{WebUtility.HtmlEncode(widthStyle)}\"")}>";
         }
 
         return string.Empty;
@@ -168,6 +191,8 @@ public static partial class BlogRichTextSanitizer
     private static string NormalizeWhitespace(string html)
     {
         var normalized = Regex.Replace(html, @"(<br>\s*){3,}", "<br><br>", RegexOptions.IgnoreCase);
+        normalized = EmptyParagraphRegex().Replace(normalized, string.Empty);
+        normalized = Regex.Replace(normalized, @"\s{2,}", " ");
         return normalized.Trim();
     }
 
@@ -199,6 +224,41 @@ public static partial class BlogRichTextSanitizer
             return relativeUri.ToString();
 
         return null;
+    }
+
+    private static string? NormalizeAllowedImageSrc(string? src)
+    {
+        if (string.IsNullOrWhiteSpace(src))
+            return null;
+
+        var trimmed = src.Trim();
+
+        if (Base64ImageSrcRegex().IsMatch(trimmed))
+            return trimmed;
+
+        var path = TryGetAssetPath(trimmed);
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+
+        return AssetPathRegex().IsMatch(path)
+            ? path
+            : null;
+    }
+
+    private static string? NormalizeImageStyle(string? style)
+    {
+        if (string.IsNullOrWhiteSpace(style))
+            return null;
+
+        var widthMatch = ImageWidthRegex().Match(style);
+        if (!widthMatch.Success)
+            return null;
+
+        if (!int.TryParse(widthMatch.Groups["value"].Value, out var width))
+            return null;
+
+        width = Math.Clamp(width, 10, 100);
+        return $"width:{width}%;max-width:100%;height:auto;display:block;";
     }
 
     private static string? ExtractAttribute(string innerTag, string attributeName)
@@ -235,4 +295,16 @@ public static partial class BlogRichTextSanitizer
 
     [GeneratedRegex(@"(?<name>[a-zA-Z_:][a-zA-Z0-9_\:\-]*)\s*=\s*[""'](?<value>[^""']*)[""']", RegexOptions.IgnoreCase)]
     private static partial Regex AttributeRegex();
+
+    [GeneratedRegex(@"<p>(?:\s|<br>|&nbsp;|&#160;)*</p>", RegexOptions.IgnoreCase)]
+    private static partial Regex EmptyParagraphRegex();
+
+    [GeneratedRegex(@"src\s*=\s*[""']/public/blog/assets/(?<id>[0-9a-fA-F\-]+)[""']", RegexOptions.IgnoreCase)]
+    private static partial Regex AssetUrlReplaceRegex();
+
+    [GeneratedRegex(@"^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[a-zA-Z0-9+/=]+$", RegexOptions.IgnoreCase)]
+    private static partial Regex Base64ImageSrcRegex();
+
+    [GeneratedRegex(@"width\s*:\s*(?<value>\d{1,3})\s*%", RegexOptions.IgnoreCase)]
+    private static partial Regex ImageWidthRegex();
 }

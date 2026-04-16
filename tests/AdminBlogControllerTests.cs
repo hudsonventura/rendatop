@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using server.Controllers;
 using server.Domain;
 using server.Services;
@@ -62,7 +63,7 @@ public class AdminBlogControllerTests
     }
 
     [Fact]
-    public async Task Publish_PersistsPublishedStatusAndSocialResults()
+    public async Task Publish_PersistsPublishedStatusWithoutAutoPublishingSocialChannels()
     {
         using var fixture = new BlogFixture();
         var post = fixture.SeedPost("Carteira mensal", BlogPostStatus.Draft);
@@ -77,10 +78,10 @@ public class AdminBlogControllerTests
         Assert.Equal(BlogPostStatus.Published, response.status);
         Assert.NotNull(response.published_at);
         Assert.Equal(3, response.social_publications.Count);
-        Assert.All(response.social_publications, item => Assert.Equal(SocialPublicationStatus.Published, item.status));
+        Assert.All(response.social_publications, item => Assert.Equal(SocialPublicationStatus.Pending, item.status));
 
         using var assertionContext = fixture.CreateAssertionContext();
-        Assert.Equal(3, assertionContext.blog_post_social_publications.Count());
+        Assert.Empty(assertionContext.blog_post_social_publications);
     }
 
     [Fact]
@@ -136,6 +137,75 @@ public class AdminBlogControllerTests
         Assert.Equal("Falha temporária", linkedIn.error_message);
     }
 
+    [Fact]
+    public async Task RetrySocial_PreservesPreviousSuccessfulPublicationMetadataWhenLaterAttemptFails()
+    {
+        using var fixture = new BlogFixture();
+        var post = fixture.SeedPost("Retry social", BlogPostStatus.Published);
+        var controller = fixture.CreateAdminController(fixture.AdminUser);
+
+        var firstResult = await controller.RetrySocial(post.id, SocialChannel.LinkedIn, CancellationToken.None);
+        var firstOk = Assert.IsType<OkObjectResult>(firstResult.Result);
+        var firstResponse = Assert.IsType<BlogPostDetailResponse>(firstOk.Value);
+        var firstLinkedIn = firstResponse.social_publications.Single(item => item.channel == SocialChannel.LinkedIn);
+        Assert.Equal(SocialPublicationStatus.Published, firstLinkedIn.status);
+        Assert.NotNull(firstLinkedIn.published_at);
+
+        fixture.FakePublisher.NextSingleResult = SocialPublishResult.Failed(SocialChannel.LinkedIn, "Falha temporária");
+        var secondResult = await controller.RetrySocial(post.id, SocialChannel.LinkedIn, CancellationToken.None);
+
+        var secondOk = Assert.IsType<OkObjectResult>(secondResult.Result);
+        var secondResponse = Assert.IsType<BlogPostDetailResponse>(secondOk.Value);
+        var secondLinkedIn = secondResponse.social_publications.Single(item => item.channel == SocialChannel.LinkedIn);
+
+        Assert.Equal(SocialPublicationStatus.Failed, secondLinkedIn.status);
+        Assert.Equal("Falha temporária", secondLinkedIn.error_message);
+        Assert.NotNull(secondLinkedIn.published_at);
+        Assert.Equal(firstLinkedIn.remote_post_id, secondLinkedIn.remote_post_id);
+    }
+
+    [Fact]
+    public async Task Update_AllowsEditingPublishedPost()
+    {
+        using var fixture = new BlogFixture();
+        var post = fixture.SeedPost("Publicado", BlogPostStatus.Published);
+        var controller = fixture.CreateAdminController(fixture.AdminUser);
+
+        var result = await controller.Update(post.id, new SaveBlogPostRequest
+        {
+            title = "Publicado atualizado",
+            excerpt = "Resumo novo",
+            body_html = "<p>Conteúdo atualizado</p>"
+        }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<BlogPostDetailResponse>(ok.Value);
+
+        Assert.Equal(BlogPostStatus.Published, response.status);
+        Assert.Equal("Publicado atualizado", response.title);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var savedPost = assertionContext.blog_posts.Single(item => item.id == post.id);
+        Assert.Equal(BlogPostStatus.Published, savedPost.status);
+        Assert.Equal("Publicado atualizado", savedPost.title);
+    }
+
+    [Fact]
+    public async Task Publish_IsIdempotentWhenPostIsAlreadyPublished()
+    {
+        using var fixture = new BlogFixture();
+        var post = fixture.SeedPost("Publicado", BlogPostStatus.Published);
+        var controller = fixture.CreateAdminController(fixture.AdminUser);
+
+        var result = await controller.Publish(post.id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<BlogPostDetailResponse>(ok.Value);
+
+        Assert.Equal(BlogPostStatus.Published, response.status);
+        Assert.Equal(post.id, response.id);
+    }
+
     private static IFormFile CreateFormFile(string fileName, string contentType, string content)
     {
         var bytes = Encoding.UTF8.GetBytes(content);
@@ -177,7 +247,8 @@ public class AdminBlogControllerTests
             var controller = new AdminBlogController(
                 new HttpContextAccessor { HttpContext = httpContext },
                 new TestContextFactory(_options),
-                FakePublisher);
+                FakePublisher,
+                NullLogger<AdminBlogController>.Instance);
 
             controller.ControllerContext = new ControllerContext
             {
@@ -325,4 +396,3 @@ public class AdminBlogControllerTests
         }
     }
 }
-

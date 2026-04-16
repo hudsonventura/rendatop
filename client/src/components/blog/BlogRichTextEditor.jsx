@@ -20,7 +20,6 @@ function normalizeEditorHtml(value) {
 export default function BlogRichTextEditor({
     value,
     onChange,
-    onUploadImages,
     disabled = false,
     uploading = false,
     placeholder = "Escreva o conteúdo do post...",
@@ -29,6 +28,7 @@ export default function BlogRichTextEditor({
     const editorRef = useRef(null)
     const fileInputRef = useRef(null)
     const savedRangeRef = useRef(null)
+    const selectedImageRef = useRef(null)
 
     useEffect(() => {
         const editor = editorRef.current
@@ -50,6 +50,14 @@ export default function BlogRichTextEditor({
         if (editorRef.current?.contains(range.commonAncestorContainer)) {
             savedRangeRef.current = range.cloneRange()
         }
+
+        const commonNode = range.commonAncestorContainer
+        const element = commonNode?.nodeType === Node.ELEMENT_NODE
+            ? commonNode
+            : commonNode?.parentElement
+
+        const nextSelectedImage = element?.closest?.("img") || null
+        selectedImageRef.current = nextSelectedImage instanceof HTMLImageElement ? nextSelectedImage : null
     }
 
     const restoreSelection = () => {
@@ -101,20 +109,40 @@ export default function BlogRichTextEditor({
         handleInput()
     }
 
+    const resizeSelectedImage = (percentage) => {
+        const image = selectedImageRef.current
+        if (!image || disabled) return
+
+        image.style.width = `${percentage}%`
+        image.style.maxWidth = "100%"
+        image.style.height = "auto"
+        image.style.display = "block"
+        handleInput()
+    }
+
+    const readFileAsDataUrl = (file) =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(String(reader.result || ""))
+            reader.onerror = () => reject(reader.error || new Error("Falha ao ler imagem"))
+            reader.readAsDataURL(file)
+        })
+
     const handleSelectImages = async (event) => {
         const files = Array.from(event.target.files || [])
         event.target.value = ""
 
         if (!files.length || disabled) return
 
-        const uploaded = await onUploadImages?.(files)
-        if (!uploaded?.length) return
+        for (const file of files) {
+            const dataUrl = await readFileAsDataUrl(file)
+            if (!dataUrl) continue
 
-        uploaded.forEach((asset) => {
+            const alt = (file.name || "").replace(/\.[^/.]+$/, "")
             insertHtmlAtCursor(
-                `<p><img src="${asset.url}" alt="${asset.alt_text || asset.file_name || ""}"></p>`
+                `<p><img src="${dataUrl}" alt="${alt}" style="width:65%;max-width:100%;height:auto;display:block;"></p>`
             )
-        })
+        }
     }
 
     const isEmpty = !normalizeEditorHtml(value).replace(/<[^>]+>/g, "").trim()
@@ -170,6 +198,20 @@ export default function BlogRichTextEditor({
                 </Button>
             </div>
 
+            <div className="flex flex-wrap items-center gap-3 border-b px-3 py-2">
+                <span className="text-muted-foreground text-xs font-medium">Tamanho da imagem</span>
+                <Button type="button" variant="outline" size="sm" className="h-8 px-3" disabled={disabled} onClick={() => resizeSelectedImage(40)}>
+                    40%
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-8 px-3" disabled={disabled} onClick={() => resizeSelectedImage(65)}>
+                    65%
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-8 px-3" disabled={disabled} onClick={() => resizeSelectedImage(100)}>
+                    100%
+                </Button>
+                <span className="text-muted-foreground text-xs">Clique na imagem e escolha a largura.</span>
+            </div>
+
             <div className="relative">
                 {isEmpty ? (
                     <div className="text-muted-foreground pointer-events-none absolute left-4 top-3 text-sm">
@@ -189,7 +231,7 @@ export default function BlogRichTextEditor({
                         "min-h-72 px-4 py-3 text-sm outline-none",
                         "[&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:italic",
                         "[&_h1]:mb-3 [&_h1]:text-3xl [&_h1]:font-bold [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold",
-                        "[&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_img]:my-4 [&_img]:w-full [&_img]:rounded-xl [&_img]:border",
+                        "[&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-xl [&_img]:border",
                         "[&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6",
                         disabled && "pointer-events-none opacity-70"
                     )}
@@ -198,4 +240,3 @@ export default function BlogRichTextEditor({
         </div>
     )
 }
-

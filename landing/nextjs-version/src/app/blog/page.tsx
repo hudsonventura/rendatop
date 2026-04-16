@@ -40,10 +40,10 @@ export default async function BlogIndexPage() {
         <div className="mx-auto mb-14 max-w-3xl text-center">
           <Badge variant="outline" className="mb-4">Blog</Badge>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Leituras para quem quer investir com organização e contexto
+            Conteúdo para quem quer investir com organização e contexto
           </h1>
           <p className="mt-6 text-lg text-muted-foreground">
-            Postagens completas, com imagens e exemplos visuais, em um formato clássico de blog para leitura tranquila.
+            Aprenda a investir de maneira inteligente e com segurança, com conteúdos sobre organização da carteira, clareza financeira e uso inteligente do RendaTop. 
           </p>
         </div>
 

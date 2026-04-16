@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using server.Domain;
 using server.Utils;
 using static server.Services.BlogSocialPublishingHelpers;
@@ -84,24 +85,53 @@ public sealed class CompositeSocialPostPublisher : IBlogSocialPublisher
 public sealed class FacebookPostPublisher : ISocialPostPublisher
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<FacebookPostPublisher> _logger;
     public SocialChannel Channel => SocialChannel.Facebook;
 
-    public FacebookPostPublisher(IHttpClientFactory httpClientFactory)
+    public FacebookPostPublisher(IHttpClientFactory httpClientFactory, ILogger<FacebookPostPublisher> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
     }
 
     public async Task<SocialPublishResult> PublishAsync(SocialPublishRequest request, CancellationToken cancellationToken)
     {
         var pageId = (Environment.GetEnvironmentVariable("FACEBOOK_PAGE_ID") ?? string.Empty).Trim();
-        var accessToken = (Environment.GetEnvironmentVariable("FACEBOOK_PAGE_ACCESS_TOKEN") ?? string.Empty).Trim();
         var graphVersion = (Environment.GetEnvironmentVariable("META_GRAPH_API_VERSION") ?? "v23.0").Trim();
 
-        if (string.IsNullOrWhiteSpace(pageId) || string.IsNullOrWhiteSpace(accessToken))
+        var tokenCandidates = GetFacebookTokenCandidates();
+
+        if (string.IsNullOrWhiteSpace(pageId) || tokenCandidates.Count == 0)
             return SocialPublishResult.Failed(Channel, "Integração do Facebook não configurada.");
 
         var client = _httpClientFactory.CreateClient();
+        _logger.LogInformation("Iniciando publicação no Facebook para post {PostId} ({Slug}) com {ImageCount} imagens. Tokens candidatos: {TokenSources}", request.post_id, request.slug, request.images.Count, string.Join(", ", tokenCandidates.Select(item => item.Source)));
+
+        SocialPublishResult? lastFailure = null;
+
+        foreach (var tokenCandidate in tokenCandidates)
+        {
+            var attemptResult = await TryPublishToFacebookAsync(client, graphVersion, pageId, tokenCandidate, request, cancellationToken);
+            if (attemptResult.status == SocialPublicationStatus.Published)
+                return attemptResult;
+
+            lastFailure = attemptResult;
+        }
+
+        return lastFailure ?? SocialPublishResult.Failed(Channel, "Falha ao publicar no Facebook.");
+    }
+
+    private async Task<SocialPublishResult> TryPublishToFacebookAsync(
+        HttpClient client,
+        string graphVersion,
+        string pageId,
+        FacebookTokenCandidate tokenCandidate,
+        SocialPublishRequest request,
+        CancellationToken cancellationToken)
+    {
         var attachedMedia = new List<string>();
+
+        _logger.LogInformation("Tentando publicar post {PostId} no Facebook usando token {TokenSource}.", request.post_id, tokenCandidate.Source);
 
         try
         {
@@ -113,17 +143,23 @@ public sealed class FacebookPostPublisher : ISocialPostPublisher
                     [
                         new("url", image.public_url),
                         new("published", "false"),
-                        new("access_token", accessToken),
+                        new("access_token", tokenCandidate.Value),
                     ]),
                     cancellationToken);
 
                 var photoPayload = await photoResponse.Content.ReadAsStringAsync(cancellationToken);
                 if (!photoResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Falha ao enviar mídia ao Facebook para post {PostId}. Status {StatusCode}. Resposta: {Payload}", request.post_id, (int)photoResponse.StatusCode, TruncateForLog(photoPayload));
                     return SocialPublishResult.Failed(Channel, ExtractErrorMessage(photoPayload) ?? "Falha ao enviar mídia para o Facebook.");
+                }
 
                 using var photoJson = JsonDocument.Parse(photoPayload);
                 if (!photoJson.RootElement.TryGetProperty("id", out var mediaIdElement))
-                    return SocialPublishResult.Failed(Channel, "Facebook não retornou o ID da mídia enviada.");
+                {
+                    _logger.LogWarning("Facebook não retornou ID de mídia para post {PostId} com token {TokenSource}. Resposta: {Payload}", request.post_id, tokenCandidate.Source, TruncateForLog(photoPayload));
+                    return SocialPublishResult.Failed(Channel, PrefixFacebookFailure(tokenCandidate.Source, "Facebook não retornou o ID da mídia enviada."));
+                }
 
                 attachedMedia.Add(mediaIdElement.GetString() ?? string.Empty);
             }
@@ -131,7 +167,7 @@ public sealed class FacebookPostPublisher : ISocialPostPublisher
             var postFields = new List<KeyValuePair<string, string>>
             {
                 new("message", BuildSocialText(request)),
-                new("access_token", accessToken),
+                new("access_token", tokenCandidate.Value),
             };
 
             for (var index = 0; index < attachedMedia.Count; index++)
@@ -144,17 +180,46 @@ public sealed class FacebookPostPublisher : ISocialPostPublisher
 
             var postPayload = await postResponse.Content.ReadAsStringAsync(cancellationToken);
             if (!postResponse.IsSuccessStatusCode)
-                return SocialPublishResult.Failed(Channel, ExtractErrorMessage(postPayload) ?? "Falha ao publicar no Facebook.");
+            {
+                _logger.LogWarning("Falha ao publicar no Facebook para post {PostId} com token {TokenSource}. Status {StatusCode}. Resposta: {Payload}", request.post_id, tokenCandidate.Source, (int)postResponse.StatusCode, TruncateForLog(postPayload));
+                return SocialPublishResult.Failed(Channel, PrefixFacebookFailure(tokenCandidate.Source, ExtractErrorMessage(postPayload) ?? "Falha ao publicar no Facebook."));
+            }
 
             using var postJson = JsonDocument.Parse(postPayload);
             var remoteId = postJson.RootElement.TryGetProperty("id", out var idElement) ? idElement.GetString() : null;
+            _logger.LogInformation("Post {PostId} publicado com sucesso no Facebook com token {TokenSource}. RemoteId: {RemoteId}", request.post_id, tokenCandidate.Source, remoteId);
             return SocialPublishResult.Published(Channel, remoteId, BuildFacebookPostUrl(pageId, remoteId));
         }
         catch (Exception ex)
         {
-            return SocialPublishResult.Failed(Channel, $"Falha ao publicar no Facebook: {ex.Message}");
+            _logger.LogError(ex, "Exceção ao publicar post {PostId} no Facebook com token {TokenSource}.", request.post_id, tokenCandidate.Source);
+            return SocialPublishResult.Failed(Channel, PrefixFacebookFailure(tokenCandidate.Source, $"Falha ao publicar no Facebook: {ex.Message}"));
         }
     }
+
+    private static List<FacebookTokenCandidate> GetFacebookTokenCandidates()
+    {
+        var candidates = new List<FacebookTokenCandidate>();
+
+        AddIfPresent(candidates, "FACEBOOK_PAGE_ACCESS_TOKEN", "token da página");
+        AddIfPresent(candidates, "FACEBOOK_LONG_LIVED_USER_ACCESS_TOKEN", "long-lived user token");
+        AddIfPresent(candidates, "FACEBOOK_USER_ACCESS_TOKEN", "user token");
+
+        return candidates
+            .GroupBy(item => item.Value)
+            .Select(group => group.First())
+            .ToList();
+    }
+
+    private static void AddIfPresent(List<FacebookTokenCandidate> candidates, string envName, string source)
+    {
+        var value = (Environment.GetEnvironmentVariable(envName) ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(value))
+            candidates.Add(new FacebookTokenCandidate(source, value));
+    }
+
+    private static string PrefixFacebookFailure(string tokenSource, string message)
+        => $"[{tokenSource}] {message}";
 
     private static string? BuildFacebookPostUrl(string pageId, string? remotePostId)
     {
@@ -169,14 +234,18 @@ public sealed class FacebookPostPublisher : ISocialPostPublisher
     }
 }
 
+internal sealed record FacebookTokenCandidate(string Source, string Value);
+
 public sealed class InstagramPostPublisher : ISocialPostPublisher
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<InstagramPostPublisher> _logger;
     public SocialChannel Channel => SocialChannel.Instagram;
 
-    public InstagramPostPublisher(IHttpClientFactory httpClientFactory)
+    public InstagramPostPublisher(IHttpClientFactory httpClientFactory, ILogger<InstagramPostPublisher> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
     }
 
     public async Task<SocialPublishResult> PublishAsync(SocialPublishRequest request, CancellationToken cancellationToken)
@@ -193,6 +262,7 @@ public sealed class InstagramPostPublisher : ISocialPostPublisher
             return SocialPublishResult.Failed(Channel, "Instagram exige pelo menos uma imagem para publicar.");
 
         var client = _httpClientFactory.CreateClient();
+        _logger.LogInformation("Iniciando publicação no Instagram para post {PostId} ({Slug}).", request.post_id, request.slug);
 
         try
         {
@@ -208,11 +278,17 @@ public sealed class InstagramPostPublisher : ISocialPostPublisher
 
             var containerPayload = await createContainerResponse.Content.ReadAsStringAsync(cancellationToken);
             if (!createContainerResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Falha ao criar mídia no Instagram para post {PostId}. Status {StatusCode}. Resposta: {Payload}", request.post_id, (int)createContainerResponse.StatusCode, TruncateForLog(containerPayload));
                 return SocialPublishResult.Failed(Channel, ExtractErrorMessage(containerPayload) ?? "Falha ao criar mídia no Instagram.");
+            }
 
             using var containerJson = JsonDocument.Parse(containerPayload);
             if (!containerJson.RootElement.TryGetProperty("id", out var containerIdElement))
+            {
+                _logger.LogWarning("Instagram não retornou container id para post {PostId}. Resposta: {Payload}", request.post_id, TruncateForLog(containerPayload));
                 return SocialPublishResult.Failed(Channel, "Instagram não retornou o ID do container de mídia.");
+            }
 
             var containerId = containerIdElement.GetString() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(containerId))
@@ -229,14 +305,19 @@ public sealed class InstagramPostPublisher : ISocialPostPublisher
 
             var publishPayload = await publishResponse.Content.ReadAsStringAsync(cancellationToken);
             if (!publishResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Falha ao publicar no Instagram para post {PostId}. Status {StatusCode}. Resposta: {Payload}", request.post_id, (int)publishResponse.StatusCode, TruncateForLog(publishPayload));
                 return SocialPublishResult.Failed(Channel, ExtractErrorMessage(publishPayload) ?? "Falha ao publicar no Instagram.");
+            }
 
             using var publishJson = JsonDocument.Parse(publishPayload);
             var remoteId = publishJson.RootElement.TryGetProperty("id", out var mediaIdElement) ? mediaIdElement.GetString() : null;
+            _logger.LogInformation("Post {PostId} publicado com sucesso no Instagram. RemoteId: {RemoteId}", request.post_id, remoteId);
             return SocialPublishResult.Published(Channel, remoteId, null);
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Exceção ao publicar post {PostId} no Instagram.", request.post_id);
             return SocialPublishResult.Failed(Channel, $"Falha ao publicar no Instagram: {ex.Message}");
         }
     }
@@ -245,11 +326,13 @@ public sealed class InstagramPostPublisher : ISocialPostPublisher
 public sealed class LinkedInPostPublisher : ISocialPostPublisher
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<LinkedInPostPublisher> _logger;
     public SocialChannel Channel => SocialChannel.LinkedIn;
 
-    public LinkedInPostPublisher(IHttpClientFactory httpClientFactory)
+    public LinkedInPostPublisher(IHttpClientFactory httpClientFactory, ILogger<LinkedInPostPublisher> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
     }
 
     public async Task<SocialPublishResult> PublishAsync(SocialPublishRequest request, CancellationToken cancellationToken)
@@ -263,6 +346,7 @@ public sealed class LinkedInPostPublisher : ISocialPostPublisher
 
         var authorUrn = $"urn:li:organization:{organizationId}";
         var client = _httpClientFactory.CreateClient();
+        _logger.LogInformation("Iniciando publicação no LinkedIn para post {PostId} ({Slug}).", request.post_id, request.slug);
 
         try
         {
@@ -280,16 +364,21 @@ public sealed class LinkedInPostPublisher : ISocialPostPublisher
             var postResponse = await client.SendAsync(postRequest, cancellationToken);
             var postBody = await postResponse.Content.ReadAsStringAsync(cancellationToken);
             if (!postResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Falha ao publicar no LinkedIn para post {PostId}. Status {StatusCode}. Resposta: {Payload}", request.post_id, (int)postResponse.StatusCode, TruncateForLog(postBody));
                 return SocialPublishResult.Failed(Channel, ExtractErrorMessage(postBody) ?? "Falha ao publicar no LinkedIn.");
+            }
 
             var remoteId = postResponse.Headers.TryGetValues("x-restli-id", out var values)
                 ? values.FirstOrDefault()
                 : null;
 
+            _logger.LogInformation("Post {PostId} publicado com sucesso no LinkedIn. RemoteId: {RemoteId}", request.post_id, remoteId);
             return SocialPublishResult.Published(Channel, remoteId, BuildLinkedInPostUrl(remoteId));
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Exceção ao publicar post {PostId} no LinkedIn.", request.post_id);
             return SocialPublishResult.Failed(Channel, $"Falha ao publicar no LinkedIn: {ex.Message}");
         }
     }
@@ -447,10 +536,30 @@ internal static class BlogSocialPublishingHelpers
             using var document = JsonDocument.Parse(payload);
             if (document.RootElement.TryGetProperty("error", out var errorElement))
             {
-                if (errorElement.ValueKind == JsonValueKind.Object &&
-                    errorElement.TryGetProperty("message", out var messageElement))
+                if (errorElement.ValueKind == JsonValueKind.Object)
                 {
-                    return messageElement.GetString();
+                    var parts = new List<string>();
+
+                    if (errorElement.TryGetProperty("message", out var messageElement))
+                        parts.Add(messageElement.GetString() ?? string.Empty);
+
+                    if (errorElement.TryGetProperty("type", out var typeElement) && !string.IsNullOrWhiteSpace(typeElement.GetString()))
+                        parts.Add($"type={typeElement.GetString()}");
+
+                    if (errorElement.TryGetProperty("code", out var codeElement) && codeElement.ValueKind != JsonValueKind.Null)
+                        parts.Add($"code={codeElement}");
+
+                    if (errorElement.TryGetProperty("error_subcode", out var subcodeElement) && subcodeElement.ValueKind != JsonValueKind.Null)
+                        parts.Add($"subcode={subcodeElement}");
+
+                    if (errorElement.TryGetProperty("error_user_title", out var userTitleElement) && !string.IsNullOrWhiteSpace(userTitleElement.GetString()))
+                        parts.Add(userTitleElement.GetString() ?? string.Empty);
+
+                    if (errorElement.TryGetProperty("error_user_msg", out var userMessageElement) && !string.IsNullOrWhiteSpace(userMessageElement.GetString()))
+                        parts.Add(userMessageElement.GetString() ?? string.Empty);
+
+                    var combined = string.Join(" | ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+                    return string.IsNullOrWhiteSpace(combined) ? errorElement.ToString() : combined;
                 }
 
                 return errorElement.ToString();
@@ -465,5 +574,13 @@ internal static class BlogSocialPublishingHelpers
         }
 
         return payload.Length > 240 ? payload[..240] : payload;
+    }
+
+    public static string TruncateForLog(string? value, int maxLength = 1200)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        return value.Length > maxLength ? value[..maxLength] : value;
     }
 }
