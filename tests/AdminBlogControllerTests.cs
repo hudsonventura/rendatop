@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using server.Controllers;
 using server.Domain;
@@ -138,6 +139,24 @@ public class AdminBlogControllerTests
     }
 
     [Fact]
+    public async Task RetrySocial_UsesTemporaryPublicUrlForInlineCoverImage()
+    {
+        using var fixture = new BlogFixture();
+        var post = fixture.SeedPost("Cover inline", BlogPostStatus.Published);
+        post.cover_image_data_url = "data:image/png;base64," + Convert.ToBase64String(Encoding.UTF8.GetBytes("cover-image"));
+        fixture.Context.SaveChanges();
+        var controller = fixture.CreateAdminController(fixture.AdminUser);
+
+        var result = await controller.RetrySocial(post.id, SocialChannel.Facebook, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.IsType<BlogPostDetailResponse>(ok.Value);
+        Assert.NotNull(fixture.FakePublisher.LastSingleRequest);
+        var image = Assert.Single(fixture.FakePublisher.LastSingleRequest!.images);
+        Assert.StartsWith("https://localhost:5000/public/blog/social-assets/", image.public_url, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RetrySocial_PreservesPreviousSuccessfulPublicationMetadataWhenLaterAttemptFails()
     {
         using var fixture = new BlogFixture();
@@ -223,6 +242,7 @@ public class AdminBlogControllerTests
 
         public Context Context { get; }
         public FakeBlogSocialPublisher FakePublisher { get; } = new();
+        public ITemporarySocialAssetService TemporarySocialAssetService { get; } = new TemporarySocialAssetService(new MemoryCache(new MemoryCacheOptions()));
         public User AdminUser { get; }
         public User CommonUser { get; }
 
@@ -248,6 +268,7 @@ public class AdminBlogControllerTests
                 new HttpContextAccessor { HttpContext = httpContext },
                 new TestContextFactory(_options),
                 FakePublisher,
+                TemporarySocialAssetService,
                 NullLogger<AdminBlogController>.Instance);
 
             controller.ControllerContext = new ControllerContext
@@ -375,6 +396,8 @@ public class AdminBlogControllerTests
     private sealed class FakeBlogSocialPublisher : IBlogSocialPublisher
     {
         public SocialPublishResult? NextSingleResult { get; set; }
+        public SocialPublishRequest? LastSingleRequest { get; private set; }
+        public SocialChannel? LastSingleChannel { get; private set; }
 
         public Task<IReadOnlyList<SocialPublishResult>> PublishAllAsync(SocialPublishRequest request, CancellationToken cancellationToken)
         {
@@ -390,6 +413,8 @@ public class AdminBlogControllerTests
 
         public Task<SocialPublishResult> PublishAsync(SocialChannel channel, SocialPublishRequest request, CancellationToken cancellationToken)
         {
+            LastSingleChannel = channel;
+            LastSingleRequest = request;
             var result = NextSingleResult ?? SocialPublishResult.Published(channel, $"{channel}-1", null);
             NextSingleResult = null;
             return Task.FromResult(result);

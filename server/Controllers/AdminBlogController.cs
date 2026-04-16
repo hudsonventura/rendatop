@@ -14,16 +14,19 @@ public class AdminBlogController : AuthenticatedController
 {
     private readonly Context _context;
     private readonly IBlogSocialPublisher _socialPublisher;
+    private readonly ITemporarySocialAssetService _temporarySocialAssetService;
     private readonly ILogger<AdminBlogController> _logger;
 
     public AdminBlogController(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<Context> contextFactory,
         IBlogSocialPublisher socialPublisher,
+        ITemporarySocialAssetService temporarySocialAssetService,
         ILogger<AdminBlogController> logger) : base(httpContextAccessor)
     {
         _context = contextFactory.CreateDbContext();
         _socialPublisher = socialPublisher;
+        _temporarySocialAssetService = temporarySocialAssetService;
         _logger = logger;
     }
 
@@ -337,27 +340,24 @@ public class AdminBlogController : AuthenticatedController
 
         if (!string.IsNullOrWhiteSpace(post.cover_image_data_url))
         {
-            var coverImage = TryCreateSocialImageFromDataUrl(post.cover_image_data_url);
+            var coverImage = TryCreateSocialImageFromDataUrl(post.cover_image_data_url, Request);
             if (coverImage is not null)
-                return [coverImage, .. assets.Select(asset => new SocialPublishImage(
-                    asset.id,
-                    asset.file_name,
-                    asset.content_type,
-                    asset.alt_text,
-                    asset.content,
-                    BlogUrlBuilder.BuildPublicAssetUrl(asset.id, Request)))];
+                return [coverImage, .. assets.Select(BuildTemporarySocialImage)];
         }
 
         return assets
-            .Select(asset => new SocialPublishImage(
-                asset.id,
-                asset.file_name,
-                asset.content_type,
-                asset.alt_text,
-                asset.content,
-                BlogUrlBuilder.BuildPublicAssetUrl(asset.id, Request)))
+            .Select(BuildTemporarySocialImage)
             .ToList();
     }
+
+    private SocialPublishImage BuildTemporarySocialImage(BlogPostAsset asset)
+        => new(
+            asset.id,
+            asset.file_name,
+            asset.content_type,
+            asset.alt_text,
+            asset.content,
+            _temporarySocialAssetService.Store(asset.file_name, asset.content_type, asset.content, Request));
 
     private void UpsertSocialPublicationResults(Guid postId, IReadOnlyList<SocialPublishResult> results)
     {
@@ -513,7 +513,7 @@ public class AdminBlogController : AuthenticatedController
         return coverAsset is null ? null : BuildAssetResponse(coverAsset);
     }
 
-    private static SocialPublishImage? TryCreateSocialImageFromDataUrl(string? dataUrl)
+    private SocialPublishImage? TryCreateSocialImageFromDataUrl(string? dataUrl, HttpRequest? request = null)
     {
         var normalized = BlogRichTextSanitizer.NormalizeDataImageUrl(dataUrl);
         if (string.IsNullOrWhiteSpace(normalized))
@@ -530,13 +530,14 @@ public class AdminBlogController : AuthenticatedController
         try
         {
             var content = Convert.FromBase64String(base64);
+            var fileName = $"cover.{GetExtensionFromContentType(contentType)}";
             return new SocialPublishImage(
                 Guid.Empty,
-                $"cover.{GetExtensionFromContentType(contentType)}",
+                fileName,
                 contentType,
                 "Capa do post",
                 content,
-                normalized);
+                _temporarySocialAssetService.Store(fileName, contentType, content, request));
         }
         catch
         {

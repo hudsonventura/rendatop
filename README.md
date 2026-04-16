@@ -81,6 +81,7 @@ LINKEDIN_API_VERSION=202504
 Observações:
 - Facebook usa `FACEBOOK_PAGE_ID` e `FACEBOOK_PAGE_ACCESS_TOKEN`
 - se `FACEBOOK_PAGE_ACCESS_TOKEN` falhar, o backend também tenta `FACEBOOK_LONG_LIVED_USER_ACCESS_TOKEN` e depois `FACEBOOK_USER_ACCESS_TOKEN`, nessa ordem
+- imagens enviadas às redes sociais são expostas por URLs temporárias do backend em vez de `data:` URL/base64
 - Instagram exige uma conta business e pelo menos uma imagem no post
 - LinkedIn publica em nome da organização definida em `LINKEDIN_ORGANIZATION_ID`
 - se uma rede não estiver configurada, o post continua sendo publicado no blog e o canal fica com status de falha no painel admin

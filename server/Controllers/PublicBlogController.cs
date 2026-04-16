@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using server.Domain;
+using server.Services;
 using server.Utils;
 
 namespace server.Controllers;
@@ -121,6 +122,19 @@ public class PublicBlogController : ControllerBase
 
         Response.Headers["Cache-Control"] = "public,max-age=86400";
         return File(asset.content, asset.content_type, enableRangeProcessing: false);
+    }
+
+    [HttpGet("public/blog/social-assets/{token}")]
+    public IActionResult GetTemporarySocialAsset(
+        [FromRoute] string token,
+        [FromServices] ITemporarySocialAssetService temporarySocialAssetService)
+    {
+        if (!temporarySocialAssetService.TryGet(token, out var asset) || asset is null)
+            return NotFound();
+
+        var maxAge = Math.Max(0, (int)Math.Floor((asset.ExpiresAtUtc - DateTime.UtcNow).TotalSeconds));
+        Response.Headers["Cache-Control"] = $"public,max-age={maxAge}";
+        return File(asset.Content, asset.ContentType, enableRangeProcessing: false);
     }
 }
 

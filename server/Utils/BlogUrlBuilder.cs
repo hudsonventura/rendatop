@@ -30,6 +30,12 @@ public static class BlogUrlBuilder
         return $"{apiBaseUrl}/public/blog/assets/{assetId}";
     }
 
+    public static string BuildTemporarySocialAssetUrl(string token, HttpRequest? request = null)
+    {
+        var apiBaseUrl = GetApiBaseUrl(request);
+        return $"{apiBaseUrl}/public/blog/social-assets/{token}";
+    }
+
     public static string BuildPublicPostUrl(string slug)
     {
         var landingBaseUrl = GetLandingBaseUrl();
