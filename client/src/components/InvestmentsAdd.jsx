@@ -410,6 +410,20 @@ const formSchema = z.object({
 			message: "Data de vencimento é obrigatória quando não há liquidez diária.",
 		})
 	}
+
+	if (values.date_buy && values.due_date && values.due_date < values.date_buy) {
+		const message = "A data da aplicação não pode ser maior que a data de vencimento."
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["date_buy"],
+			message,
+		})
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["due_date"],
+			message,
+		})
+	}
 });
 
 
@@ -726,6 +740,8 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 	};
 
 	const [liquidez_diaria, setLiquidezDiaria] = useState(false);
+	const watchDateBuy = form.watch("date_buy");
+	const watchDueDate = form.watch("due_date");
 
 
 
@@ -844,7 +860,16 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 									<FormItem>
 										<FormLabel>Data da aplicação</FormLabel>
 										<FormControl>
-											<Calendario field={field} />
+											<Calendario
+												field={{
+													...field,
+													onChange: (value) => {
+														field.onChange(value);
+														form.trigger(["date_buy", "due_date"]);
+													},
+												}}
+												maxDate={!liquidez_diaria ? watchDueDate : undefined}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -853,16 +878,26 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 							<FormField
 								control={form.control}
 								name="due_date"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Data do vencimento / resgate</FormLabel>
-										<FormControl>
-											<Calendario field={field} disabled={liquidez_diaria} />
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Data do vencimento / resgate</FormLabel>
+                                        <FormControl>
+                                            <Calendario
+												field={{
+													...field,
+													onChange: (value) => {
+														field.onChange(value);
+														form.trigger(["date_buy", "due_date"]);
+													},
+												}}
+												disabled={liquidez_diaria}
+												minDate={watchDateBuy}
+											/>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 							<FormField
 								control={form.control}
 								name="liquidez_diaria"
@@ -875,6 +910,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 													onCheckedChange={(checked) => {
 														field.onChange(checked);
 														setLiquidezDiaria(checked);
+														form.trigger(["date_buy", "due_date"]);
 													}}
 													className="bg-background rounded border border-input"
 												/>
