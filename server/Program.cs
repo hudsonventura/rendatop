@@ -10,7 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
-using Serilog;
+using LogCenter;
+using LogCenter.RequestInterceptor;
 using server.BackgroundServices;
 using server.Domain;
 using server.Middlewares;
@@ -24,47 +25,93 @@ Env.Load();
 //tenta carregar o .env no diretorio pai, se houver
 Env.Load("../.env");
 
+
+
+
 SnowflakeGuid.SetMachineID(0);
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-INotification telegram = new server.Utils.Telegram(Environment.GetEnvironmentVariable("TELEGRAM_TOKEN"), Environment.GetEnvironmentVariable("TELEGRAM_CHATID"));
-builder.Services.AddSingleton<INotification>(telegram);
-IWhatsAppNotification whatsapp = new FallbackWhatsAppNotification(
-    Environment.GetEnvironmentVariable("WHATSAPP_PROVIDER"),
-    Environment.GetEnvironmentVariable("WHATSAPP_PROVIDER_FALLBACK"),
-    new WWebJsWhatsAppNotification(
-        Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_URL"),
-        Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_API_KEY"),
-        Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_SESSION_ID")),
-    new WhatsApp(
-        Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_URL"),
-        Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_INSTANCE"),
-        Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_API_KEY")
-    )
-);
-builder.Services.AddSingleton<IWhatsAppNotification>(whatsapp);
-IEmailNotification email = new EmailSmtp(
-    Environment.GetEnvironmentVariable("SMTP_HOST"),
-    Environment.GetEnvironmentVariable("SMTP_PORT"),
-    Environment.GetEnvironmentVariable("SMTP_USERNAME"),
-    Environment.GetEnvironmentVariable("SMTP_PASSWORD"),
-    Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL"),
-    Environment.GetEnvironmentVariable("SMTP_FROM_NAME"),
-    Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL")
-);
-builder.Services.AddSingleton<IEmailNotification>(email);
+
+//LogCenter configuration
+InterceptorOptions options = new InterceptorOptions(){
+    // LogCenter's URL
+    Url = Environment.GetEnvironmentVariable("LOGCENTER_URL") ?? string.Empty,
+
+    // Table name 
+    Table = Environment.GetEnvironmentVariable("LOGCENTER_TABLE") ?? string.Empty,
+
+    // Generate this on LogCenter inteface, on you profile photo.
+    Token = Environment.GetEnvironmentVariable("LOGCENTER_TOKEN") ?? string.Empty,
+    
+    BannedEventNames =
+    {
+        "ExecutingEndpoint",
+        "Microsoft.EntityFrameworkCore.Database.Command.CommandExecutedExecuted",
+        "ControllerActionExecuting",
+        "ExecutedEndpoint",
+        "ObjectResultExecuting",
+        "PolicySuccess",
+        "ActionExecuted",
+    },
+    BannedMessages =
+    {
+        "Request finished {Protocol} {Method} {Scheme}://{Host}{PathBase}{Path}{QueryString} - {StatusCode} {ContentLength} {ContentType} {ElapsedMilliseconds}ms",
+    }
+
+};
+using var loggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.ClearProviders();
+    builder.AddLogCenter(options);
+});
+
+// Remove default logging (ILogger, console, debug, etc)
+builder.Logging.ClearProviders();
+// Add LogCenter provider, to use as ILogger in the controllers and other services.
+builder.Logging.AddLogCenter(options);
+var logger = loggerFactory.CreateLogger<Program>();
+
+
+builder.Services.AddSingleton<INotification>(provider =>
+    new server.Utils.Telegram(
+        provider.GetRequiredService<ILogger<server.Utils.Telegram>>(),
+        Environment.GetEnvironmentVariable("TELEGRAM_TOKEN") ?? string.Empty,
+        Environment.GetEnvironmentVariable("TELEGRAM_CHATID")));
+builder.Services.AddSingleton<IWhatsAppNotification>(provider =>
+    new FallbackWhatsAppNotification(
+        provider.GetRequiredService<ILogger<FallbackWhatsAppNotification>>(),
+        Environment.GetEnvironmentVariable("WHATSAPP_PROVIDER"),
+        Environment.GetEnvironmentVariable("WHATSAPP_PROVIDER_FALLBACK"),
+        new WWebJsWhatsAppNotification(
+            provider.GetRequiredService<ILogger<WWebJsWhatsAppNotification>>(),
+            Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_URL"),
+            Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_API_KEY"),
+            Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_SESSION_ID")),
+        new WhatsApp(
+            provider.GetRequiredService<ILogger<WhatsApp>>(),
+            Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_URL"),
+            Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_INSTANCE"),
+            Environment.GetEnvironmentVariable("WHATSAPP_EVOLUTION_API_KEY"))));
+builder.Services.AddSingleton<IEmailNotification>(provider =>
+    new EmailSmtp(
+        provider.GetRequiredService<ILogger<EmailSmtp>>(),
+        Environment.GetEnvironmentVariable("SMTP_HOST"),
+        Environment.GetEnvironmentVariable("SMTP_PORT"),
+        Environment.GetEnvironmentVariable("SMTP_USERNAME"),
+        Environment.GetEnvironmentVariable("SMTP_PASSWORD"),
+        Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL"),
+        Environment.GetEnvironmentVariable("SMTP_FROM_NAME"),
+        Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL")));
 //_notify.Notify("Vencimento", $"Tem investimento vencendo hj carai, que tal resgata-lo? {Environment.NewLine} {investments[0].bank} {Environment.NewLine} {investments[0].title}");
 
 
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .CreateLogger();
 
-Log.Information("Starting web application");
 
-builder.Services.AddSerilog();
+logger.LogInformation("Starting web application");
+
+
 builder.Services.AddMemoryCache();
 builder.Services.AddMemoryVapidTokenCache();
 builder.Services.AddPushServiceClient(options =>
@@ -75,6 +122,7 @@ builder.Services.AddPushServiceClient(options =>
 });
 builder.Services.AddSingleton<IBrowserPushNotification>(provider =>
     new BrowserPushNotification(
+        provider.GetRequiredService<ILogger<BrowserPushNotification>>(),
         provider.GetRequiredService<PushServiceClient>(),
         Environment.GetEnvironmentVariable("WEB_PUSH_PUBLIC_KEY"),
         Environment.GetEnvironmentVariable("WEB_PUSH_PRIVATE_KEY")));
@@ -272,6 +320,9 @@ app.MapControllers();
 app.UseAuthenticationMiddleware();
 app.UseRateLimiter();
 
+// Use the interceptor LogCenter to log request and response
+app.UseRequestInterceptor();
+
 
 MigrateDatabase();
 
@@ -355,7 +406,7 @@ void AddBackgroundServices()
 
 void MigrateDatabase(){
 
-    Log.Information("Applying migrations");
+    logger.LogInformation("Applying migrations");
     using (var scope = app.Services.CreateScope())
     {
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<Context>>();
@@ -363,11 +414,11 @@ void MigrateDatabase(){
         try
         {
             dbContext.Database.Migrate();
-            Log.Information("Migrations applied successfully.");
+            logger.LogInformation("Migrations applied successfully.");
         }
         catch (System.Exception error)
         {
-            Log.Error(error, "Não foi possível aplicar as migrations de forma automática.");
+            logger.LogError(error, "Não foi possível aplicar as migrations de forma automática.");
             throw;
         }
 
