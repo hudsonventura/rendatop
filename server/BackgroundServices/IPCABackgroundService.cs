@@ -13,7 +13,9 @@ public class IPCABackgroundService : IHostedService
     ILogger _logger;
     void Wait() => Thread.Sleep((int) TimeSpan.FromHours(24).TotalMilliseconds);
 
-    private List<string> _tags = new List<string>();
+    private readonly List<string> _tags = new() { "IPCA", "BackgroundService" };
+    private string _TraceId = string.Empty;
+
 
     public IPCABackgroundService(ILogger logger, Context context)
     {
@@ -24,7 +26,6 @@ public class IPCABackgroundService : IHostedService
         _logger = logger;
         _context = context;
 
-        _tags.AddRange(["IPCA", "BackgroundService"]);
     }
 
     
@@ -42,8 +43,7 @@ public class IPCABackgroundService : IHostedService
 
     private Task Run()
     {
-        var traceId = string.Empty;
-        _logger.LogInformation("Serviço de atualização da taxa IPCA iniciado. {TraceId} {_tags_}", traceId, _tags);
+        _logger.LogInformation("Serviço de atualização da taxa IPCA iniciado. {TraceId} {_tags_}", _TraceId, _tags);
 
 
         
@@ -51,11 +51,11 @@ public class IPCABackgroundService : IHostedService
         
 
         while (true){
-            traceId = Guid.NewGuid().ToString();
+            _TraceId = Guid.NewGuid().ToString();
 
             //Busca geral. Nada no banco de dados
             if(dtStart == DateOnly.MinValue){
-                _logger.LogInformation("Buscando todas as taxas IPCA possiveis do BCB. TraceId={TraceId} {_tags_}", traceId, _tags);
+                _logger.LogInformation("Buscando todas as taxas IPCA possiveis do BCB. TraceId={TraceId} {_tags_}", _TraceId, _tags);
                 List<IPCA> ipcas = FethFromBCB();
                 ipcas.RemoveAll(s => s.date > DateOnly.FromDateTime(DateTime.UtcNow));
 
@@ -63,13 +63,13 @@ public class IPCABackgroundService : IHostedService
 
                 _context.ipcas.AddRange(ipcas);
                 _context.SaveChanges();
-                _logger.LogInformation("{Count} registros IPCA obtidos. TraceId={TraceId}", ipcas.Count(), traceId);
+                _logger.LogInformation("{Count} registros IPCA obtidos. TraceId={TraceId}", ipcas.Count(), _TraceId);
                 dtStart = ipcas.Max(x => x.date);
             }
             else{
 
 
-                _logger.LogInformation("Verificando atualização da taxa IPCA. Último registro em {lastDate} {TraceId} {_tags_}", dtStart, traceId, _tags);
+                _logger.LogInformation("Verificando atualização da taxa IPCA. Último registro em {lastDate} {TraceId} {_tags_}", dtStart, _TraceId, _tags);
 
                 if(dtStart >= DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-1))){
                     Wait();
@@ -80,7 +80,7 @@ public class IPCABackgroundService : IHostedService
                 try
                 {
                     //Checa o mês anterior, pois o IPCA é divulgado com um mês de atraso
-                    _logger.LogInformation("Buscando ultimas 3 taxas IPCA. TraceId={TraceId} {_tags_}", traceId, _tags);
+                    _logger.LogInformation("Buscando ultimas 3 taxas IPCA. TraceId={TraceId} {_tags_}", _TraceId, _tags);
                     List<IPCA> ipcas = FethFromBCB(3);
                     ipcas.RemoveAll(s => s.date > DateOnly.FromDateTime(DateTime.UtcNow));
                     var existingSelics = _context.ipcas.Where(s => ipcas.Select(x => x.date).Contains(s.date)).ToList();
@@ -90,24 +90,24 @@ public class IPCABackgroundService : IHostedService
                     }
 
                     if(ipcas.Count() > 0){
-                        _logger.LogInformation("Novas taxas IPCA encontradas: {Count}. Salvando no banco. TraceId={TraceId} {_tags_}", ipcas.Count(), traceId, _tags);
+                        _logger.LogInformation("Novas taxas IPCA encontradas: {Count}. Salvando no banco. TraceId={TraceId} {_tags_}", ipcas.Count(), _TraceId, _tags);
                         _context.ipcas.AddRange(ipcas);
                         _context.SaveChanges();
-                        _logger.LogInformation("{Count} registros IPCA obtidos. TraceId={TraceId} {_tags_}", ipcas.Count(), traceId, _tags);
+                        _logger.LogInformation("{Count} registros IPCA obtidos. TraceId={TraceId} {_tags_}", ipcas.Count(), _TraceId, _tags);
                     } else {
-                        _logger.LogInformation("Nenhuma nova taxa IPCA encontrada. TraceId={TraceId} {_tags_}", traceId, _tags);
+                        _logger.LogInformation("Nenhuma nova taxa IPCA encontrada. TraceId={TraceId} {_tags_}", _TraceId, _tags);
                     }
                     
                 }
                 catch (System.Exception error)
                 {
-                    _logger.LogError(error, "Erro ao obter taxa IPCA. TraceId={TraceId}", traceId);
+                    _logger.LogError(error, "Erro ao obter taxa IPCA. TraceId={TraceId}", _TraceId);
                 }
             }
             Wait();
         }
 
-        _logger.LogError("Codigo do IPCA parou. Isso não deveria ter acontecido {TraceId} {_tags_}", traceId, _tags);
+        _logger.LogError("Codigo do IPCA parou. Isso não deveria ter acontecido {TraceId} {_tags_}", _TraceId, _tags);
 
         return Task.CompletedTask;
     }

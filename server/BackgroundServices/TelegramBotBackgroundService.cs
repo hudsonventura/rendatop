@@ -3,6 +3,7 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using server.Utils;
 
 namespace server.BackgroundServices;
 
@@ -11,6 +12,9 @@ public class TelegramBotBackgroundService : BackgroundService
     private readonly ILogger<TelegramBotBackgroundService> _logger;
     private readonly string? _token;
     private TelegramBotClient? _botClient;
+
+    private string _TraceId = string.Empty;
+    private readonly List<string> _tags = new() { "TelegramBot", "BackgroundService" };
 
     public TelegramBotBackgroundService(ILogger<TelegramBotBackgroundService> logger)
     {
@@ -22,7 +26,7 @@ public class TelegramBotBackgroundService : BackgroundService
     {
         if (string.IsNullOrWhiteSpace(_token))
         {
-            _logger.LogWarning("Serviço do bot do Telegram não iniciado porque TELEGRAM_TOKEN não está configurado.");
+            _logger.LogWarning("Serviço do bot do Telegram não iniciado porque TELEGRAM_TOKEN não está configurado. {_tags_}", _tags);
             return;
         }
 
@@ -39,7 +43,7 @@ public class TelegramBotBackgroundService : BackgroundService
             receiverOptions: receiverOptions,
             cancellationToken: stoppingToken);
 
-        _logger.LogInformation("Serviço do bot do Telegram iniciado com StartReceiving.");
+        _logger.LogInformation("Serviço do bot do Telegram iniciado com StartReceiving. {TraceId} {_tags_}", _TraceId, _tags);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -53,11 +57,13 @@ public class TelegramBotBackgroundService : BackgroundService
             }
         }
 
-        _logger.LogInformation("Serviço do bot do Telegram finalizado.");
+        _logger.LogInformation("Serviço do bot do Telegram finalizado. {TraceId} {_tags_}", _TraceId, _tags);
     }
 
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
+        using var activity = TraceContext.StartActivity("background.telegram-bot-update");
+        var traceId = TraceContext.GetTraceId();
         if (update.Type != UpdateType.Message || update.Message is null)
             return;
 
@@ -83,22 +89,24 @@ public class TelegramBotBackgroundService : BackgroundService
             parseMode: ParseMode.Markdown,
             cancellationToken: cancellationToken);
 
-        _logger.LogInformation("Chat ID enviado via /start para chat={ChatId}.", chatId);
+        _logger.LogInformation("Chat ID enviado via /start. TraceId={TraceId} ChatId={ChatId}.", traceId, chatId);
     }
 
     public Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {
+        var traceId = TraceContext.GetTraceId();
         if (exception is ApiRequestException apiException)
         {
             _logger.LogError(
                 exception,
-                "Erro da API do Telegram no StartReceiving. Code={Code} Message={Message}",
+                "Erro da API do Telegram no StartReceiving. TraceId={TraceId} Code={Code} Message={Message}",
+                traceId,
                 apiException.ErrorCode,
                 apiException.Message);
         }
         else
         {
-            _logger.LogError(exception, "Erro no polling do bot do Telegram.");
+            _logger.LogError(exception, "Erro no polling do bot do Telegram. TraceId={TraceId}", traceId);
         }
 
         return Task.CompletedTask;

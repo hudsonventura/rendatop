@@ -11,13 +11,16 @@ public class SelicBackgroundService : IHostedService
     readonly Context _context;
     readonly HttpClient _rest;
     readonly ILogger _logger;
-    readonly List<string> _tags = new List<string>();
+    
 
     // The BCB Selic daily series started on this date (série 432)
     static readonly DateOnly SeriesStartDate = new DateOnly(1986, 6, 4);
 
     // BCB API limit: maximum 10-year window per request
     static readonly int MaxYearsPerRequest = 9;
+
+    private readonly List<string> _tags = new() { "Selic", "BackgroundService" };
+    private string _TraceId = string.Empty;
 
 
     void Wait() => Thread.Sleep((int)TimeSpan.FromHours(1).TotalMilliseconds);
@@ -31,14 +34,8 @@ public class SelicBackgroundService : IHostedService
         _logger = logger;
         _context = context;
 
-        _tags.AddRange(["Selic", "SelicBackgroundService"]);
     }
 
-    protected string GetTraceId() {
-        string taskName = "background.selic";
-        using var activity = TraceContext.StartActivity(taskName);
-        return activity.Id;
-    }
 
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -55,10 +52,10 @@ public class SelicBackgroundService : IHostedService
 
     public Task Run()
     {
-        string traceId = string.Empty;
+        
         
         DateOnly lastDate = GetLastDate();
-        _logger.LogInformation("Serviço de atualização da taxa SELIC iniciado. Último registro em {lastDate} {TraceId} {_tags_}", lastDate, traceId, _tags);
+        _logger.LogInformation("Serviço de atualização da taxa SELIC iniciado. Último registro em {lastDate} {TraceId} {_tags_}", lastDate, _TraceId, _tags);
 
         if (lastDate == DateOnly.MinValue)
         {
@@ -70,12 +67,12 @@ public class SelicBackgroundService : IHostedService
         // Incremental hourly update loop
         while (true)
         {
-            traceId = Guid.NewGuid().ToString();
+            _TraceId = Guid.NewGuid().ToString();
 
-            _logger.LogInformation("Verificando atualização da taxa SELIC. {TraceId} {_tags_}", traceId, _tags);
+            _logger.LogInformation("Verificando atualização da taxa SELIC. {TraceId} {_tags_}", _TraceId, _tags);
             if (lastDate >= DateOnly.FromDateTime(DateTime.UtcNow))
             {
-                _logger.LogInformation("Taxa SELIC já está atualizada até hoje. Próxima verificação em 1 hora {TraceId} {_tags_}", traceId, _tags);
+                _logger.LogInformation("Taxa SELIC já está atualizada até hoje. Próxima verificação em 1 hora {TraceId} {_tags_}", _TraceId, _tags);
                 Wait();
                 continue;
             }
@@ -87,12 +84,12 @@ public class SelicBackgroundService : IHostedService
                 if(to > DateOnly.FromDateTime(DateTime.UtcNow))
                     to = DateOnly.FromDateTime(DateTime.UtcNow);
 
-                _logger.LogInformation("Buscando ultimas taxas SELIC de {lastDate} até {to} {TraceId} {_tags_}", lastDate, to, traceId, _tags);
+                _logger.LogInformation("Buscando ultimas taxas SELIC de {lastDate} até {to} {TraceId} {_tags_}", lastDate, to, _TraceId, _tags);
                 selics = FetchFromBCB(lastDate, to); // fetch next chunk starting from lastDate + 10 years  
             }
             catch (Exception error)
             {
-                _logger.LogError(error, "Erro ao obter taxa SELIC {TraceId} {_tags_}", traceId, _tags);
+                _logger.LogError(error, "Erro ao obter taxa SELIC {TraceId} {_tags_}", _TraceId, _tags);
             }
 
             try
@@ -103,19 +100,19 @@ public class SelicBackgroundService : IHostedService
                 {
                     _context.selics.AddRange(selics);
                     _context.SaveChanges();
-                    _logger.LogInformation("{Count} novos registros SELIC salvos de {lastDate} até {now} {TraceId} {_tags_}", selics.Count, lastDate, selics.Max(x => x.date), traceId, _tags);
+                    _logger.LogInformation("{Count} novos registros SELIC salvos de {lastDate} até {now} {TraceId} {_tags_}", selics.Count, lastDate, selics.Max(x => x.date), _TraceId, _tags);
                     lastDate = selics.Max(x => x.date);
                 }
             }
             catch (Exception error)
             {
-                _logger.LogError(error, "Erro ao salvar {Count} taxa SELIC no banco {TraceId} {_tags_}", selics.Count, traceId, _tags);
+                _logger.LogError(error, "Erro ao salvar {Count} taxa SELIC no banco {TraceId} {_tags_}", selics.Count, _TraceId, _tags);
             }
 
             Wait();
         }
 
-        _logger.LogError("Codigo da SELIC parou. Isso não deveria ter acontecido {TraceId} {_tags_}", traceId, _tags);
+        _logger.LogError("Codigo da SELIC parou. Isso não deveria ter acontecido {TraceId} {_tags_}", _TraceId, _tags);
 
         return Task.CompletedTask;
     }
@@ -131,8 +128,7 @@ public class SelicBackgroundService : IHostedService
         DateOnly chunkStart = SeriesStartDate;
         int totalSaved = 0;
 
-        var traceId = TraceContext.GetTraceId();
-        _logger.LogInformation("Iniciando busca completa da SELIC. TraceId={TraceId} DataInicial={DataInicial} {_tags_}", traceId, chunkStart.ToString("dd/MM/yyyy"), _tags);
+        _logger.LogInformation("Iniciando busca completa da SELIC. TraceId={TraceId} DataInicial={DataInicial} {_tags_}", _TraceId, chunkStart.ToString("dd/MM/yyyy"), _tags);
 
         while (chunkStart < today)
         {
@@ -140,7 +136,7 @@ public class SelicBackgroundService : IHostedService
             if (chunkEnd > today)
                 chunkEnd = today;
 
-            _logger.LogInformation("Buscando SELIC. TraceId={TraceId} Inicio={Inicio} Fim={Fim} {_tags_}", traceId, chunkStart.ToString("dd/MM/yyyy"), chunkEnd.ToString("dd/MM/yyyy"), _tags);
+            _logger.LogInformation("Buscando SELIC. TraceId={TraceId} Inicio={Inicio} Fim={Fim} {_tags_}", _TraceId, chunkStart.ToString("dd/MM/yyyy"), chunkEnd.ToString("dd/MM/yyyy"), _tags);
 
             try
             {
@@ -151,22 +147,22 @@ public class SelicBackgroundService : IHostedService
                 {
                     int saved = SaveInBatches(selics);
                     totalSaved += saved;
-                    _logger.LogInformation("Registros SELIC salvos. TraceId={TraceId} Saved={Saved} Total={Total} {_tags_}", traceId, saved, totalSaved, _tags);
+                    _logger.LogInformation("Registros SELIC salvos. TraceId={TraceId} Saved={Saved} Total={Total} {_tags_}", _TraceId, saved, totalSaved, _tags);
                 }
                 else
                 {
-                    _logger.LogInformation("Nenhum registro novo de SELIC neste periodo. TraceId={TraceId} {_tags_}", traceId, _tags);
+                    _logger.LogInformation("Nenhum registro novo de SELIC neste periodo. TraceId={TraceId} {_tags_}", _TraceId, _tags);
                 }
             }
             catch (Exception error)
             {
-                _logger.LogError(error, "Erro ao buscar SELIC no periodo. TraceId={TraceId} Inicio={Inicio} Fim={Fim} {_tags_}", traceId, chunkStart.ToString("dd/MM/yyyy"), chunkEnd.ToString("dd/MM/yyyy"), _tags);
+                _logger.LogError(error, "Erro ao buscar SELIC no periodo. TraceId={TraceId} Inicio={Inicio} Fim={Fim} {_tags_}", _TraceId, chunkStart.ToString("dd/MM/yyyy"), chunkEnd.ToString("dd/MM/yyyy"), _tags);
             }
 
             chunkStart = chunkEnd.AddDays(1);
         }
 
-        _logger.LogInformation("Busca completa da SELIC finalizada. TraceId={TraceId} Total={Total} {_tags_}", traceId, totalSaved, _tags);
+        _logger.LogInformation("Busca completa da SELIC finalizada. TraceId={TraceId} Total={Total} {_tags_}", _TraceId, totalSaved, _tags);
     }
 
 
