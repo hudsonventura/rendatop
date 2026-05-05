@@ -44,7 +44,15 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
         {
             try
             {
-                await NotifyDueTomorrow(stoppingToken);
+                if (DateTime.UtcNow.Hour >= 9 && DateTime.UtcNow.Hour < 17) // Executa a verificação diariamente às 8h00 UTC (5h00 no horário de Brasília)
+                {
+                    await NotifyDueTomorrow(stoppingToken);
+                }
+                else
+                {
+                    _logger.LogInformation("Fora do horário de envio de notificações. Verificação adiada. {TraceId} {_tags_}", _TraceId, _tags);
+                }
+                
             }
             catch (Exception ex)
             {
@@ -53,7 +61,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
 
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
             catch (TaskCanceledException)
             {
