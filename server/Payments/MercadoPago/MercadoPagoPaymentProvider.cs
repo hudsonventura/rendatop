@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using MercadoPago.Client;
 using MercadoPago.Client.Customer;
@@ -23,6 +24,7 @@ namespace server.Payments.MercadoPago;
 public class MercadoPagoPaymentProvider : IPaymentProvider
 {
     private readonly ILogger<MercadoPagoPaymentProvider> _logger;
+    private readonly List<string> _tags = new() { "MercadoPagoPaymentProvider", "Payments", "MercadoPago" };
     private readonly string _statementDescriptor;
 
     public MercadoPagoPaymentProvider(ILogger<MercadoPagoPaymentProvider> logger)
@@ -34,18 +36,12 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
 
         // Log para debug — remover em produção
         var trimmed = accessToken.Trim();
-        _logger.LogInformation(
-            "MP AccessToken carregado: length={Len}, starts={Start}..., ends=...{End}",
-            trimmed.Length,
-            trimmed.Length > 15 ? trimmed[..15] : trimmed,
-            trimmed.Length > 10 ? trimmed[^10..] : trimmed
-        );
 
         MercadoPagoConfig.AccessToken = trimmed;
 
         _statementDescriptor = BuildStatementDescriptor(
             Environment.GetEnvironmentVariable("MERCADO_PAGO_STATEMENT_DESCRIPTOR"));
-        _logger.LogInformation("MP statement descriptor configurado: {StatementDescriptor}", _statementDescriptor);
+        _logger.LogInformation("MP statement descriptor configurado: {StatementDescriptor} {_tags_}", _statementDescriptor, _tags);
     }
 
 
@@ -56,6 +52,21 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
 
         return await ExecuteWithMercadoPagoHandlingAsync("processar o pagamento com cartão", async () =>
         {
+            var traceId = TraceContext.GetTraceId();
+            _logger.LogInformation(
+                "Enviando pagamento com cartão ao Mercado Pago. TraceId={TraceId} Payload={@Payload} Tags={_tags_}",
+                traceId,
+                new
+                {
+                    request.amount,
+                    request.description,
+                    request.payment_method_id,
+                    request.card_type,
+                    request.installments,
+                    request.issuer_id,
+                    request.payer_email,
+                    request.external_reference
+                }, _tags);
             var client = new PaymentClient();
 
             var paymentRequest = new PaymentCreateRequest
@@ -81,7 +92,13 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
                 paymentRequest.IssuerId = request.issuer_id;
 
             var payment = await client.CreateAsync(paymentRequest);
-            _logger.LogInformation("Pagamento cartão criado: {Id} status={Status}", payment.Id, payment.Status);
+            _logger.LogInformation(
+                "Pagamento com cartão criado no Mercado Pago. TraceId={TraceId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
+                traceId,
+                payment.Id,
+                payment.Status,
+                payment.StatusDetail,
+                _tags);
 
             return new PaymentResult
             {
@@ -101,6 +118,21 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
     {
         return await ExecuteWithMercadoPagoHandlingAsync("gerar o pagamento PIX", async () =>
         {
+            var traceId = TraceContext.GetTraceId();
+            _logger.LogInformation(
+                "Enviando geracao de PIX ao Mercado Pago. TraceId={TraceId} Payload={@Payload} Tags={_tags_}",
+                traceId,
+                new
+                {
+                    request.amount,
+                    request.description,
+                    request.payer_email,
+                    request.payer_first_name,
+                    request.payer_last_name,
+                    request.payer_cpf,
+                    request.external_reference,
+                    request.date_of_expiration
+                }, _tags);
             var client = new PaymentClient();
 
             var paymentRequest = new PaymentCreateRequest
@@ -124,7 +156,13 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
             };
 
             var payment = await client.CreateAsync(paymentRequest);
-            _logger.LogInformation("Pagamento PIX criado: {Id} status={Status}", payment.Id, payment.Status);
+            _logger.LogInformation(
+                "Pagamento PIX criado no Mercado Pago. TraceId={TraceId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
+                traceId,
+                payment.Id,
+                payment.Status,
+                payment.StatusDetail,
+                _tags);
 
             var pointOfInteraction = payment.PointOfInteraction;
             var transactionData = pointOfInteraction?.TransactionData;
@@ -149,6 +187,21 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
     {
         return await ExecuteWithMercadoPagoHandlingAsync("gerar o boleto", async () =>
         {
+            var traceId = TraceContext.GetTraceId();
+            _logger.LogInformation(
+                "Enviando geracao de boleto ao Mercado Pago. TraceId={TraceId} Payload={@Payload} Tags={_tags_}",
+                traceId,
+                new
+                {
+                    request.amount,
+                    request.description,
+                    request.payer_email,
+                    request.payer_first_name,
+                    request.payer_last_name,
+                    request.payer_cpf,
+                    request.external_reference,
+                    request.date_of_expiration
+                }, _tags);
             var client = new PaymentClient();
             var syntheticAddress = BuildSyntheticBoletoAddress();
 
@@ -174,7 +227,13 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
             };
 
             var payment = await client.CreateAsync(paymentRequest);
-            _logger.LogInformation("Pagamento boleto criado: {Id} status={Status}", payment.Id, payment.Status);
+            _logger.LogInformation(
+                "Pagamento boleto criado no Mercado Pago. TraceId={TraceId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
+                traceId,
+                payment.Id,
+                payment.Status,
+                payment.StatusDetail,
+                _tags);
 
             string? barcodeContent = null;
             string? digitableLine = null;
@@ -296,8 +355,21 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
     {
         return await ExecuteWithMercadoPagoHandlingAsync("consultar o status do pagamento", async () =>
         {
+            var traceId = TraceContext.GetTraceId();
+            _logger.LogInformation(
+                "Consultando status no Mercado Pago. TraceId={TraceId} PaymentId={PaymentId} Tags={_tags_}",
+                traceId,
+                paymentId, _tags);
             var client = new PaymentClient();
             var payment = await client.GetAsync(long.Parse(paymentId));
+
+            _logger.LogInformation(
+                "Status consultado no Mercado Pago. TraceId={TraceId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
+                traceId,
+                payment.Id,
+                payment.Status,
+                payment.StatusDetail,
+                _tags);
 
             return new PaymentResult
             {
@@ -322,6 +394,11 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
     {
         return await ExecuteWithMercadoPagoHandlingAsync("salvar o cartão para cobranças futuras", async () =>
         {
+            var traceId = TraceContext.GetTraceId();
+            _logger.LogInformation(
+                "Salvando cartao para renovacao automatica no Mercado Pago. TraceId={TraceId} Email={Email} Tags={_tags_}",
+                traceId,
+                email, _tags);
             var customerClient = new CustomerClient();
 
             // Buscar ou criar customer
@@ -344,7 +421,11 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
                 Token = cardToken
             });
 
-            _logger.LogInformation("Cartão salvo: customer={CustomerId} card={CardId}", customer.Id, cardResult.Id);
+            _logger.LogInformation(
+                "Cartao salvo no Mercado Pago. TraceId={TraceId} CustomerId={CustomerId} CardId={CardId} Tags={_tags_}",
+                traceId,
+                customer.Id,
+                cardResult.Id, _tags);
             return (customer.Id, cardResult.Id);
         });
     }
@@ -354,6 +435,18 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
     {
         return await ExecuteWithMercadoPagoHandlingAsync("processar a renovação automática no cartão", async () =>
         {
+            var traceId = TraceContext.GetTraceId();
+            _logger.LogInformation(
+                "Enviando renovacao automatica com cartao salvo ao Mercado Pago. TraceId={TraceId} Payload={@Payload} Tags={_tags_}",
+                traceId,
+                new
+                {
+                    request.customer_id,
+                    request.card_id,
+                    request.amount,
+                    request.description,
+                    request.external_reference
+                }, _tags);
             var client = new PaymentClient();
 
             var paymentRequest = new PaymentCreateRequest
@@ -372,7 +465,13 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
             };
 
             var payment = await client.CreateAsync(paymentRequest);
-            _logger.LogInformation("Pagamento com cartão salvo: {Id} status={Status}", payment.Id, payment.Status);
+            _logger.LogInformation(
+                "Pagamento com cartao salvo criado no Mercado Pago. TraceId={TraceId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
+                traceId,
+                payment.Id,
+                payment.Status,
+                payment.StatusDetail,
+                _tags);
 
             return new PaymentResult
             {
@@ -419,18 +518,35 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
     {
         return await ExecuteWithMercadoPagoHandlingAsync("solicitar o estorno do pagamento", async () =>
         {
+            var traceId = TraceContext.GetTraceId();
+            _logger.LogInformation(
+                "Solicitando estorno ao Mercado Pago. TraceId={TraceId} PaymentId={PaymentId} Amount={Amount} Tags={_tags_}",
+                traceId,
+                paymentId,
+                amount,
+                _tags);
             var client = new PaymentRefundClient();
             var requestOptions = new RequestOptions();
             requestOptions.CustomHeaders.Add("X-Render-In-Process-Refunds", "true");
             var refund = await client.RefundAsync(long.Parse(paymentId), amount, requestOptions, cancellationToken);
 
-            return new PaymentRefundResult
+            var result = new PaymentRefundResult
             {
                 refund_id = refund.Id?.ToString() ?? string.Empty,
                 status = refund.Status ?? string.Empty,
                 amount = refund.Amount,
                 created_at = UtcDateTime.EnsureUtc(refund.DateCreated)
             };
+
+            _logger.LogInformation(
+                "Estorno solicitado com sucesso no Mercado Pago. TraceId={TraceId} PaymentId={PaymentId} RefundId={RefundId} Status={Status} Tags={_tags_}",
+                traceId,
+                paymentId,
+                result.refund_id,
+                result.status,
+                _tags);
+
+            return result;
         });
     }
 
@@ -444,14 +560,22 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
         {
             _logger.LogWarning(
                 ex,
-                "Erro da API do Mercado Pago ao {Operation}. StatusCode={StatusCode}",
+                "Erro da API do Mercado Pago ao {Operation}. TraceId={TraceId} StatusCode={StatusCode} ApiError={ApiError} Tags={_tags_}",
                 operation,
-                ex.StatusCode);
+                TraceContext.GetTraceId(),
+                ex.StatusCode,
+                SafeSerialize(ex.ApiError),
+                _tags);
             throw new ExpectedException(FormatMercadoPagoApiException(operation, ex));
         }
         catch (MercadoPagoException ex)
         {
-            _logger.LogError(ex, "Erro do SDK do Mercado Pago ao {Operation}", operation);
+            _logger.LogError(
+                ex,
+                "Erro do SDK do Mercado Pago ao {Operation}. TraceId={TraceId} Tags={_tags_}",
+                operation,
+                TraceContext.GetTraceId(),
+                _tags);
             throw new ExpectedException(
                 $"Falha ao comunicar com o Mercado Pago ao {operation}. {SanitizeProviderText(ex.Message)}",
                 HttpStatusCode.BadGateway);
@@ -518,6 +642,18 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
         }
 
         return string.Join(" - ", pieces);
+    }
+
+    private static string SafeSerialize(object? value)
+    {
+        try
+        {
+            return JsonSerializer.Serialize(value);
+        }
+        catch
+        {
+            return "<serialization_error>";
+        }
     }
 
     private static string? FirstNonEmpty(params object?[] values)
