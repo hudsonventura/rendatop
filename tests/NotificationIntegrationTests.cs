@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Http;
+using Microsoft.Extensions.Logging;
 using server.Utils;
 
 namespace tests;
@@ -7,6 +8,10 @@ namespace tests;
 [Trait("Category", "Integration")]
 public class NotificationIntegrationTests
 {
+
+    ILogger<server.Utils.Telegram> _logger = new LoggerFactory().CreateLogger<server.Utils.Telegram>();
+    static ILogger<server.Utils.Telegram> logger = new LoggerFactory().CreateLogger<server.Utils.Telegram>();
+
     [Fact]
     public async Task EmailSmtp_SendsRealEmail_UsingDotEnvCredentials()
     {
@@ -116,7 +121,9 @@ public class NotificationIntegrationTests
     {
         NotificationIntegrationEnvironment.Load();
 
+
         var telegram = new server.Utils.Telegram(
+            _logger,
             NotificationIntegrationEnvironment.GetRequired("TELEGRAM_TOKEN"),
             NotificationIntegrationEnvironment.GetRequired("TELEGRAM_CHATID"));
         var marker = NotificationIntegrationEnvironment.BuildMarker("telegram");
@@ -144,6 +151,8 @@ public class NotificationIntegrationTests
 
     private static class NotificationIntegrationEnvironment
     {
+
+
         private static bool _loaded;
 
         public static void Load()
@@ -189,7 +198,10 @@ public class NotificationIntegrationTests
 
         public static EmailSmtp CreateSmtp()
         {
+            ILogger<EmailSmtp> logger = new LoggerFactory().CreateLogger<EmailSmtp>();
+
             return new EmailSmtp(
+                logger,
                 Environment.GetEnvironmentVariable("SMTP_HOST"),
                 Environment.GetEnvironmentVariable("SMTP_PORT"),
                 Environment.GetEnvironmentVariable("SMTP_USERNAME"),
@@ -201,14 +213,19 @@ public class NotificationIntegrationTests
 
         public static IWhatsAppNotification CreateWhatsAppNotification()
         {
+            ILogger<WWebJsWhatsAppNotification> logger1 = new LoggerFactory().CreateLogger<WWebJsWhatsAppNotification>();
+            ILogger<WhatsApp> logger2 = new LoggerFactory().CreateLogger<WhatsApp>();
+
             var provider = (Environment.GetEnvironmentVariable("WHATSAPP_PROVIDER") ?? "evolution").Trim().ToLowerInvariant();
             return provider switch
             {
                 "wwebjs" => new WWebJsWhatsAppNotification(
+                    logger1,
                     GetRequired("WHATSAPP_WWEBJS_URL"),
                     Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_API_KEY"),
                     Environment.GetEnvironmentVariable("WHATSAPP_WWEBJS_SESSION_ID")),
                 _ => new WhatsApp(
+                    logger2,
                     GetRequired("WHATSAPP_EVOLUTION_URL"),
                     GetRequired("WHATSAPP_EVOLUTION_INSTANCE"),
                     GetRequired("WHATSAPP_EVOLUTION_API_KEY"))
