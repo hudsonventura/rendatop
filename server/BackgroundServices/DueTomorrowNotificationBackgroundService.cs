@@ -16,6 +16,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
     private readonly string? _clientBaseUrl;
 
     private readonly List<string> _tags = new() { "DueTomorrowNotification", "BackgroundService" };
+    private string _TraceId = string.Empty;
 
     public DueTomorrowNotificationBackgroundService(
         ILogger<DueTomorrowNotificationBackgroundService> logger,
@@ -36,6 +37,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _TraceId = Guid.NewGuid().ToString();
         _logger.LogInformation("Serviço de notificações de vencimento iniciado. Verificação a cada 1 minuto. {TraceId} {_tags_}", _TraceId, _tags);
 
         while (!stoppingToken.IsCancellationRequested)

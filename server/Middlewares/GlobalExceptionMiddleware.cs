@@ -9,6 +9,7 @@ public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
+    private readonly static List<string> _tags = new() { "GlobalExceptionMiddleware", "Middleware" };
 
 
     public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
@@ -46,10 +47,18 @@ public class GlobalExceptionMiddleware
 
     private static Task HandleExceptionAsync(HttpContext context, Exception exception, HttpStatusCode statusCode, ILogger logger)
     {
-        // Log do erro
-        logger.LogError(exception, "Ocorreu uma exceção.");
+        var tags = _tags;
+        tags.Add("HTTPResponse");
+        var traceId = context.TraceIdentifier;
+        logger.LogError(
+            exception,
+            "Ocorreu uma exceção global no GlobalExceptionMiddleware. TraceId={TraceId} Method={Method} Path={Path} StatusCode={StatusCode} Tags={_tags_}",
+            traceId,
+            context.Request.Method,
+            context.Request.Path,
+            (int)statusCode, 
+            tags);
 
-        // Define o status HTTP adequado (500 para erros internos)
         context.Response.StatusCode = (int)statusCode;
         context.Response.ContentType = "application/json";
 

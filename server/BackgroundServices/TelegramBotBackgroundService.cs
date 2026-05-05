@@ -89,7 +89,7 @@ public class TelegramBotBackgroundService : BackgroundService
             parseMode: ParseMode.Markdown,
             cancellationToken: cancellationToken);
 
-        _logger.LogInformation("Chat ID enviado via /start. TraceId={TraceId} ChatId={ChatId}.", traceId, chatId);
+        _logger.LogInformation("Chat ID enviado via /start. TraceId={TraceId} ChatId={ChatId} {_tags_}", traceId, chatId, _tags);
     }
 
     public Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -99,14 +99,15 @@ public class TelegramBotBackgroundService : BackgroundService
         {
             _logger.LogError(
                 exception,
-                "Erro da API do Telegram no StartReceiving. TraceId={TraceId} Code={Code} Message={Message}",
+                "Erro da API do Telegram no StartReceiving. TraceId={TraceId} Code={Code} Message={Message} {_tags_}",
                 traceId,
                 apiException.ErrorCode,
-                apiException.Message);
+                apiException.Message,
+                _tags);
         }
         else
         {
-            _logger.LogError(exception, "Erro no polling do bot do Telegram. TraceId={TraceId}", traceId);
+            _logger.LogError(exception, "Erro no polling do bot do Telegram. TraceId={TraceId} {_tags_}", traceId, _tags);
         }
 
         return Task.CompletedTask;
