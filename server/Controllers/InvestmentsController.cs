@@ -13,16 +13,14 @@ namespace server.Controllers;
 public class InvestmentsController : AuthenticatedController
 {
     Context _context;
-    ILogger _logger;
+    ILogger<InvestmentsController> _logger;
+    private readonly List<string> _tags = new() { "InvestmentsController", "Controllers", "Investment" };
     INotification _notify;
 
     public InvestmentsController(ILogger<InvestmentsController> logger, IHttpContextAccessor httpContextAccessor, IDbContextFactory<Context> contextFactory, INotification notify) : base(httpContextAccessor)
     {
         _context = contextFactory.CreateDbContext();
         _logger = logger;
-
-        _logger.LogInformation("Apenas um teste");
-
         _notify = notify;
     }
 

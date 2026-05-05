@@ -4,19 +4,24 @@ namespace server.Utils;
 
 public class Telegram : INotification
 {
+    private readonly ILogger<Telegram> _logger;
+    private readonly static List<string> _tags = new() { "Telegram", "Notification" };
+
     private readonly HttpClient _httpClient = new HttpClient();
     string _token;
     string? _defaultChatId;
 
 
-    public Telegram(string token, string? chatId)
+    public Telegram(ILogger<Telegram> logger, string token, string? chatId)
     {
+        _logger = logger;
         _token = token;
         _defaultChatId = chatId;
     }
 
     public async Task Notify(string title, string message, string? chatId = null)
     {
+        var traceId = TraceContext.GetTraceId();
         var targetChatId = string.IsNullOrWhiteSpace(chatId) ? _defaultChatId : chatId;
         if (string.IsNullOrWhiteSpace(targetChatId))
             throw new Exception("Chat ID do Telegram não configurado.");
@@ -33,9 +38,20 @@ public class Telegram : INotification
 
         var response = await _httpClient.SendAsync(request);
         var responseBody = await response.Content.ReadAsStringAsync();
-        
+
         if (!response.IsSuccessStatusCode)
         {
+            _logger.LogError(
+                "Falha ao enviar Telegram. TraceId={TraceId} Payload={@Payload} Response={ResponseBody} Tags={_tags}",
+                traceId,
+                new
+                {
+                    title,
+                    targetChatId,
+                    message
+                },
+                responseBody,
+                _tags);
             throw new Exception($"Erro ao enviar mensagem para o Telegram: {response.StatusCode}");
         }
     }

@@ -1,4 +1,5 @@
 using server.Services;
+using server.Utils;
 
 namespace server.BackgroundServices;
 
@@ -16,6 +17,8 @@ public class SubscriptionMonitorBackgroundService : IHostedService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<SubscriptionMonitorBackgroundService> _logger;
     private Timer? _timer;
+    private string _TraceId = string.Empty;
+    private readonly List<string> _tags = new() { "SubscriptionMonitor", "BackgroundService" };
 
     public SubscriptionMonitorBackgroundService(
         IServiceProvider serviceProvider,
@@ -27,7 +30,7 @@ public class SubscriptionMonitorBackgroundService : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("SubscriptionMonitor iniciado. Checagem a cada 6 horas.");
+        _logger.LogInformation("SubscriptionMonitor iniciado. Checagem a cada 6 horas. {TraceId} {_tags_}", _TraceId, _tags);
         _timer = new Timer(DoWork, null, TimeSpan.FromMinutes(5), TimeSpan.FromHours(6));
         return Task.CompletedTask;
     }
@@ -40,8 +43,10 @@ public class SubscriptionMonitorBackgroundService : IHostedService
 
     private async void DoWork(object? state)
     {
+        _TraceId = Guid.NewGuid().ToString();
         try
         {
+            _logger.LogInformation("Ciclo do SubscriptionMonitor iniciado. TraceId={TraceId} {_tags_}", _TraceId, _tags);
             using var scope = _serviceProvider.CreateScope();
             var billing = scope.ServiceProvider.GetRequiredService<SubscriptionBillingService>();
 
@@ -50,10 +55,11 @@ public class SubscriptionMonitorBackgroundService : IHostedService
             await billing.ProcessDueTomorrowRenewalNotificationsAsync();
             await billing.ProcessDueCardRenewalsAsync();
             await billing.ExpireUnpaidRenewalsAsync();
+            _logger.LogInformation("Ciclo do SubscriptionMonitor concluido. TraceId={TraceId} {_tags_}", _TraceId, _tags);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro no SubscriptionMonitor");
+            _logger.LogError(ex, "Erro no SubscriptionMonitor. TraceId={TraceId} {_tags_}", _TraceId, _tags);
         }
     }
 }

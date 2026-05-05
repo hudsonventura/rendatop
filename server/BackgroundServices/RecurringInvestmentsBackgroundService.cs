@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using server.Domain;
+using server.Utils;
 
 namespace server.BackgroundServices;
 
@@ -7,6 +8,8 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
 {
     private readonly ILogger<RecurringInvestmentsBackgroundService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+
+    private readonly List<string> _tags = new() { "RecurringInvestments", "BackgroundService" };
 
     public RecurringInvestmentsBackgroundService(
         ILogger<RecurringInvestmentsBackgroundService> logger,
@@ -44,6 +47,8 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
 
     private async Task GenerateRecurringInvestments(CancellationToken stoppingToken)
     {
+        using var activity = TraceContext.StartActivity("background.recurring-investments");
+        var traceId = TraceContext.GetTraceId();
         var nowUtc = DateTime.UtcNow;
         if (nowUtc.Hour < 6)
             return;
@@ -59,6 +64,8 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
             .Include(item => item.bank)
             .Where(item => item.active)
             .ToListAsync(stoppingToken);
+
+        _logger.LogInformation("Processando investimentos recorrentes. TraceId={TraceId} Count={Count} Date={Date} {_tags_}", traceId, recurringInvestments.Count, today, _tags);
 
         foreach (var recurringInvestment in recurringInvestments)
         {
@@ -84,12 +91,15 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
             recurringInvestment.updated_at = nowUtc;
 
             _logger.LogInformation(
-                "Investimento recorrente gerado para user={UserId} recurring={RecurringId} title={Title}",
+                "Investimento recorrente gerado. TraceId={TraceId} UserId={UserId} RecurringId={RecurringId} Title={Title} {_tags_}",
+                traceId,
                 recurringInvestment.owner_id,
                 recurringInvestment.id,
-                recurringInvestment.title);
+                recurringInvestment.title,
+                _tags);
         }
 
         await context.SaveChangesAsync(stoppingToken);
+        _logger.LogInformation("Processamento de investimentos recorrentes concluido. TraceId={TraceId} {_tags_}", traceId, _tags);
     }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date"
 import { DatePicker } from "@heroui/react"
@@ -38,11 +38,29 @@ function toJsDate(value) {
 	return new Date(value.year, value.month - 1, value.day)
 }
 
-const Calendario = ({ field, disabled = false }) => {
+function compareCalendarDate(left, right) {
+	if (!left || !right) return 0
+
+	if (left.year !== right.year) return left.year - right.year
+	if (left.month !== right.month) return left.month - right.month
+	return left.day - right.day
+}
+
+const Calendario = ({ field, disabled = false, minDate, maxDate }) => {
 	const dateValue = toCalendarDate(field.value)
+	const minValue = useMemo(() => toCalendarDate(minDate), [minDate])
+	const maxValue = useMemo(() => toCalendarDate(maxDate), [maxDate])
 	const wrapperRef = useRef(null)
 	const [portalContainer, setPortalContainer] = useState(undefined)
 	const [focusedValue, setFocusedValue] = useState(dateValue ?? today(getLocalTimeZone()))
+
+	const isCalendarDateUnavailable = (value) => {
+		if (minValue && compareCalendarDate(value, minValue) < 0) return true
+		if (maxValue && compareCalendarDate(value, maxValue) > 0) return true
+		return false
+	}
+
+	const canSelectDate = (value) => value && !isCalendarDateUnavailable(value)
 
 	useEffect(() => {
 		if (disabled) {
@@ -61,12 +79,14 @@ const Calendario = ({ field, disabled = false }) => {
 
 	const handleToday = () => {
 		const currentDate = today(getLocalTimeZone())
+		if (!canSelectDate(currentDate)) return
 		setFocusedValue(currentDate)
 		field.onChange(toJsDate(currentDate))
 	}
 
 	const handleQuickDate = (duration) => {
 		const nextDate = today(getLocalTimeZone()).add(duration)
+		if (!canSelectDate(nextDate)) return
 		setFocusedValue(nextDate)
 		field.onChange(toJsDate(nextDate))
 	}
@@ -84,6 +104,9 @@ const Calendario = ({ field, disabled = false }) => {
 				calendarWidth={360}
 				granularity="day"
 				disableAnimation
+				minValue={minValue ?? undefined}
+				maxValue={maxValue ?? undefined}
+				isDateUnavailable={isCalendarDateUnavailable}
 				placeholderValue={new CalendarDate(2026, 1, 1)}
 				calendarProps={{
 					focusedValue,
@@ -100,6 +123,7 @@ const Calendario = ({ field, disabled = false }) => {
 							variant="outline"
 							className="h-9 w-full justify-center"
 							onClick={handleToday}
+							disabled={!canSelectDate(today(getLocalTimeZone()))}
 						>
 							Hoje
 						</Button>
@@ -111,6 +135,7 @@ const Calendario = ({ field, disabled = false }) => {
 									variant="outline"
 									className="h-8 px-2 text-xs"
 									onClick={() => handleQuickDate(option.value)}
+									disabled={!canSelectDate(today(getLocalTimeZone()).add(option.value))}
 								>
 									{option.label}
 								</Button>

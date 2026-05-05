@@ -8,6 +8,8 @@ namespace server.Utils;
 /// </summary>
 public class WWebJsWhatsAppNotification : IWhatsAppNotification
 {
+    private readonly ILogger<WWebJsWhatsAppNotification> _logger;
+    private readonly List<string> _tags = new() { "WWebJsWhatsAppNotification", "Utils", "WhatsAppNotification", "WhatsApp", "Notification" };
     private readonly HttpClient _httpClient = new HttpClient();
     private readonly SemaphoreSlim _sessionLock = new(1, 1);
     private readonly string _baseUrl;
@@ -15,8 +17,13 @@ public class WWebJsWhatsAppNotification : IWhatsAppNotification
     private readonly string _sessionId;
     private bool _sessionInitialized;
 
-    public WWebJsWhatsAppNotification(string? baseUrl, string? apiKey, string? sessionId)
+    public WWebJsWhatsAppNotification(
+        ILogger<WWebJsWhatsAppNotification> logger,
+        string? baseUrl,
+        string? apiKey,
+        string? sessionId)
     {
+        _logger = logger;
         _baseUrl = (baseUrl ?? string.Empty).Trim().TrimEnd('/');
         _apiKey = (apiKey ?? string.Empty).Trim();
         _sessionId = string.IsNullOrWhiteSpace(sessionId) ? "Default" : sessionId.Trim();
@@ -24,6 +31,7 @@ public class WWebJsWhatsAppNotification : IWhatsAppNotification
 
     public async Task Notify(string phone, string title, string message)
     {
+        var traceId = TraceContext.GetTraceId();
         EnsureConfigured();
         await EnsureSessionAsync();
 
@@ -59,6 +67,19 @@ public class WWebJsWhatsAppNotification : IWhatsAppNotification
 
             body = await response.Content.ReadAsStringAsync();
         }
+
+        _logger.LogError(
+            "Falha ao enviar WhatsApp via WWebJS. TraceId={TraceId} Payload={@Payload} ResponseBody={ResponseBody} Tags={_tags_}",
+            traceId,
+            new
+            {
+                phone,
+                title,
+                sessionId = _sessionId,
+                destination
+            },
+            body,
+            _tags);
 
         throw new Exception($"Erro ao enviar mensagem para o WhatsApp via WWebJS: {(int)response.StatusCode} {response.ReasonPhrase}. {body}");
     }

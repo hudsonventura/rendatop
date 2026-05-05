@@ -26,6 +26,7 @@ public class SubscriptionBillingService
     private readonly IPaymentProvider _paymentProvider;
     private readonly IEmailNotification _emailNotification;
     private readonly ILogger<SubscriptionBillingService> _logger;
+    private readonly List<string> _tags = new() { "SubscriptionBillingService" };
     private readonly string? _clientBaseUrl;
 
     public SubscriptionBillingService(
@@ -43,6 +44,7 @@ public class SubscriptionBillingService
 
     public async Task<string> SavePayerCpfAsync(Guid userId, string? cpf, CancellationToken cancellationToken = default)
     {
+        var traceId = TraceContext.GetTraceId();
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var normalizedCpf = CpfUtility.NormalizeOrThrow(cpf);
         var user = await context.users.FirstOrDefaultAsync(x => x.id == userId, cancellationToken)
@@ -52,6 +54,7 @@ public class SubscriptionBillingService
         {
             user.cpf = normalizedCpf;
             await context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("CPF do pagador atualizado. TraceId={TraceId} UserId={UserId} {_tags_}", traceId, userId, _tags);
         }
 
         return normalizedCpf;
@@ -67,6 +70,7 @@ public class SubscriptionBillingService
         int installments,
         CancellationToken cancellationToken = default)
     {
+        var traceId = TraceContext.GetTraceId();
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var user = await context.users.FirstOrDefaultAsync(x => x.id == userId, cancellationToken)
             ?? throw new ExpectedException("Usuário não encontrado.");
@@ -78,6 +82,24 @@ public class SubscriptionBillingService
         var billingPeriodEnd = now.AddMonths(1);
         var paymentMethod = paymentMethodId.Contains("debit", StringComparison.OrdinalIgnoreCase) ? "debit_card" : "credit_card";
         var externalReference = BuildExternalReference("sub", userId, plan.id);
+
+        _logger.LogInformation(
+            "Iniciando assinatura com cartao. TraceId={TraceId} UserId={UserId} Payload={@Payload} {_tags_}",
+            traceId,
+            userId,
+            new
+            {
+                planId = plan.id,
+                planName = plan.name,
+                plan.price,
+                paymentMethod,
+                paymentMethodId,
+                cardType,
+                issuerId,
+                installments,
+                externalReference
+            },
+            _tags);
 
         var result = await _paymentProvider.CreateCardPaymentAsync(new CardPaymentRequest
         {
@@ -94,6 +116,13 @@ public class SubscriptionBillingService
 
         if (IsApproved(result.status))
         {
+            _logger.LogInformation(
+                "Pagamento com cartao aprovado. TraceId={TraceId} UserId={UserId} PaymentId={PaymentId} Status={Status} Tags={_tags_}",
+                traceId,
+                userId,
+                result.payment_id,
+                result.status,
+                _tags);
             string? customerId = null;
             string? cardId = null;
             try
@@ -104,7 +133,7 @@ public class SubscriptionBillingService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Não foi possível salvar cartão para renovação automática do usuário {UserId}", userId);
+                _logger.LogWarning(ex, "Nao foi possivel salvar cartao para renovacao automatica. TraceId={TraceId} UserId={UserId} Tags={_tags_}", traceId, userId, _tags);
             }
 
             var subscription = CancelOldAndCreateSubscription(
@@ -142,6 +171,14 @@ public class SubscriptionBillingService
         }
         else if (IsPending(result.status))
         {
+            _logger.LogInformation(
+                "Pagamento com cartao pendente. TraceId={TraceId} UserId={UserId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
+                traceId,
+                userId,
+                result.payment_id,
+                result.status,
+                result.status_detail,
+                _tags);
             var subscription = CancelOldAndCreateSubscription(
                 context,
                 user.id,
@@ -172,6 +209,18 @@ public class SubscriptionBillingService
                 result);
 
             await context.SaveChangesAsync(cancellationToken);
+        }
+
+        if (IsRejected(result.status))
+        {
+            _logger.LogWarning(
+                "Pagamento com cartao rejeitado. TraceId={TraceId} UserId={UserId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
+                traceId,
+                userId,
+                result.payment_id,
+                result.status,
+                result.status_detail,
+                _tags);
         }
 
         return result;
@@ -211,6 +260,13 @@ public class SubscriptionBillingService
 
     public async Task<PaymentResult> RefreshPaymentStatusAsync(Guid userId, string paymentId, CancellationToken cancellationToken = default)
     {
+        var traceId = TraceContext.GetTraceId();
+        _logger.LogInformation(
+            "Atualizando status de pagamento. TraceId={TraceId} UserId={UserId} PaymentId={PaymentId} Tags={_tags_}",
+            traceId,
+            userId,
+            paymentId,
+            _tags);
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var charge = await context.subscription_charges
             .Include(x => x.subscription)
@@ -226,6 +282,13 @@ public class SubscriptionBillingService
 
         await ApplyPaymentResultAsync(context, charge, result, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation(
+            "Status de pagamento atualizado. TraceId={TraceId} ChargeId={ChargeId} PaymentId={PaymentId} Status={Status} Tags={_tags_}",
+            traceId,
+            charge.id,
+            paymentId,
+            result.status,
+            _tags);
         return result;
     }
 
@@ -375,6 +438,7 @@ public class SubscriptionBillingService
 
     public async Task ProcessPendingChargesAsync(CancellationToken cancellationToken = default)
     {
+        var traceId = TraceContext.GetTraceId();
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var pendingCharges = await context.subscription_charges
             .Include(x => x.subscription)
@@ -383,6 +447,7 @@ public class SubscriptionBillingService
             .OrderBy(x => x.created_at)
             .ToListAsync(cancellationToken);
 
+        _logger.LogInformation("Iniciando reconciliacao de cobrancas pendentes. TraceId={TraceId} Count={Count} Tags={_tags_}", traceId, pendingCharges.Count, _tags);
         foreach (var charge in pendingCharges)
         {
             try
@@ -392,7 +457,7 @@ public class SubscriptionBillingService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Erro ao reconciliar cobrança pendente {ChargeId}", charge.id);
+                _logger.LogWarning(ex, "Erro ao reconciliar cobranca pendente. TraceId={TraceId} ChargeId={ChargeId} PaymentId={PaymentId} Tags={_tags_}", traceId, charge.id, charge.provider_payment_id, _tags);
             }
         }
 
@@ -401,6 +466,7 @@ public class SubscriptionBillingService
 
     public async Task ProcessDueTomorrowRenewalNotificationsAsync(CancellationToken cancellationToken = default)
     {
+        var traceId = TraceContext.GetTraceId();
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var now = DateTime.UtcNow;
         var tomorrowStart = now.Date.AddDays(1);
@@ -416,6 +482,7 @@ public class SubscriptionBillingService
                 x.current_period_end < tomorrowEnd)
             .ToListAsync(cancellationToken);
 
+        _logger.LogInformation("Processando lembretes de renovacao. TraceId={TraceId} Count={Count} Tags={_tags_}", traceId, subscriptions.Count, _tags);
         foreach (var subscription in subscriptions)
         {
             try
@@ -430,7 +497,7 @@ public class SubscriptionBillingService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Erro ao processar lembrete de renovação da assinatura {SubscriptionId}", subscription.id);
+                _logger.LogWarning(ex, "Erro ao processar lembrete de renovacao. TraceId={TraceId} SubscriptionId={SubscriptionId} Tags={_tags_}", traceId, subscription.id, _tags);
             }
         }
 
@@ -439,6 +506,7 @@ public class SubscriptionBillingService
 
     public async Task ProcessDueCardRenewalsAsync(CancellationToken cancellationToken = default)
     {
+        var traceId = TraceContext.GetTraceId();
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var now = DateTime.UtcNow;
 
@@ -453,6 +521,7 @@ public class SubscriptionBillingService
                 x.mp_card_id != null)
             .ToListAsync(cancellationToken);
 
+        _logger.LogInformation("Processando renovacoes em cartao. TraceId={TraceId} Count={Count} Tags={_tags_}", traceId, subscriptions.Count, _tags);
         foreach (var subscription in subscriptions)
         {
             try
@@ -506,17 +575,31 @@ public class SubscriptionBillingService
 
                 if (IsApproved(result.status))
                 {
+                    _logger.LogInformation(
+                        "Renovacao com cartao aprovada. TraceId={TraceId} SubscriptionId={SubscriptionId} PaymentId={PaymentId} Tags={_tags_}",
+                        traceId,
+                        subscription.id,
+                        result.payment_id,
+                        _tags);
                     await ApplyApprovedRenewalAsync(context, charge, cancellationToken);
                 }
                 else
                 {
+                    _logger.LogWarning(
+                        "Renovacao com cartao nao aprovada. TraceId={TraceId} SubscriptionId={SubscriptionId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
+                        traceId,
+                        subscription.id,
+                        result.payment_id,
+                        result.status,
+                        result.status_detail,
+                        _tags);
                     subscription.status = SubscriptionStatus.Expired;
                     subscription.updated_at = now;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao renovar assinatura com cartão {SubscriptionId}", subscription.id);
+                _logger.LogError(ex, "Erro ao renovar assinatura com cartao. TraceId={TraceId} SubscriptionId={SubscriptionId}", traceId, subscription.id);
                 subscription.status = SubscriptionStatus.Expired;
                 subscription.updated_at = now;
             }
@@ -527,6 +610,7 @@ public class SubscriptionBillingService
 
     public async Task ExpireUnpaidRenewalsAsync(CancellationToken cancellationToken = default)
     {
+        var traceId = TraceContext.GetTraceId();
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var now = DateTime.UtcNow;
 
@@ -539,6 +623,7 @@ public class SubscriptionBillingService
                 x.current_period_end < now)
             .ToListAsync(cancellationToken);
 
+        _logger.LogInformation("Processando expiracao de renovacoes nao pagas. TraceId={TraceId} Count={Count} Tags={_tags_}", traceId, subscriptions.Count, _tags);
         foreach (var subscription in subscriptions)
         {
             var charge = await FindRenewalChargeAsync(context, subscription.id, subscription.current_period_end, cancellationToken);
@@ -583,6 +668,7 @@ public class SubscriptionBillingService
 
     public async Task ProcessScheduledCancellationsAsync(CancellationToken cancellationToken = default)
     {
+        var traceId = TraceContext.GetTraceId();
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var now = DateTime.UtcNow;
 
@@ -593,6 +679,7 @@ public class SubscriptionBillingService
                 x.current_period_end <= now)
             .ToListAsync(cancellationToken);
 
+        _logger.LogInformation("Processando cancelamentos agendados. TraceId={TraceId} Count={Count} Tags={_tags_}", traceId, subscriptions.Count, _tags);
         foreach (var subscription in subscriptions)
         {
             subscription.status = SubscriptionStatus.Cancelled;
@@ -606,6 +693,7 @@ public class SubscriptionBillingService
 
     public async Task CancelPendingSubscriptionAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        var traceId = TraceContext.GetTraceId();
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var sub = await context.subscriptions
             .Where(s => s.user_id == userId && s.plan_id != "free" && s.status == SubscriptionStatus.PendingPayment)
@@ -629,6 +717,7 @@ public class SubscriptionBillingService
         }
 
         await context.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation("Assinatura pendente cancelada. TraceId={TraceId} UserId={UserId} SubscriptionId={SubscriptionId} Tags={_tags_}", traceId, userId, sub.id, _tags);
     }
 
     private async Task<PaymentResult> CreateInitialOfflineSubscriptionAsync(
@@ -639,6 +728,7 @@ public class SubscriptionBillingService
         string payerLastName,
         CancellationToken cancellationToken)
     {
+        var traceId = TraceContext.GetTraceId();
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var user = await context.users.FirstOrDefaultAsync(x => x.id == userId, cancellationToken)
             ?? throw new ExpectedException("Usuário não encontrado.");
@@ -650,6 +740,23 @@ public class SubscriptionBillingService
         var billingPeriodEnd = now.AddMonths(1);
         var externalReference = BuildExternalReference("sub", userId, plan.id);
         var expiration = now.AddDays(1);
+
+        _logger.LogInformation(
+            "Iniciando assinatura offline. TraceId={TraceId} UserId={UserId} Payload={@Payload} Tags={_tags_}",
+            traceId,
+            userId,
+            new
+            {
+                planId = plan.id,
+                planName = plan.name,
+                plan.price,
+                paymentMethod,
+                payerFirstName,
+                payerLastName,
+                externalReference,
+                expiration
+            },
+            _tags);
 
         PaymentResult result;
         if (paymentMethod == "pix")
@@ -715,8 +822,27 @@ public class SubscriptionBillingService
 
         if (IsApproved(result.status))
         {
+            _logger.LogInformation(
+                "Pagamento offline aprovado. TraceId={TraceId} UserId={UserId} PaymentId={PaymentId} Method={PaymentMethod} Tags={_tags_}",
+                traceId,
+                userId,
+                result.payment_id,
+                paymentMethod,
+                _tags);
             await SendReceiptIfNeededAsync(context, user, charge, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Pagamento offline criado. TraceId={TraceId} UserId={UserId} PaymentId={PaymentId} Method={PaymentMethod} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
+                traceId,
+                userId,
+                result.payment_id,
+                paymentMethod,
+                result.status,
+                result.status_detail,
+                _tags);
         }
 
         return result;
@@ -767,6 +893,7 @@ public class SubscriptionBillingService
 
     private async Task<SubscriptionCharge> CreateOfflineRenewalChargeAsync(Context context, Subscription subscription, CancellationToken cancellationToken)
     {
+        var traceId = TraceContext.GetTraceId();
         var plan = Plans.GetById(subscription.plan_id)
             ?? throw new ExpectedException("Plano inválido.");
 
@@ -777,6 +904,14 @@ public class SubscriptionBillingService
         var billingPeriodStart = subscription.current_period_end;
         var billingPeriodEnd = subscription.current_period_end.AddMonths(1);
         var externalReference = BuildExternalReference("renewal", subscription.user_id, subscription.plan_id);
+
+        _logger.LogInformation(
+            "Criando cobranca de renovacao offline. TraceId={TraceId} SubscriptionId={SubscriptionId} PaymentMethod={PaymentMethod} ExternalReference={ExternalReference} Tags={_tags_}",
+            traceId,
+            subscription.id,
+            subscription.payment_method,
+            externalReference,
+            _tags);
 
         PaymentResult result;
         if (subscription.payment_method == "pix")
@@ -829,19 +964,37 @@ public class SubscriptionBillingService
             await ApplyApprovedRenewalAsync(context, charge, cancellationToken);
         }
 
+        _logger.LogInformation(
+            "Cobranca de renovacao offline registrada. TraceId={TraceId} SubscriptionId={SubscriptionId} ChargeId={ChargeId} PaymentId={PaymentId} Status={Status} Tags={_tags_}",
+            traceId,
+            subscription.id,
+            charge.id,
+            charge.provider_payment_id,
+            charge.status,
+            _tags);
+
         return charge;
     }
 
     private async Task ApplyPaymentResultAsync(Context context, SubscriptionCharge charge, PaymentResult result, CancellationToken cancellationToken)
     {
+        var traceId = TraceContext.GetTraceId();
         if (charge.status == SubscriptionChargeStatus.Cancelled)
         {
             charge.provider_status_detail = result.status_detail;
             charge.updated_at = DateTime.UtcNow;
+            _logger.LogInformation("Resultado ignorado para cobranca cancelada. TraceId={TraceId} ChargeId={ChargeId} PaymentId={PaymentId} Tags={_tags_}", traceId, charge.id, charge.provider_payment_id, _tags);
             return;
         }
 
         UpdateChargeFromResult(charge, result);
+        _logger.LogInformation(
+            "Aplicando resultado de pagamento. TraceId={TraceId} ChargeId={ChargeId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
+            traceId,
+            charge.id,
+            result.payment_id,
+            result.status,
+            result.status_detail, _tags);
 
         if (IsApproved(result.status))
         {
@@ -914,9 +1067,11 @@ public class SubscriptionBillingService
 
     private async Task SendReceiptIfNeededAsync(Context context, User user, SubscriptionCharge charge, CancellationToken cancellationToken)
     {
+        var traceId = TraceContext.GetTraceId();
         if (charge.receipt_sent_at.HasValue)
             return;
 
+        _logger.LogInformation("Enviando recibo de assinatura. TraceId={TraceId} UserId={UserId} ChargeId={ChargeId} Tags={_tags_}", traceId, user.id, charge.id, _tags);
         await _emailNotification.Notify(
             user.email,
             "RendaTop | Recibo de assinatura",
@@ -929,6 +1084,19 @@ public class SubscriptionBillingService
 
     private async Task SendCancellationEmailAsync(User user, Subscription subscription, SubscriptionCancellationResult result)
     {
+        _logger.LogInformation(
+            "Enviando email de cancelamento. TraceId={TraceId} UserId={UserId} SubscriptionId={SubscriptionId} Payload={@Payload} Tags={_tags_}",
+            TraceContext.GetTraceId(),
+            user.id,
+            subscription.id,
+            new
+            {
+                result.cancelled,
+                result.scheduled,
+                result.refunded_amount,
+                result.effective_at
+            },
+            _tags);
         await _emailNotification.Notify(
             user.email,
             "RendaTop | Cancelamento de assinatura",

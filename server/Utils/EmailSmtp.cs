@@ -5,6 +5,7 @@ namespace server.Utils;
 
 public class EmailSmtp : IEmailNotification
 {
+    private readonly ILogger<EmailSmtp> _logger;
     private readonly string _host;
     private readonly int _port;
     private readonly string _username;
@@ -13,7 +14,11 @@ public class EmailSmtp : IEmailNotification
     private readonly string _fromName;
     private readonly bool _enableSsl;
 
+    private readonly static List<string> _tags = new() { "Email", "Notification" };
+
+
     public EmailSmtp(
+        ILogger<EmailSmtp> logger,
         string? host,
         string? port,
         string? username,
@@ -22,6 +27,7 @@ public class EmailSmtp : IEmailNotification
         string? fromName,
         string? enableSsl)
     {
+        _logger = logger;
         _host = (host ?? string.Empty).Trim();
         _port = int.TryParse(port, out var parsedPort) ? parsedPort : 587;
         _username = (username ?? string.Empty).Trim();
@@ -33,6 +39,7 @@ public class EmailSmtp : IEmailNotification
 
     public async Task Notify(string toEmail, string title, string message, bool isHtml = false)
     {
+        var traceId = TraceContext.GetTraceId();
         if (string.IsNullOrWhiteSpace(_host) || string.IsNullOrWhiteSpace(_fromEmail))
             throw new Exception("Configuração SMTP incompleta. Defina SMTP_HOST e SMTP_FROM_EMAIL.");
 
@@ -61,6 +68,26 @@ public class EmailSmtp : IEmailNotification
         if (!string.IsNullOrWhiteSpace(_username))
             smtp.Credentials = new NetworkCredential(_username, _password);
 
-        await smtp.SendMailAsync(mail);
+        try
+        {
+            await smtp.SendMailAsync(mail);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Falha ao enviar email. TraceId={TraceId} Payload={@Payload} Tags={_tags_}",
+                traceId,
+                new
+                {
+                    toEmail = destination,
+                    title,
+                    isHtml,
+                    fromEmail = _fromEmail,
+                    host = _host,
+                    port = _port
+                },
+                _tags);
+            throw;
+        }
     }
 }

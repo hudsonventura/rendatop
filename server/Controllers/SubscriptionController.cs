@@ -17,6 +17,7 @@ public class SubscriptionController : AuthenticatedController
     private readonly Context _context;
     private readonly SubscriptionBillingService _billing;
     private readonly ILogger<SubscriptionController> _logger;
+    private readonly List<string> _tags = new() { "SubscriptionController", "Controllers", "Subscription" };
 
     public SubscriptionController(
         ILogger<SubscriptionController> logger,
@@ -106,11 +107,25 @@ public class SubscriptionController : AuthenticatedController
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     public async Task<PaymentResult> SubscribeWithCard([FromBody] CardSubscriptionRequest request)
     {
+        var traceId = TraceContext.GetTraceId();
         var plan = Plans.GetById(request.plan_id)
             ?? throw new ExpectedException("Plano inválido.");
 
         if (plan.price <= 0)
             throw new ExpectedException("O plano Free não requer pagamento.");
+
+        _logger.LogInformation(
+            "Tentativa de pagamento com cartão iniciada. TraceId={TraceId} UserId={UserId} Payload={@Payload} Tags={_tags_}",
+            traceId,
+            _user.id,
+            new
+            {
+                request.plan_id,
+                request.payment_method_id,
+                request.card_type,
+                request.issuer_id,
+                request.installments
+            }, _tags);
 
         await _billing.SavePayerCpfAsync(_user.id, request.payer_cpf);
 
@@ -133,11 +148,23 @@ public class SubscriptionController : AuthenticatedController
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     public async Task<PaymentResult> SubscribeWithPix([FromBody] PixSubscriptionRequest request)
     {
+        var traceId = TraceContext.GetTraceId();
         var plan = Plans.GetById(request.plan_id)
             ?? throw new ExpectedException("Plano inválido.");
 
         if (plan.price <= 0)
             throw new ExpectedException("O plano Free não requer pagamento.");
+
+        _logger.LogInformation(
+            "Tentativa de gerar QR Code PIX iniciada. TraceId={TraceId} UserId={UserId} Payload={@Payload} Tags={_tags_}",
+            traceId,
+            _user.id,
+            new
+            {
+                request.plan_id,
+                request.payer_first_name,
+                request.payer_last_name
+            }, _tags);
 
         await _billing.SavePayerCpfAsync(_user.id, request.payer_cpf);
 
@@ -157,11 +184,23 @@ public class SubscriptionController : AuthenticatedController
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     public async Task<PaymentResult> SubscribeWithBoleto([FromBody] BoletoSubscriptionRequest request)
     {
+        var traceId = TraceContext.GetTraceId();
         var plan = Plans.GetById(request.plan_id)
             ?? throw new ExpectedException("Plano inválido.");
 
         if (plan.price <= 0)
             throw new ExpectedException("O plano Free não requer pagamento.");
+
+        _logger.LogInformation(
+            "Tentativa de gerar boleto iniciada. TraceId={TraceId} UserId={UserId} Payload={@Payload} Tags={_tags_}",
+            traceId,
+            _user.id,
+            new
+            {
+                request.plan_id,
+                request.payer_first_name,
+                request.payer_last_name
+            }, _tags);
 
         await _billing.SavePayerCpfAsync(_user.id, request.payer_cpf);
 
@@ -180,6 +219,11 @@ public class SubscriptionController : AuthenticatedController
     [ProducesResponseType(typeof(PaymentResult), StatusCodes.Status200OK)]
     public async Task<PaymentResult> CheckPaymentStatus(string paymentId)
     {
+        _logger.LogInformation(
+            "Consulta de status de pagamento iniciada. TraceId={TraceId} UserId={UserId} PaymentId={PaymentId} Tags={_tags_}",
+            TraceContext.GetTraceId(),
+            _user.id,
+            paymentId, _tags);
         return await _billing.RefreshPaymentStatusAsync(_user.id, paymentId);
     }
 

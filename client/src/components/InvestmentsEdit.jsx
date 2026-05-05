@@ -86,6 +86,20 @@ const formSchema = z.object({
             message: "Data de vencimento é obrigatória quando não há liquidez diária.",
         })
     }
+
+    if (values.date_buy && values.due_date && values.due_date < values.date_buy) {
+        const message = "A data da aplicação não pode ser maior que a data de vencimento."
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["date_buy"],
+            message,
+        })
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["due_date"],
+            message,
+        })
+    }
 })
 
 // ── Index enum mapping (backend string → select number) ──────────────────────
@@ -165,6 +179,8 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
             index_percent: formatDecimalDisplay(investment.index_percent),
         },
     })
+    const watchDateBuy = form.watch("date_buy")
+    const watchDueDate = form.watch("due_date")
 
     useEffect(() => {
         if (!isOpen) return
@@ -298,7 +314,16 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                     <FormItem>
                                         <FormLabel>Data da aplicação</FormLabel>
                                         <FormControl>
-                                            <Calendario field={field} />
+                                            <Calendario
+                                                field={{
+                                                    ...field,
+                                                    onChange: (value) => {
+                                                        field.onChange(value)
+                                                        form.trigger(["date_buy", "due_date"])
+                                                    },
+                                                }}
+                                                maxDate={!liquidez_diaria ? watchDueDate : undefined}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -311,7 +336,17 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                     <FormItem>
                                         <FormLabel>Data do vencimento / resgate</FormLabel>
                                         <FormControl>
-                                            <Calendario field={field} disabled={liquidez_diaria} />
+                                            <Calendario
+                                                field={{
+                                                    ...field,
+                                                    onChange: (value) => {
+                                                        field.onChange(value)
+                                                        form.trigger(["date_buy", "due_date"])
+                                                    },
+                                                }}
+                                                disabled={liquidez_diaria}
+                                                minDate={watchDateBuy}
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -329,6 +364,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                                     onCheckedChange={(checked) => {
                                                         field.onChange(checked)
                                                         setLiquidezDiaria(checked)
+                                                        form.trigger(["date_buy", "due_date"])
                                                     }}
                                                     className="bg-background rounded border border-input"
                                                 />

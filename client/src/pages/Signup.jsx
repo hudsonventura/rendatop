@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, TrendingUp, Eye, EyeOff, UserPlus } from "lucide-react"
+import { PasswordRequirements } from "@/components/PasswordRequirements"
 import axiosInstance from "@/utils/axiosConfig";
 import { appPath } from "@/utils/appPath";
 import { persistSessionUser } from "@/utils/userSession";
+import { getPasswordValidationMessage } from "@/utils/passwordPolicy";
 
 const Signup = () => {
 
@@ -21,6 +23,8 @@ const Signup = () => {
     const [pendingEmail, setPendingEmail] = useState("");
     const [verificationCode, setVerificationCode] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -50,12 +54,17 @@ const Signup = () => {
         const formData = new FormData(event.target);
         const name = formData.get('name');
         const email = formData.get('email');
-        const password = formData.get('password');
-        const confirmPassword = formData.get('confirmPassword');
-
         if (password !== confirmPassword) {
             setErro(true);
             setErroMessage("As senhas não conferem.");
+            setLoading(false);
+            return;
+        }
+
+        const passwordError = getPasswordValidationMessage(password);
+        if (passwordError) {
+            setErro(true);
+            setErroMessage(passwordError);
             setLoading(false);
             return;
         }
@@ -67,6 +76,8 @@ const Signup = () => {
                 setVerificationPending(true);
                 setPendingEmail(data.email || String(email || ""));
                 setVerificationCode("");
+                setPassword("");
+                setConfirmPassword("");
                 setSuccessMessage(data.message || "Enviamos um código de verificação para seu email.")
                 setLoading(false);
             })
@@ -211,8 +222,10 @@ const Signup = () => {
                                                         id="password"
                                                         type={showPassword ? "text" : "password"}
                                                         name="password"
+                                                        value={password}
+                                                        onChange={(e) => setPassword(e.target.value)}
                                                         required
-                                                        minLength={6}
+                                                        minLength={9}
                                                         className="h-11 pr-10"
                                                     />
                                                     <button
@@ -231,11 +244,19 @@ const Signup = () => {
                                                     id="confirmPassword"
                                                     type={showPassword ? "text" : "password"}
                                                     name="confirmPassword"
+                                                    value={confirmPassword}
+                                                    onChange={(e) => setConfirmPassword(e.target.value)}
                                                     required
-                                                    minLength={6}
+                                                    minLength={9}
                                                     className="h-11"
                                                 />
                                             </div>
+
+                                            <PasswordRequirements
+                                                password={password}
+                                                confirmPassword={confirmPassword}
+                                                visible={password.length > 0 || confirmPassword.length > 0}
+                                            />
 
                                             <Button
                                                 type="submit"

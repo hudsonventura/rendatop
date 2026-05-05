@@ -5,17 +5,21 @@ namespace server.Utils;
 /// </summary>
 public class FallbackWhatsAppNotification : IWhatsAppNotification
 {
+    private readonly ILogger<FallbackWhatsAppNotification> _logger;
     private readonly string _provider;
     private readonly string? _fallbackProvider;
     private readonly IWhatsAppNotification _wwebjs;
     private readonly IWhatsAppNotification _evolution;
+    private readonly List<string> _tags = new() { "FallbackWhatsAppNotification", "Utils", "WhatsAppNotification", "Notification" };
 
     public FallbackWhatsAppNotification(
+        ILogger<FallbackWhatsAppNotification> logger,
         string? provider,
         string? fallbackProvider,
         IWhatsAppNotification wwebjs,
         IWhatsAppNotification evolution)
     {
+        _logger = logger;
         _provider = NormalizeProvider(provider) ?? "evolution";
         _fallbackProvider = NormalizeProvider(fallbackProvider);
         _wwebjs = wwebjs;
@@ -24,6 +28,7 @@ public class FallbackWhatsAppNotification : IWhatsAppNotification
 
     public async Task Notify(string phone, string title, string message)
     {
+        var traceId = TraceContext.GetTraceId();
         var primary = Resolve(_provider);
 
         try
@@ -35,7 +40,18 @@ public class FallbackWhatsAppNotification : IWhatsAppNotification
             if (string.IsNullOrWhiteSpace(_fallbackProvider) || _fallbackProvider == _provider)
                 throw;
 
-            Console.WriteLine($"Provider principal do WhatsApp falhou ({_provider}). Tentando fallback '{_fallbackProvider}'. Erro: {primaryException.Message}");
+            _logger.LogWarning(
+                primaryException,
+                "Provider principal do WhatsApp falhou. TraceId={TraceId} Payload={@Payload} Tags={_tags_}",
+                traceId,
+                new
+                {
+                    phone,
+                    title,
+                    provider = _provider,
+                    fallbackProvider = _fallbackProvider
+                },
+                _tags);
 
             try
             {
@@ -43,6 +59,18 @@ public class FallbackWhatsAppNotification : IWhatsAppNotification
             }
             catch (Exception fallbackException)
             {
+                _logger.LogError(
+                    fallbackException,
+                    "Fallback do WhatsApp também falhou. TraceId={TraceId} Payload={@Payload} Tags={_tags_}",
+                    traceId,
+                    new
+                    {
+                        phone,
+                        title,
+                        provider = _provider,
+                        fallbackProvider = _fallbackProvider
+                    },
+                    _tags);
                 throw new AggregateException(
                     $"Falha ao enviar WhatsApp com provider principal '{_provider}' e fallback '{_fallbackProvider}'.",
                     primaryException,

@@ -7,13 +7,16 @@ namespace server.Utils;
 /// </summary>
 public class WhatsApp : IWhatsAppNotification
 {
+    private readonly ILogger<WhatsApp> _logger;
+    private readonly static List<string> _tags = new() { "WhatsApp", "Notification" };
     private readonly HttpClient _httpClient = new HttpClient();
     private readonly string _baseUrl;
     private readonly string _instance;
     private readonly string _apiKey;
 
-    public WhatsApp(string? baseUrl, string? instance, string? apiKey)
+    public WhatsApp(ILogger<WhatsApp> logger, string? baseUrl, string? instance, string? apiKey)
     {
+        _logger = logger;
         _baseUrl = (baseUrl ?? string.Empty).Trim().TrimEnd('/');
         _instance = (instance ?? string.Empty).Trim();
         _apiKey = (apiKey ?? string.Empty).Trim();
@@ -21,6 +24,7 @@ public class WhatsApp : IWhatsAppNotification
 
     public async Task Notify(string phone, string title, string message)
     {
+        var traceId = TraceContext.GetTraceId();
         if (string.IsNullOrWhiteSpace(_baseUrl) || string.IsNullOrWhiteSpace(_instance) || string.IsNullOrWhiteSpace(_apiKey))
             throw new Exception("Configuração do WhatsApp incompleta. Defina WHATSAPP_EVOLUTION_URL, WHATSAPP_EVOLUTION_INSTANCE e WHATSAPP_EVOLUTION_API_KEY.");
 
@@ -43,6 +47,18 @@ public class WhatsApp : IWhatsAppNotification
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync();
+            _logger.LogError(
+                "Falha ao enviar WhatsApp via Evolution. TraceId={TraceId} Payload={@Payload} ResponseBody={ResponseBody} Tags={_tags_}",
+                traceId,
+                new
+                {
+                    phone,
+                    title,
+                    instance = _instance,
+                    destination
+                },
+                body,
+                _tags);
             throw new Exception($"Erro ao enviar mensagem para o WhatsApp: {(int)response.StatusCode} {response.ReasonPhrase}. {body}");
         }
     }

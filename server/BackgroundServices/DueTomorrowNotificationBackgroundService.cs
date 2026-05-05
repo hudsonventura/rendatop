@@ -15,6 +15,9 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
     private readonly IBrowserPushNotification _browserPush;
     private readonly string? _clientBaseUrl;
 
+    private readonly List<string> _tags = new() { "DueTomorrowNotification", "BackgroundService" };
+    private string _TraceId = string.Empty;
+
     public DueTomorrowNotificationBackgroundService(
         ILogger<DueTomorrowNotificationBackgroundService> logger,
         IServiceScopeFactory scopeFactory,
@@ -34,7 +37,8 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Serviço de notificações de vencimento iniciado. Verificação a cada 1 minuto.");
+        _TraceId = Guid.NewGuid().ToString();
+        _logger.LogInformation("Serviço de notificações de vencimento iniciado. Verificação a cada 1 minuto. {TraceId} {_tags_}", _TraceId, _tags);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -44,7 +48,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao processar notificações de vencimento para amanhã.");
+                _logger.LogError(ex, "Falha ao processar notificações de vencimento para amanhã. {TraceId} {_tags_}", _TraceId, _tags);
             }
 
             try
@@ -60,6 +64,8 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
 
     private async Task NotifyDueTomorrow(CancellationToken stoppingToken)
     {
+        using var activity = TraceContext.StartActivity("background.due-tomorrow-notifications");
+        var traceId = TraceContext.GetTraceId();
         var tomorrowLocal = DateTime.Now.Date.AddDays(1);
         var tomorrowStartLocal = new DateTime(
             tomorrowLocal.Year,
@@ -90,9 +96,11 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
 
         if (investments.Count == 0)
         {
-            _logger.LogInformation("Nenhum investimento com vencimento para amanhã ({date}).", tomorrowLocal.ToString("dd/MM/yyyy"));
+            _logger.LogInformation("Nenhum investimento com vencimento para amanhã. TraceId={TraceId} Date={Date} {_tags_}", traceId, tomorrowLocal.ToString("dd/MM/yyyy"), _tags);
             return;
         }
+
+        _logger.LogInformation("Processando notificacoes de vencimento. TraceId={TraceId} Count={Count} Date={Date} {_tags_}", traceId, investments.Count, tomorrowLocal.ToString("dd/MM/yyyy"), _tags);
 
         var activeWhatsAppUserIds = (await context.subscriptions
                 .AsNoTracking()
@@ -148,7 +156,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Falha ao enviar notificação Telegram para o usuário {userId}.", user.id);
+                    _logger.LogWarning(ex, "Falha ao enviar notificacao Telegram. TraceId={TraceId} Payload={@Payload} {_tags_}", traceId, new { userId = user.id, investmentId = investment.id, title, sourceKey }, _tags);
                 }
             }
 
@@ -160,7 +168,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Falha ao enviar notificação WhatsApp para o usuário {userId}.", user.id);
+                    _logger.LogWarning(ex, "Falha ao enviar notificacao WhatsApp. TraceId={TraceId} Payload={@Payload} {_tags_}", traceId, new { userId = user.id, investmentId = investment.id, title, sourceKey, user.phone }, _tags);
                 }
             }
 
@@ -173,7 +181,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Falha ao enviar notificação Email para o usuário {userId}.", user.id);
+                    _logger.LogWarning(ex, "Falha ao enviar notificacao Email. TraceId={TraceId} Payload={@Payload} {_tags_}", traceId, new { userId = user.id, investmentId = investment.id, title, sourceKey, user.email }, _tags);
                 }
             }
 
@@ -203,13 +211,16 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
 
                         _logger.LogInformation(
                             ex,
-                            "Inscrição Browser Push removida após retorno {statusCode} para o usuário {userId}.",
+                            "Inscricao Browser Push removida apos erro. TraceId={TraceId} StatusCode={StatusCode} UserId={UserId} Endpoint={Endpoint} {_tags_}",
+                            traceId,
                             ex.StatusCode,
-                            user.id);
+                            user.id,
+                            browserSubscription.endpoint,
+                            _tags);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Falha ao enviar notificação Browser Push para o usuário {userId}.", user.id);
+                        _logger.LogWarning(ex, "Falha ao enviar notificacao Browser Push. TraceId={TraceId} Payload={@Payload} {_tags_}", traceId, new { userId = user.id, investmentId = investment.id, title, sourceKey, browserSubscription.endpoint }, _tags);
                     }
                 }
             }
@@ -217,7 +228,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
 
         await context.SaveChangesAsync(stoppingToken);
 
-        _logger.LogInformation("Verificação de vencimentos concluída às {time}.", DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
+        _logger.LogInformation("Verificacao de vencimentos concluida. TraceId={TraceId} Time={Time} {_tags_}", traceId, DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), _tags);
     }
 
     internal static DueTomorrowNotificationSummary BuildNotificationSummary(Context context, Investment investment)
