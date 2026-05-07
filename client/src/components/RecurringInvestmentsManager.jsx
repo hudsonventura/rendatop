@@ -617,7 +617,7 @@ export default function RecurringInvestmentsManager() {
                     <CardHeader>
                         <CardTitle>Nenhuma recorrência cadastrada</CardTitle>
                         <CardDescription>
-                            Crie uma recorrência semanal ou mensal para gerar investimentos automaticamente sem usar IA.
+                            Crie uma recorrência semanal ou mensal para gerar investimentos automaticamente.
                         </CardDescription>
                     </CardHeader>
                 </Card>
