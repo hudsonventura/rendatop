@@ -31,7 +31,10 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao processar investimentos recorrentes.");
+                _logger.LogError(
+                    "Falha ao processar investimentos recorrentes. Exception={Exception} {_tags_}",
+                    ex.ToSafeLogString(),
+                    _tags);
             }
 
             try
@@ -50,7 +53,7 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
         using var activity = TraceContext.StartActivity("background.recurring-investments");
         var traceId = TraceContext.GetTraceId();
         var nowUtc = DateTime.UtcNow;
-        if (nowUtc.Hour < 6)
+        if (nowUtc.Hour < 9 || nowUtc.Hour >= 20)
             return;
 
         var today = DateOnly.FromDateTime(nowUtc);

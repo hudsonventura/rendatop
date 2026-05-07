@@ -65,6 +65,13 @@ const defaultForm = {
     active: true,
 }
 
+const INDEX_FORM_VALUE_BY_API_VALUE = {
+    CDI: "0",
+    IPCA_MAIS: "1",
+    PERCENT_YEAR: "2",
+    CDI_MAIS: "3",
+}
+
 function formatCurrency(value) {
     return Number(value || 0).toLocaleString("pt-BR", {
         style: "currency",
@@ -113,7 +120,7 @@ function buildFormFromItem(item) {
         investment_type: item.investment_type ?? INVESTMENT_TYPE_NONE,
         bank_code: item.bank_code,
         value: String(item.value ?? ""),
-        index: String(item.index ?? 0),
+        index: INDEX_FORM_VALUE_BY_API_VALUE[item.index] ?? String(item.index ?? 0),
         index_percent: String(item.index_percent ?? ""),
         taxes: Boolean(item.taxes),
         liquidity_daily: Boolean(item.liquidity_daily),
