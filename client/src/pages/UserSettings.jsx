@@ -829,7 +829,7 @@ const UserSettings = () => {
                                             </Button>
                                         </div>
 
-                                        <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+                                        {/* <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
                                             <div>
                                                 <p className="text-sm font-medium">Navegador</p>
                                                 <p className="text-xs text-muted-foreground">
@@ -864,7 +864,7 @@ const UserSettings = () => {
                                                         ? "Ativo neste navegador"
                                                         : "Desativado"}
                                             </div>
-                                        </div>
+                                        </div> */}
                                     </div>
 
                                     <div className="space-y-3 rounded-md border p-4">
