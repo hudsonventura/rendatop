@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
 using System.Text.Json.Serialization;
 using server.RequestObjects;
 
@@ -152,10 +153,13 @@ public class RecurringInvestment
         DateTime? dueDate = liquidity_daily || !duration_days.HasValue
             ? null
             : buyDate.AddDays(duration_days.Value);
+        var culture = new CultureInfo("pt-BR");
+        var monthName = culture.TextInfo.ToTitleCase(buyDate.ToString("MMMM", culture));
+        var titleSuffix = $"{buyDate:yyyy}/{monthName}";
 
         return new InvestmentRequest
         {
-            title = title,
+            title = $"{title} {titleSuffix}",
             investment_type = investment_type,
             bank_code = bank.Code,
             date_buy = buyDate,
