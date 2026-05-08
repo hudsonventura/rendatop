@@ -3,6 +3,7 @@ import { useState } from "react"
 import {
     TrendingUp,
     Wallet,
+    Repeat,
     LogOut,
     CircleUser,
     CalendarDays,
@@ -51,6 +52,11 @@ const navItems = [
         title: "Meus Investimentos",
         url: "/meus-investimentos",
         icon: Wallet,
+    },
+    {
+        title: "Investimentos Recorrentes",
+        url: "/investimentos-recorrentes",
+        icon: Repeat,
     },
     {
         title: "Cofrinhos",

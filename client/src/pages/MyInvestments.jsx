@@ -6,11 +6,8 @@ import { BaseLayout } from "@/components/layouts/base-layout";
 import Logged from "@/components/Logged";
 import InvestmentsAdd from "@/components/InvestmentsAdd";
 import InvestmentsDataTable from "@/components/InvestmentsDataTable";
-import RecurringInvestmentsManager from "@/components/RecurringInvestmentsManager";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getReinvestmentInitialValues } from "@/utils/investment-actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getInvestmentTypeLabel } from "@/utils/investment-types";
@@ -68,7 +65,6 @@ const MyInvestments = () => {
     const [reinvestOpen, setReinvestOpen] = useState(false);
     const [reinvestInitialValues, setReinvestInitialValues] = useState(null);
     const [showArchived, setShowArchived] = useState(false);
-    const [activeTab, setActiveTab] = useState("portfolio");
     const [selectedBank, setSelectedBank] = useState(ALL_BANKS);
     const [selectedType, setSelectedType] = useState(ALL_TYPES);
     const [selectedIndex, setSelectedIndex] = useState(ALL_INDEXES);
@@ -249,19 +245,15 @@ const MyInvestments = () => {
                 <div className="px-4 lg:px-6 space-y-6">
                     <div className="flex items-center justify-between">
                         <h2 className="text-lg font-semibold tracking-tight">Carteira</h2>
-                        {activeTab !== "recurring" && (
-                            <InvestmentsAdd setReload={setReload} />
-                        )}
+                        <InvestmentsAdd setReload={setReload} />
                     </div>
-                    {activeTab !== "recurring" && (
-                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Checkbox
-                                checked={showArchived}
-                                onCheckedChange={(checked) => setShowArchived(Boolean(checked))}
-                            />
-                            Mostrar também os investimentos arquivados
-                        </label>
-                    )}
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Checkbox
+                            checked={showArchived}
+                            onCheckedChange={(checked) => setShowArchived(Boolean(checked))}
+                        />
+                        Mostrar também os investimentos arquivados
+                    </label>
 
                     {loadingInvestments ? (
                         <div className="space-y-4">
@@ -272,20 +264,11 @@ const MyInvestments = () => {
                             <InvestmentsTableSkeleton />
                         </div>
                     ) : (
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <div className="w-full space-y-4">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                                    <TabsList>
-                                    <TabsTrigger
-                                        value="portfolio"
-                                        className="cursor-pointer"
-                                    >
-                                        Investimentos
-                                        <Badge variant="secondary" className="ml-1.5">{filteredInvestments.length}</Badge>
-                                    </TabsTrigger>
-                                    <TabsTrigger value="recurring" className="cursor-pointer">
-                                        Recorrentes
-                                    </TabsTrigger>
-                                </TabsList>
+                                <div className="text-sm text-muted-foreground">
+                                    {filteredInvestments.length} investimento(s) encontrado(s)
+                                </div>
 
                                 <div className="flex flex-col gap-2 sm:flex-row">
                                     <Select value={selectedBank} onValueChange={setSelectedBank}>
@@ -356,13 +339,9 @@ const MyInvestments = () => {
                                     </Select>
                                 </div>
                             </div>
-                            <TabsContent value="portfolio">
-                                <InvestmentsDataTable investments={filteredInvestments} setReload={setReload} onReinvest={handleReinvest} />
-                            </TabsContent>
-                            <TabsContent value="recurring">
-                                <RecurringInvestmentsManager />
-                            </TabsContent>
-                        </Tabs>
+
+                            <InvestmentsDataTable investments={filteredInvestments} setReload={setReload} onReinvest={handleReinvest} />
+                        </div>
                     )}
                 </div>
             </BaseLayout>

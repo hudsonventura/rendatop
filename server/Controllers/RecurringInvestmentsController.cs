@@ -52,6 +52,7 @@ public class RecurringInvestmentsController : AuthenticatedController
             ?? throw new ExpectedException("Usuário não encontrado.");
 
         var recurringInvestment = new RecurringInvestment(request, user, bank);
+        TryGenerateImmediateInvestment(recurringInvestment);
         _context.recurring_investments.Add(recurringInvestment);
         _context.SaveChanges();
 
@@ -68,6 +69,7 @@ public class RecurringInvestmentsController : AuthenticatedController
         ValidateRequest(request);
 
         var recurringInvestment = _context.recurring_investments
+            .Include(item => item.owner)
             .Include(item => item.bank)
             .FirstOrDefault(item => item.id == id && item.owner_id == _user.id)
             ?? throw new ExpectedException("Recorrência não encontrada.");
@@ -76,6 +78,7 @@ public class RecurringInvestmentsController : AuthenticatedController
             ?? throw new ExpectedException($"Banco com código {request.bank_code} não encontrado.");
 
         recurringInvestment.Apply(request, bank);
+        TryGenerateImmediateInvestment(recurringInvestment);
         _context.SaveChanges();
 
         recurringInvestment.bank = bank;
@@ -88,6 +91,7 @@ public class RecurringInvestmentsController : AuthenticatedController
     public IActionResult UpdateActive(Guid id, [FromBody] RecurringInvestmentActiveRequest request)
     {
         var recurringInvestment = _context.recurring_investments
+            .Include(item => item.owner)
             .Include(item => item.bank)
             .FirstOrDefault(item => item.id == id && item.owner_id == _user.id)
             ?? throw new ExpectedException("Recorrência não encontrada.");
@@ -97,6 +101,7 @@ public class RecurringInvestmentsController : AuthenticatedController
 
         recurringInvestment.active = request.active;
         recurringInvestment.updated_at = DateTime.UtcNow;
+        TryGenerateImmediateInvestment(recurringInvestment);
         _context.SaveChanges();
 
         return Ok(ToResponse(recurringInvestment));
@@ -188,6 +193,31 @@ public class RecurringInvestmentsController : AuthenticatedController
             recurringInvestment.created_at,
             recurringInvestment.updated_at
         );
+    }
+
+    private void TryGenerateImmediateInvestment(RecurringInvestment recurringInvestment)
+    {
+        if (!recurringInvestment.active)
+            return;
+
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        if (!recurringInvestment.MatchesDate(today))
+            return;
+
+        if (recurringInvestment.last_generated_at.HasValue &&
+            DateOnly.FromDateTime(recurringInvestment.last_generated_at.Value.ToLocalTime()) == today)
+        {
+            return;
+        }
+
+        var investmentRequest = recurringInvestment.ToInvestmentRequest(today);
+        var investment = new Investment(investmentRequest, recurringInvestment.owner, recurringInvestment.bank);
+        _context.Entry(investment.owner).State = EntityState.Unchanged;
+        _context.Entry(investment.bank).State = EntityState.Unchanged;
+        _context.investments.Add(investment);
+
+        recurringInvestment.last_generated_at = DateTime.UtcNow;
+        recurringInvestment.updated_at = DateTime.UtcNow;
     }
 }
 

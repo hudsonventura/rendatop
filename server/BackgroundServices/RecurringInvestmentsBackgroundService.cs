@@ -53,7 +53,7 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
         using var activity = TraceContext.StartActivity("background.recurring-investments");
         var traceId = TraceContext.GetTraceId();
         var nowUtc = DateTime.UtcNow;
-        if (nowUtc.Hour < 9 || nowUtc.Hour >= 20)
+        if (nowUtc.Hour < 9 || nowUtc.Hour >= 22)
             return;
 
         var today = DateOnly.FromDateTime(nowUtc);
@@ -94,11 +94,10 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
             recurringInvestment.updated_at = nowUtc;
 
             _logger.LogInformation(
-                "Investimento recorrente gerado. TraceId={TraceId} UserId={UserId} RecurringId={RecurringId} Title={Title} {_tags_}",
+                "Investimento recorrente gerado. TraceId={TraceId} Recurring={Recurring} Investment={Investment} {_tags_}",
                 traceId,
-                recurringInvestment.owner_id,
-                recurringInvestment.id,
-                recurringInvestment.title,
+                recurringInvestment,
+                investment,
                 _tags);
         }
 
