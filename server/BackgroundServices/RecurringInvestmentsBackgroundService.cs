@@ -31,12 +31,15 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao processar investimentos recorrentes.");
+                _logger.LogError(
+                    "Falha ao processar investimentos recorrentes. Exception={Exception} {_tags_}",
+                    ex.ToSafeLogString(),
+                    _tags);
             }
 
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
             catch (TaskCanceledException)
             {
@@ -50,7 +53,7 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
         using var activity = TraceContext.StartActivity("background.recurring-investments");
         var traceId = TraceContext.GetTraceId();
         var nowUtc = DateTime.UtcNow;
-        if (nowUtc.Hour < 6)
+        if (nowUtc.Hour < 9 || nowUtc.Hour >= 22)
             return;
 
         var today = DateOnly.FromDateTime(nowUtc);
@@ -91,11 +94,10 @@ public class RecurringInvestmentsBackgroundService : BackgroundService
             recurringInvestment.updated_at = nowUtc;
 
             _logger.LogInformation(
-                "Investimento recorrente gerado. TraceId={TraceId} UserId={UserId} RecurringId={RecurringId} Title={Title} {_tags_}",
+                "Investimento recorrente gerado. TraceId={TraceId} Recurring={Recurring} Investment={Investment} {_tags_}",
                 traceId,
-                recurringInvestment.owner_id,
-                recurringInvestment.id,
-                recurringInvestment.title,
+                recurringInvestment,
+                investment,
                 _tags);
         }
 

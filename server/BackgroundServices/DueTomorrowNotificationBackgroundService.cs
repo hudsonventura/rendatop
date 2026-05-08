@@ -44,19 +44,23 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
         {
             try
             {
-                if (DateTime.UtcNow.Hour >= 9 && DateTime.UtcNow.Hour < 17) // Executa a verificação diariamente às 8h00 UTC (5h00 no horário de Brasília)
+                if (DateTime.UtcNow.Hour >= 9 && DateTime.UtcNow.Hour < 22) // Executa a verificação diariamente às 8h00 UTC (5h00 no horário de Brasília)
                 {
                     await NotifyDueTomorrow(stoppingToken);
                 }
                 else
                 {
-                    _logger.LogInformation("Fora do horário de envio de notificações. Verificação adiada. {TraceId} {_tags_}", _TraceId, _tags);
+                    _logger.LogInformation("Fora do horário de envio de notificações. Verificação adiada {Hours}. {TraceId} {_tags_}", DateTime.UtcNow.Hour, _TraceId, _tags);
                 }
                 
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao processar notificações de vencimento para amanhã. {TraceId} {_tags_}", _TraceId, _tags);
+                _logger.LogError(
+                    "Falha ao processar notificações de vencimento para amanhã. TraceId={TraceId} Exception={Exception} {_tags_}",
+                    _TraceId,
+                    ex.ToSafeLogString(),
+                    _tags);
             }
 
             try
@@ -142,29 +146,37 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
             var title = "📈 RentaTop | Vencimento amanhã";
             var notificationSummary = BuildNotificationSummary(context, investment);
             var message = BuildMessage(user, investment, notificationSummary);
-            context.notifications.Add(new Notification
-            {
-                id = SnowflakeGuid.NewGuid(),
-                user_id = user.id,
-                title = title,
-                message = message,
-                source_key = sourceKey,
-                is_read = false,
-                created_at = DateTime.UtcNow
-            });
+            var browserSubscriptions = browserSubscriptionsByUser.TryGetValue(user.id, out var userBrowserSubscriptions)
+                ? userBrowserSubscriptions
+                : [];
+            var browserPushActive = user.notify_browser &&
+                _browserPush.IsConfigured &&
+                browserSubscriptionsByUser.TryGetValue(user.id, out _) &&
+                browserSubscriptions.Count > 0;
 
-            if (!user.notify_telegram && !user.notify_whatsapp && !user.notify_email)
-                continue;
+            var hasAnyActiveChannel =
+                (user.notify_telegram && !string.IsNullOrWhiteSpace(user.telegram_chat_id)) ||
+                (user.notify_whatsapp && activeWhatsAppUserIds.Contains(user.id) && !string.IsNullOrWhiteSpace(user.phone)) ||
+                (user.notify_email && !string.IsNullOrWhiteSpace(user.email)) ||
+                browserPushActive;
+
+            var hasAnySuccessfulDelivery = false;
 
             if (user.notify_telegram && !string.IsNullOrWhiteSpace(user.telegram_chat_id))
             {
                 try
                 {
                     await _telegram.Notify(title, BuildTelegramMessage(user, investment, notificationSummary), user.telegram_chat_id);
+                    hasAnySuccessfulDelivery = true;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Falha ao enviar notificacao Telegram. TraceId={TraceId} Payload={@Payload} {_tags_}", traceId, new { userId = user.id, investmentId = investment.id, title, sourceKey }, _tags);
+                    LogNotificationFailure(
+                        LogLevel.Warning,
+                        "Falha ao enviar notificacao Telegram.",
+                        traceId,
+                        ex,
+                        new { userId = user.id, investmentId = investment.id, title, sourceKey });
                 }
             }
 
@@ -173,10 +185,16 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
                 try
                 {
                     await _whatsApp.Notify(user.phone, title, BuildWhatsAppMessage(user, investment, notificationSummary));
+                    hasAnySuccessfulDelivery = true;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Falha ao enviar notificacao WhatsApp. TraceId={TraceId} Payload={@Payload} {_tags_}", traceId, new { userId = user.id, investmentId = investment.id, title, sourceKey, user.phone }, _tags);
+                    LogNotificationFailure(
+                        LogLevel.Warning,
+                        "Falha ao enviar notificacao WhatsApp.",
+                        traceId,
+                        ex,
+                        new { userId = user.id, investmentId = investment.id, title, sourceKey, user.phone });
                 }
             }
 
@@ -186,16 +204,20 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
                 {
                     var emailMessage = DueTomorrowEmailTemplate.Build(user, investment, notificationSummary, _clientBaseUrl);
                     await _email.Notify(user.email, title, emailMessage, isHtml: true);
+                    hasAnySuccessfulDelivery = true;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Falha ao enviar notificacao Email. TraceId={TraceId} Payload={@Payload} {_tags_}", traceId, new { userId = user.id, investmentId = investment.id, title, sourceKey, user.email }, _tags);
+                    LogNotificationFailure(
+                        LogLevel.Warning,
+                        "Falha ao enviar notificacao Email.",
+                        traceId,
+                        ex,
+                        new { userId = user.id, investmentId = investment.id, title, sourceKey, user.email });
                 }
             }
 
-            if (user.notify_browser &&
-                _browserPush.IsConfigured &&
-                browserSubscriptionsByUser.TryGetValue(user.id, out var browserSubscriptions))
+            if (browserPushActive)
             {
                 var pushMessage = BuildBrowserPushMessage(title, investment, notificationSummary);
 
@@ -204,6 +226,7 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
                     try
                     {
                         await _browserPush.SendAsync(browserSubscription, pushMessage, stoppingToken);
+                        hasAnySuccessfulDelivery = true;
                     }
                     catch (PushServiceClientException ex) when (
                         ex.StatusCode == System.Net.HttpStatusCode.Gone ||
@@ -218,19 +241,59 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
                         }
 
                         _logger.LogInformation(
-                            ex,
-                            "Inscricao Browser Push removida apos erro. TraceId={TraceId} StatusCode={StatusCode} UserId={UserId} Endpoint={Endpoint} {_tags_}",
+                            "Inscricao Browser Push removida apos erro. TraceId={TraceId} StatusCode={StatusCode} UserId={UserId} Endpoint={Endpoint} Exception={Exception} {_tags_}",
                             traceId,
                             ex.StatusCode,
                             user.id,
                             browserSubscription.endpoint,
+                            ex.ToSafeLogString(),
                             _tags);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Falha ao enviar notificacao Browser Push. TraceId={TraceId} Payload={@Payload} {_tags_}", traceId, new { userId = user.id, investmentId = investment.id, title, sourceKey, browserSubscription.endpoint }, _tags);
+                        LogNotificationFailure(
+                            LogLevel.Warning,
+                            "Falha ao enviar notificacao Browser Push.",
+                            traceId,
+                            ex,
+                            new { userId = user.id, investmentId = investment.id, title, sourceKey, browserSubscription.endpoint });
                     }
                 }
+            }
+
+            if (!hasAnyActiveChannel || hasAnySuccessfulDelivery)
+            {
+                context.notifications.Add(new Notification
+                {
+                    id = SnowflakeGuid.NewGuid(),
+                    user_id = user.id,
+                    title = title,
+                    message = message,
+                    source_key = sourceKey,
+                    is_read = false,
+                    created_at = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Nenhuma notificacao foi entregue. TraceId={TraceId} Payload={@Payload} {_tags_}",
+                    traceId,
+                    new
+                    {
+                        userId = user.id,
+                        investmentId = investment.id,
+                        title,
+                        sourceKey,
+                        Channels = new
+                        {
+                            Telegram = user.notify_telegram,
+                            WhatsApp = user.notify_whatsapp,
+                            Email = user.notify_email,
+                            Browser = user.notify_browser
+                        }
+                    },
+                    _tags);
             }
         }
 
@@ -321,6 +384,18 @@ public class DueTomorrowNotificationBackgroundService : BackgroundService
             return null;
 
         return $"{normalizedBaseUrl}/notifications";
+    }
+
+    private void LogNotificationFailure(LogLevel level, string message, string? traceId, Exception exception, object payload)
+    {
+        _logger.Log(
+            level,
+            "{Message} TraceId={TraceId} Exception={Exception} Payload={@Payload} {_tags_}",
+            message,
+            traceId,
+            exception.ToSafeLogString(),
+            payload,
+            _tags);
     }
 }
 

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using server.Controllers;
 using server.Domain;
 using server.RequestObjects;
@@ -108,6 +109,41 @@ public class RecurringInvestmentsControllerTests
         var exception = Assert.Throws<ExpectedException>(() => fixture.Controller.Create(request));
 
         Assert.Equal("Selecione pelo menos um dia da semana para a recorrência.", exception.Message);
+    }
+
+    [Fact]
+    public void ToInvestmentRequest_AppendsPortugueseYearAndMonthToTitle()
+    {
+        using var fixture = new RecurringInvestmentsControllerFixture();
+        var recurring = new RecurringInvestment(fixture.CreateRequest(title: "Aporte recorrente CDI"), fixture.User, fixture.Bank);
+
+        var investmentRequest = recurring.ToInvestmentRequest(new DateOnly(2026, 6, 6));
+
+        Assert.Equal("Aporte recorrente CDI 2026/Junho", investmentRequest.title);
+    }
+
+    [Fact]
+    public void Create_GeneratesImmediateInvestmentWithLocalizedSuffix_WhenRecurringMatchesToday()
+    {
+        using var fixture = new RecurringInvestmentsControllerFixture();
+        fixture.SeedActiveSubscription("plus");
+        var today = DateTime.Now;
+        var request = fixture.CreateRequest(
+            title: "Aporte recorrente CDI",
+            frequency: RecurringInvestmentFrequency.Monthly) with
+        {
+            day_of_month = today.Day,
+            months = [today.Month]
+        };
+
+        fixture.Controller.Create(request);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var investment = Assert.Single(assertionContext.investments);
+        var culture = new CultureInfo("pt-BR");
+        var monthName = culture.TextInfo.ToTitleCase(today.ToString("MMMM", culture));
+        var expectedSuffix = $"{today:yyyy}/{monthName}";
+        Assert.Equal($"Aporte recorrente CDI {expectedSuffix}", investment.title);
     }
 
     private sealed class RecurringInvestmentsControllerFixture : IDisposable

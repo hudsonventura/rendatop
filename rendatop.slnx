@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="dbclone/dbclone.csproj" />
   <Project Path="migrator/migrator.csproj" />
   <Project Path="server/server.csproj" />
   <Project Path="tests/tests.csproj" />

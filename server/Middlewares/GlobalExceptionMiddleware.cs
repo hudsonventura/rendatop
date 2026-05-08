@@ -47,16 +47,16 @@ public class GlobalExceptionMiddleware
 
     private static Task HandleExceptionAsync(HttpContext context, Exception exception, HttpStatusCode statusCode, ILogger logger)
     {
-        var tags = _tags;
+        var tags = _tags.ToList();
         tags.Add("HTTPResponse");
         var traceId = context.TraceIdentifier;
         logger.LogError(
-            exception,
-            "Ocorreu uma exceção global no GlobalExceptionMiddleware. TraceId={TraceId} Method={Method} Path={Path} StatusCode={StatusCode} Tags={_tags_}",
+            "Ocorreu uma exceção global no GlobalExceptionMiddleware. TraceId={TraceId} Method={Method} Path={Path} StatusCode={StatusCode} Exception={Exception} Tags={_tags_}",
             traceId,
             context.Request.Method,
             context.Request.Path,
-            (int)statusCode, 
+            (int)statusCode,
+            exception.ToSafeLogString(),
             tags);
 
         context.Response.StatusCode = (int)statusCode;

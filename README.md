@@ -114,6 +114,46 @@ dotnet ef migrations add NameMigration --project server/server.csproj
 dotnet ef database update --project server/server.csproj
 ```
 
+## dbclone
+
+O repositório possui um console app em `.NET 10` para clonar um banco PostgreSQL de origem para um banco de destino, recriando estrutura e dados completos.
+
+Documentacao detalhada:
+
+- [dbclone/README.md](/home/hudsonventura/sources/rendatop/dbclone/README.md)
+
+Pre-requisitos no host:
+
+- o utilitario usa `pg_dump` e `pg_restore`
+- nao basta o banco estar no Docker; os binarios precisam estar instalados na maquina
+
+No Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install postgresql-client
+```
+
+Ou, para acompanhar a versao principal `18` usada no ambiente dev:
+
+```bash
+sudo apt update
+sudo apt install postgresql-client-18
+```
+
+Teste rapido:
+
+```bash
+pg_dump --version
+pg_restore --version
+```
+
+Execucao:
+
+```bash
+dotnet run --project dbclone/dbclone.csproj
+```
+
 # Authentications Configuration
 
 **Microsoft**

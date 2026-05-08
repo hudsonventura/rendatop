@@ -4,7 +4,7 @@ import { getCachedBanks, primeBanksCache } from "@/utils/banksCache"
 import BankCombobox from "@/components/BankCombobox"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -65,6 +65,18 @@ const defaultForm = {
     active: true,
 }
 
+const INDEX_FORM_VALUE_BY_API_VALUE = {
+    CDI: "0",
+    IPCA_MAIS: "1",
+    PERCENT_YEAR: "2",
+    CDI_MAIS: "3",
+}
+
+const FREQUENCY_FORM_VALUE_BY_API_VALUE = {
+    Weekly: "0",
+    Monthly: "1",
+}
+
 function formatCurrency(value) {
     return Number(value || 0).toLocaleString("pt-BR", {
         style: "currency",
@@ -91,7 +103,9 @@ function getIndexLabel(index, percent) {
 }
 
 function getFrequencyLabel(item) {
-    if (item.frequency === 0) {
+    const frequency = normalizeFrequencyValue(item.frequency)
+
+    if (frequency === "0") {
         const days = (item.weekdays || [])
             .map(dayValue => weekDays.find(entry => entry.value === dayValue)?.label)
             .filter(Boolean)
@@ -113,12 +127,12 @@ function buildFormFromItem(item) {
         investment_type: item.investment_type ?? INVESTMENT_TYPE_NONE,
         bank_code: item.bank_code,
         value: String(item.value ?? ""),
-        index: String(item.index ?? 0),
+        index: INDEX_FORM_VALUE_BY_API_VALUE[item.index] ?? String(item.index ?? 0),
         index_percent: String(item.index_percent ?? ""),
         taxes: Boolean(item.taxes),
         liquidity_daily: Boolean(item.liquidity_daily),
         duration_days: item.duration_days ? String(item.duration_days) : "",
-        frequency: String(item.frequency ?? 1),
+        frequency: normalizeFrequencyValue(item.frequency),
         weekdays: item.weekdays?.length ? item.weekdays : [],
         day_of_month: String(item.day_of_month ?? 1),
         months: item.months?.length ? item.months : allMonthValues,
@@ -126,10 +140,45 @@ function buildFormFromItem(item) {
     }
 }
 
+function normalizeFrequencyValue(value) {
+    if (typeof value === "string" && FREQUENCY_FORM_VALUE_BY_API_VALUE[value]) {
+        return FREQUENCY_FORM_VALUE_BY_API_VALUE[value]
+    }
+
+    return String(value ?? 1)
+}
+
+function isRecurringScheduledForToday(item) {
+    if (!item?.active) {
+        return false
+    }
+
+    const today = new Date()
+    const currentMonth = today.getMonth() + 1
+    const currentDay = today.getDate()
+    const currentWeekday = today.getDay()
+    const frequency = normalizeFrequencyValue(item.frequency)
+
+    if (frequency === "0") {
+        return (item.weekdays || []).map(Number).includes(currentWeekday)
+    }
+
+    const months = (item.months || []).map(Number)
+    if (!months.includes(currentMonth)) {
+        return false
+    }
+
+    const requestedDay = Number(item.day_of_month || 1)
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+    return currentDay === Math.min(requestedDay, lastDayOfMonth)
+}
+
 export default function RecurringInvestmentsManager() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState("")
+    const [noticeOpen, setNoticeOpen] = useState(false)
+    const [noticeMessage, setNoticeMessage] = useState("")
     const [items, setItems] = useState([])
     const [enabled, setEnabled] = useState(false)
     const [banks, setBanks] = useState([])
@@ -183,10 +232,16 @@ export default function RecurringInvestmentsManager() {
 
     const openCreate = () => {
         resetForm()
+        setError("")
+        setNoticeOpen(false)
+        setNoticeMessage("")
         setOpen(true)
     }
 
     const openEdit = (item) => {
+        setError("")
+        setNoticeOpen(false)
+        setNoticeMessage("")
         setForm(buildFormFromItem(item))
         autoDetectedInvestmentTypeRef.current = detectInvestmentTypeFromTitle(item.title ?? "") ?? INVESTMENT_TYPE_NONE
         setEditingItem(item)
@@ -260,6 +315,8 @@ export default function RecurringInvestmentsManager() {
     const handleSubmit = (event) => {
         event.preventDefault()
         setError("")
+        setNoticeOpen(false)
+        setNoticeMessage("")
 
         const validationError = validateForm()
         if (validationError) {
@@ -292,8 +349,16 @@ export default function RecurringInvestmentsManager() {
 
         request
             .then(() => {
+                const shouldShowImmediateNotice = isRecurringScheduledForToday({
+                    ...form,
+                    active: form.active,
+                })
                 setOpen(false)
                 resetForm()
+                if (shouldShowImmediateNotice) {
+                    setNoticeMessage("Se a recorrência era para hoje, aguarde alguns segundos e confira o investimento criado na sua carteira.")
+                    setNoticeOpen(true)
+                }
                 loadData()
             })
             .catch((err) => {
@@ -308,9 +373,17 @@ export default function RecurringInvestmentsManager() {
 
     const handleToggleActive = (item, active) => {
         setError("")
+        setNoticeOpen(false)
+        setNoticeMessage("")
         axiosInstance
             .patch(`/Investments/Recurring/${item.id}/active`, { active })
-            .then(() => loadData())
+            .then(() => {
+                if (isRecurringScheduledForToday({ ...item, active })) {
+                    setNoticeMessage("Se a recorrência era para hoje, aguarde alguns segundos e confira o investimento criado na sua carteira.")
+                    setNoticeOpen(true)
+                }
+                loadData()
+            })
             .catch((err) => {
                 setError(typeof err?.response?.data === "string"
                     ? err.response.data
@@ -617,7 +690,7 @@ export default function RecurringInvestmentsManager() {
                     <CardHeader>
                         <CardTitle>Nenhuma recorrência cadastrada</CardTitle>
                         <CardDescription>
-                            Crie uma recorrência semanal ou mensal para gerar investimentos automaticamente sem usar IA.
+                            Crie uma recorrência semanal ou mensal para gerar investimentos automaticamente.
                         </CardDescription>
                     </CardHeader>
                 </Card>
@@ -704,6 +777,20 @@ export default function RecurringInvestmentsManager() {
                     ))}
                 </div>
             )}
+
+            <Dialog open={noticeOpen} onOpenChange={setNoticeOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Recorrência atualizada</DialogTitle>
+                        <DialogDescription>{noticeMessage}</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button type="button" onClick={() => setNoticeOpen(false)}>
+                            OK
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
