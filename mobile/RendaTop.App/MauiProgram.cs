@@ -1,0 +1,37 @@
+﻿using Microsoft.Extensions.Logging;
+using RendaTop.App.Pages;
+using RendaTop.App.Services;
+
+namespace RendaTop.App;
+
+public static class MauiProgram
+{
+	public static MauiApp CreateMauiApp()
+	{
+		var builder = MauiApp.CreateBuilder();
+		builder
+			.UseMauiApp<App>()
+			.ConfigureFonts(fonts =>
+			{
+				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+			});
+
+#if DEBUG
+		builder.Logging.AddDebug();
+#endif
+
+		builder.Services.AddSingleton<AppConfig>();
+		builder.Services.AddSingleton<ApiClient>();
+		builder.Services.AddSingleton<SessionService>();
+		builder.Services.AddSingleton<AuthService>();
+		builder.Services.AddSingleton<AppShell>();
+		builder.Services.AddTransient<SplashPage>();
+		builder.Services.AddTransient<LoginPage>();
+		builder.Services.AddTransient<SignupPage>();
+		builder.Services.AddTransient<SignupVerificationPage>();
+		builder.Services.AddTransient<DashboardPlaceholderPage>();
+
+		return builder.Build();
+	}
+}

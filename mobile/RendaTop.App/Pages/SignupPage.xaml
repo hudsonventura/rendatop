@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.SignupPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#F8FAFC">
+    <ScrollView>
+        <Grid Padding="24" MinimumHeightRequest="760">
+            <VerticalStackLayout Spacing="22" VerticalOptions="Center">
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                    <Image Source="brand_icon.svg" HeightRequest="72" WidthRequest="72" />
+                    <Label Text="Criar conta" FontSize="28" FontAttributes="Bold" HorizontalTextAlignment="Center" TextColor="#111827" />
+                    <Label Text="Comece a acompanhar sua carteira" FontSize="15" HorizontalTextAlignment="Center" TextColor="#64748B" />
+                </VerticalStackLayout>
+
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="22">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="15">
+                        <VerticalStackLayout Spacing="7">
+                            <Label Text="Nome" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="NameEntry" Placeholder="Seu nome completo" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="7">
+                            <Label Text="Email" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="EmailEntry" Keyboard="Email" Placeholder="seu@email.com" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="7">
+                            <Label Text="Senha" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="PasswordEntry" IsPassword="True" Placeholder="Minimo de 9 caracteres" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="7">
+                            <Label Text="Confirmar senha" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="ConfirmPasswordEntry" IsPassword="True" Placeholder="Repita sua senha" />
+                        </VerticalStackLayout>
+
+                        <Label
+                            Text="Use no minimo 9 caracteres, com letra, numero e caractere especial."
+                            FontSize="13"
+                            TextColor="#64748B" />
+
+                        <Button
+                            x:Name="SignupButton"
+                            Text="Criar conta"
+                            BackgroundColor="#111827"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            HeightRequest="48"
+                            Clicked="OnSignupClicked" />
+
+                        <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                            <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                        </Border>
+
+                        <Button
+                            Text="Ja tenho uma conta"
+                            BackgroundColor="Transparent"
+                            TextColor="#111827"
+                            FontAttributes="Bold"
+                            Clicked="OnLoginClicked" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </Grid>
+    </ScrollView>
+</ContentPage>
