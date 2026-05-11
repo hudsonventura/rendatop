@@ -48,7 +48,7 @@ public partial class LoginPage : ContentPage
 
             ShowError(ex.Message);
         }
-        catch(Exception ex)
+        catch
         {
             ShowError("Nao foi possivel entrar. Verifique sua conexao e tente novamente.");
         }

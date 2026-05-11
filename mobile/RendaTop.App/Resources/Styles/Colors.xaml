@@ -5,27 +5,27 @@
 
     <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
 
-    <Color x:Key="Primary">#512BD4</Color>
-    <Color x:Key="PrimaryDark">#ac99ea</Color>
-    <Color x:Key="PrimaryDarkText">#242424</Color>
-    <Color x:Key="Secondary">#DFD8F7</Color>
-    <Color x:Key="SecondaryDarkText">#9880e5</Color>
-    <Color x:Key="Tertiary">#2B0B98</Color>
+    <Color x:Key="Primary">#111827</Color>
+    <Color x:Key="PrimaryDark">#111827</Color>
+    <Color x:Key="PrimaryDarkText">#FFFFFF</Color>
+    <Color x:Key="Secondary">#E2E8F0</Color>
+    <Color x:Key="SecondaryDarkText">#111827</Color>
+    <Color x:Key="Tertiary">#22C55E</Color>
 
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
-    <Color x:Key="Magenta">#D600AA</Color>
-    <Color x:Key="MidnightBlue">#190649</Color>
-    <Color x:Key="OffBlack">#1f1f1f</Color>
+    <Color x:Key="Magenta">#22C55E</Color>
+    <Color x:Key="MidnightBlue">#111827</Color>
+    <Color x:Key="OffBlack">#111827</Color>
 
-    <Color x:Key="Gray100">#E1E1E1</Color>
-    <Color x:Key="Gray200">#C8C8C8</Color>
-    <Color x:Key="Gray300">#ACACAC</Color>
-    <Color x:Key="Gray400">#919191</Color>
-    <Color x:Key="Gray500">#6E6E6E</Color>
-    <Color x:Key="Gray600">#404040</Color>
-    <Color x:Key="Gray900">#212121</Color>
-    <Color x:Key="Gray950">#141414</Color>
+    <Color x:Key="Gray100">#F1F5F9</Color>
+    <Color x:Key="Gray200">#CBD5E1</Color>
+    <Color x:Key="Gray300">#94A3B8</Color>
+    <Color x:Key="Gray400">#64748B</Color>
+    <Color x:Key="Gray500">#475569</Color>
+    <Color x:Key="Gray600">#334155</Color>
+    <Color x:Key="Gray900">#111827</Color>
+    <Color x:Key="Gray950">#020617</Color>
 
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>

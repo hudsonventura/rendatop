@@ -24,13 +24,13 @@
 
                         <VerticalStackLayout Spacing="7">
                             <Label Text="Email" FontAttributes="Bold" TextColor="#334155" />
-                            <Entry x:Name="EmailEntry" Keyboard="Email" Placeholder="seu@email.com" ReturnType="Next" />
+                            <Entry x:Name="EmailEntry" Keyboard="Email" Placeholder="seu@email.com" ReturnType="Next" TextColor="#111827" PlaceholderColor="#64748B" BackgroundColor="#FFFFFF" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Spacing="7">
                             <Label Text="Senha" FontAttributes="Bold" TextColor="#334155" />
                             <Grid ColumnDefinitions="*,Auto">
-                                <Entry x:Name="PasswordEntry" Grid.Column="0" IsPassword="True" Placeholder="Sua senha" ReturnType="Done" />
+                                <Entry x:Name="PasswordEntry" Grid.Column="0" IsPassword="True" Placeholder="Sua senha" ReturnType="Done" TextColor="#111827" PlaceholderColor="#64748B" BackgroundColor="#FFFFFF" />
                                 <Button
                                     x:Name="PasswordVisibilityButton"
                                     Grid.Column="1"
@@ -43,7 +43,7 @@
 
                         <VerticalStackLayout x:Name="TotpSection" Spacing="7" IsVisible="False">
                             <Label Text="Codigo do app Authenticator" FontAttributes="Bold" TextColor="#334155" />
-                            <Entry x:Name="TotpEntry" Keyboard="Numeric" MaxLength="6" Placeholder="000000" />
+                            <Entry x:Name="TotpEntry" Keyboard="Numeric" MaxLength="6" Placeholder="000000" TextColor="#111827" PlaceholderColor="#64748B" BackgroundColor="#FFFFFF" />
                         </VerticalStackLayout>
 
                         <Button

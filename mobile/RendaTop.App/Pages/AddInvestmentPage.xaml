@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.AddInvestmentPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Novo Investimento"
+    BackgroundColor="#F8FAFC">
+    <ScrollView>
+        <VerticalStackLayout Padding="18,16,18,28" Spacing="14">
+            <Label Text="Adicionar investimento" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+            <Label Text="Cadastre um investimento de renda fixa na sua carteira." TextColor="#64748B" />
+
+            <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="14">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Titulo" FontAttributes="Bold" TextColor="#334155" />
+                        <Entry x:Name="TitleEntry" Placeholder="Ex.: CDB Banco X" TextColor="#111827" PlaceholderColor="#64748B" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Banco" FontAttributes="Bold" TextColor="#334155" />
+                        <Picker x:Name="BankPicker" ItemDisplayBinding="{Binding DisplayName}" TextColor="#111827" Title="Selecione o banco" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Tipo" FontAttributes="Bold" TextColor="#334155" />
+                        <Picker x:Name="TypePicker" ItemDisplayBinding="{Binding Label}" TextColor="#111827" Title="Opcional" />
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Data de compra" FontAttributes="Bold" TextColor="#334155" />
+                            <DatePicker x:Name="BuyDatePicker" TextColor="#111827" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="6">
+                            <Label Text="Vencimento" FontAttributes="Bold" TextColor="#334155" />
+                            <DatePicker x:Name="DueDatePicker" TextColor="#111827" />
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="Liquidez diaria" FontAttributes="Bold" TextColor="#334155" />
+                            <Label Text="Sem vencimento definido" FontSize="12" TextColor="#64748B" />
+                        </VerticalStackLayout>
+                        <Switch x:Name="DailyLiquiditySwitch" Grid.Column="1" Toggled="OnDailyLiquidityToggled" />
+                    </Grid>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Valor investido" FontAttributes="Bold" TextColor="#334155" />
+                        <Entry x:Name="ValueEntry" Keyboard="Numeric" Placeholder="1000,00" TextColor="#111827" PlaceholderColor="#64748B" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Indexador" FontAttributes="Bold" TextColor="#334155" />
+                        <Picker x:Name="IndexPicker" ItemDisplayBinding="{Binding Label}" TextColor="#111827" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Percentual" FontAttributes="Bold" TextColor="#334155" />
+                        <Entry x:Name="IndexPercentEntry" Keyboard="Numeric" Placeholder="Ex.: 110 ou 13,5" TextColor="#111827" PlaceholderColor="#64748B" />
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="Incide IR/IOF" FontAttributes="Bold" TextColor="#334155" />
+                            <Label Text="Desative para LCI/LCA isentas" FontSize="12" TextColor="#64748B" />
+                        </VerticalStackLayout>
+                        <Switch x:Name="TaxesSwitch" Grid.Column="1" IsToggled="True" />
+                    </Grid>
+
+                    <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                    </Border>
+
+                    <Button
+                        x:Name="SaveButton"
+                        Text="Salvar investimento"
+                        BackgroundColor="#111827"
+                        TextColor="White"
+                        FontAttributes="Bold"
+                        HeightRequest="50"
+                        Clicked="OnSaveClicked" />
+
+                    <Button
+                        Text="Cancelar"
+                        BackgroundColor="White"
+                        BorderColor="#CBD5E1"
+                        BorderWidth="1"
+                        TextColor="#111827"
+                        HeightRequest="48"
+                        Clicked="OnCancelClicked" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

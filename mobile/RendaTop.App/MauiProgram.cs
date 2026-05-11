@@ -25,12 +25,15 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ApiClient>();
 		builder.Services.AddSingleton<SessionService>();
 		builder.Services.AddSingleton<AuthService>();
+		builder.Services.AddSingleton<InvestmentService>();
 		builder.Services.AddSingleton<AppShell>();
 		builder.Services.AddTransient<SplashPage>();
 		builder.Services.AddTransient<LoginPage>();
 		builder.Services.AddTransient<SignupPage>();
 		builder.Services.AddTransient<SignupVerificationPage>();
-		builder.Services.AddTransient<DashboardPlaceholderPage>();
+		builder.Services.AddTransient<DashboardPage>();
+		builder.Services.AddTransient<MyInvestmentsPage>();
+		builder.Services.AddTransient<AddInvestmentPage>();
 
 		return builder.Build();
 	}
