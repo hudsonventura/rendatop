@@ -17,6 +17,14 @@ public sealed class InvestmentService
         return investments ?? [];
     }
 
+    public async Task<InvestmentDto> GetInvestmentAsync(Guid investmentId, CancellationToken cancellationToken = default)
+        => await _apiClient.GetAsync<InvestmentDto>($"/Investments/{investmentId}", cancellationToken)
+           ?? throw new ApiException("Investimento nao encontrado.", 404);
+
+    public async Task<InvestmentDto> GetInvestmentWithCalculatedAsync(Guid investmentId, CancellationToken cancellationToken = default)
+        => (await GetInvestmentsAsync(cancellationToken)).FirstOrDefault(item => item.Id == investmentId)
+           ?? throw new ApiException("Investimento nao encontrado.", 404);
+
     public async Task<IReadOnlyList<BankDto>> GetBanksAsync(CancellationToken cancellationToken = default)
     {
         var banks = await _apiClient.GetAsync<List<BankDto>>("/Banks", cancellationToken);
@@ -27,6 +35,9 @@ public sealed class InvestmentService
     {
         await _apiClient.PostAsync<InvestmentRequestDto, Guid>("/Investments", request, cancellationToken);
     }
+
+    public Task UpdateInvestmentAsync(Guid investmentId, InvestmentRequestDto request, CancellationToken cancellationToken = default)
+        => _apiClient.PatchAsync($"/Investments/{investmentId}", request, cancellationToken);
 
     public async Task<DashboardSummary> GetDashboardSummaryAsync(CancellationToken cancellationToken = default)
     {

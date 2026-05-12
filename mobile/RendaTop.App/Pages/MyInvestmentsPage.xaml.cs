@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using RendaTop.App.Models;
 using RendaTop.App.Services;
 
@@ -6,11 +7,14 @@ namespace RendaTop.App.Pages;
 public partial class MyInvestmentsPage : ContentPage
 {
     private readonly InvestmentService _investmentService;
+    private readonly ObservableCollection<InvestmentRow> _rows = [];
 
     public MyInvestmentsPage(InvestmentService investmentService)
     {
         _investmentService = investmentService;
         InitializeComponent();
+        InvestmentsCollection.ItemsSource = _rows;
+        PageFab.AddCommand = new Command(async () => await Shell.Current.GoToAsync(nameof(AddInvestmentPage)));
     }
 
     protected override async void OnAppearing()
@@ -25,9 +29,6 @@ public partial class MyInvestmentsPage : ContentPage
     private async void OnRetryClicked(object? sender, EventArgs e)
         => await LoadInvestmentsAsync();
 
-    private async void OnAddClicked(object? sender, EventArgs e)
-        => await Shell.Current.GoToAsync("//add-investment");
-
     private async Task LoadInvestmentsAsync()
     {
         SetLoading(true);
@@ -40,12 +41,15 @@ public partial class MyInvestmentsPage : ContentPage
                 .OrderBy(item => item.DueDate ?? DateTime.MaxValue)
                 .ToList();
 
-            var rows = investments.Select(InvestmentRow.FromDto).ToList();
-            InvestmentsCollection.ItemsSource = rows;
-            EmptyLabel.IsVisible = rows.Count == 0;
-            CountLabel.Text = rows.Count.ToString();
+            _rows.Clear();
+            foreach (var row in investments.Select(InvestmentRow.FromDto))
+                _rows.Add(row);
+
+            InvestmentsCollection.SelectedItem = null;
+            EmptyLabel.IsVisible = _rows.Count == 0;
+            CountLabel.Text = _rows.Count.ToString();
             TotalLabel.Text = MoneyFormatter.Currency(investments.Sum(item => item.CurrentValueForDisplay));
-            SubtitleLabel.Text = rows.Count == 1 ? "1 investimento ativo" : $"{rows.Count} investimentos ativos";
+            SubtitleLabel.Text = _rows.Count == 1 ? "1 investimento ativo" : $"{_rows.Count} investimentos ativos";
         }
         catch (ApiException ex)
         {
@@ -59,6 +63,15 @@ public partial class MyInvestmentsPage : ContentPage
         {
             SetLoading(false);
         }
+    }
+
+    private async void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.CurrentSelection.FirstOrDefault() is not InvestmentRow row)
+            return;
+
+        InvestmentsCollection.SelectedItem = null;
+        await Shell.Current.GoToAsync($"{nameof(InvestmentDetailsPage)}?investmentId={row.Id}");
     }
 
     private void SetLoading(bool loading)
@@ -81,6 +94,7 @@ public partial class MyInvestmentsPage : ContentPage
     }
 
     private sealed record InvestmentRow(
+        Guid Id,
         string Title,
         string BankName,
         string CurrentValue,
@@ -97,6 +111,7 @@ public partial class MyInvestmentsPage : ContentPage
                 : "Investimento";
 
             return new InvestmentRow(
+                investment.Id,
                 investment.Title,
                 investment.Bank?.Name ?? "Banco",
                 MoneyFormatter.Currency(investment.CurrentValueForDisplay),

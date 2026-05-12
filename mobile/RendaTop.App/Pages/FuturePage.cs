@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls.Shapes;
+using RendaTop.App.Controls;
 
 namespace RendaTop.App.Pages;
 
@@ -47,6 +48,10 @@ public sealed class FuturePage : ContentPage
                             }
                         }
                     }
+                },
+                new FloatingActionMenu
+                {
+                    AddCommand = new Command(async () => await Shell.Current.GoToAsync(nameof(AddInvestmentPage)))
                 }
             }
         };

@@ -14,6 +14,7 @@ public partial class DashboardPage : ContentPage
         _investments = investments;
         _session = session;
         InitializeComponent();
+        PageFab.AddCommand = new Command(async () => await Shell.Current.GoToAsync(nameof(AddInvestmentPage)));
     }
 
     protected override async void OnAppearing()

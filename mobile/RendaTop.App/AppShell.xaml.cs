@@ -19,6 +19,7 @@ public partial class AppShell : Shell
 		Items.Add(CreateShellContent<Pages.LoginPage>("login", "Entrar", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.SignupPage>("signup", "Criar conta", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.AddInvestmentPage>("add-investment", "Novo Investimento", showInFlyout: false));
+		Items.Add(CreateShellContent<Pages.InvestmentDetailsPage>("investment-details", "Detalhes do Investimento", showInFlyout: false));
 		Items.Add(CreateFlyoutItem<Pages.DashboardPage>("dashboard", "Dashboard"));
 		Items.Add(CreateFlyoutItem<Pages.MyInvestmentsPage>("meus-investimentos", "Meus Investimentos"));
 		Items.Add(CreateFutureFlyoutItem("investimentos-recorrentes", "Investimentos Recorrentes", "Automacoes de aportes conforme permissao do plano."));
@@ -30,6 +31,8 @@ public partial class AppShell : Shell
 		Items.Add(CreateFutureFlyoutItem("atendimento", "Atendimento", "Chamados e mensagens de suporte."));
 
 		Routing.RegisterRoute(nameof(Pages.SignupVerificationPage), typeof(Pages.SignupVerificationPage));
+		Routing.RegisterRoute(nameof(Pages.AddInvestmentPage), typeof(Pages.AddInvestmentPage));
+		Routing.RegisterRoute(nameof(Pages.InvestmentDetailsPage), typeof(Pages.InvestmentDetailsPage));
 	}
 
 	private ShellContent CreateShellContent<TPage>(string route, string title, bool showInFlyout)

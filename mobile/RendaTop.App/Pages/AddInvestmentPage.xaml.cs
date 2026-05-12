@@ -4,7 +4,7 @@ using RendaTop.App.Services;
 
 namespace RendaTop.App.Pages;
 
-public partial class AddInvestmentPage : ContentPage
+public partial class AddInvestmentPage : ContentPage, IQueryAttributable
 {
     private static readonly List<InvestmentOption> TypeOptions =
     [
@@ -31,23 +31,44 @@ public partial class AddInvestmentPage : ContentPage
     ];
 
     private readonly InvestmentService _investmentService;
+    private Guid? _editingInvestmentId;
+    private Guid? _loadedInvestmentId;
 
     public AddInvestmentPage(InvestmentService investmentService)
     {
         _investmentService = investmentService;
         InitializeComponent();
+        PageFab.AddCommand = new Command(ActivateNewInvestmentMode);
         TypePicker.ItemsSource = TypeOptions;
         TypePicker.SelectedIndex = 0;
         IndexPicker.ItemsSource = IndexOptions;
         IndexPicker.SelectedIndex = 0;
-        BuyDatePicker.Date = DateTime.Today;
-        DueDatePicker.Date = DateTime.Today.AddYears(1);
+        ResetForm();
+        UpdateModeUi();
+    }
+
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        _editingInvestmentId = null;
+
+        if (query.TryGetValue("investmentId", out var rawValue)
+            && Guid.TryParse(rawValue?.ToString(), out var investmentId))
+        {
+            _editingInvestmentId = investmentId;
+        }
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
         await LoadBanksAsync();
+        await LoadInvestmentForEditionAsync();
+    }
+
+    protected override bool OnBackButtonPressed()
+    {
+        MainThread.BeginInvokeOnMainThread(async () => await NavigateBackAsync());
+        return true;
     }
 
     private async Task LoadBanksAsync()
@@ -72,6 +93,47 @@ public partial class AddInvestmentPage : ContentPage
         }
     }
 
+    private async Task LoadInvestmentForEditionAsync()
+    {
+        UpdateModeUi();
+
+        if (!_editingInvestmentId.HasValue)
+        {
+            if (_loadedInvestmentId.HasValue)
+            {
+                _loadedInvestmentId = null;
+                ResetForm();
+            }
+
+            return;
+        }
+
+        if (_loadedInvestmentId == _editingInvestmentId)
+            return;
+
+        SetBusy(true);
+        HideError();
+
+        try
+        {
+            var investment = await _investmentService.GetInvestmentAsync(_editingInvestmentId.Value);
+            FillForm(investment);
+            _loadedInvestmentId = investment.Id;
+        }
+        catch (ApiException ex)
+        {
+            ShowError(ex.Message);
+        }
+        catch
+        {
+            ShowError("Nao foi possivel carregar o investimento para edicao.");
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
     private void OnDailyLiquidityToggled(object? sender, ToggledEventArgs e)
     {
         DueDatePicker.IsEnabled = !e.Value;
@@ -90,9 +152,17 @@ public partial class AddInvestmentPage : ContentPage
         SetBusy(true);
         try
         {
-            await _investmentService.CreateInvestmentAsync(request!);
-            ClearForm();
-            await Shell.Current.GoToAsync("//meus-investimentos");
+            if (_editingInvestmentId.HasValue)
+            {
+                await _investmentService.UpdateInvestmentAsync(_editingInvestmentId.Value, request!);
+            }
+            else
+            {
+                await _investmentService.CreateInvestmentAsync(request!);
+                ResetForm();
+            }
+
+            await NavigateBackAsync();
         }
         catch (ApiException ex)
         {
@@ -100,7 +170,9 @@ public partial class AddInvestmentPage : ContentPage
         }
         catch
         {
-            ShowError("Nao foi possivel salvar o investimento.");
+            ShowError(_editingInvestmentId.HasValue
+                ? "Nao foi possivel atualizar o investimento."
+                : "Nao foi possivel salvar o investimento.");
         }
         finally
         {
@@ -109,7 +181,10 @@ public partial class AddInvestmentPage : ContentPage
     }
 
     private async void OnCancelClicked(object? sender, EventArgs e)
-        => await Shell.Current.GoToAsync("//meus-investimentos");
+        => await NavigateBackAsync();
+
+    private async void OnBackClicked(object? sender, EventArgs e)
+        => await NavigateBackAsync();
 
     private bool TryBuildRequest(out InvestmentRequestDto? request, out string error)
     {
@@ -175,7 +250,23 @@ public partial class AddInvestmentPage : ContentPage
             || decimal.TryParse(normalized.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out value);
     }
 
-    private void ClearForm()
+    private void FillForm(InvestmentDto investment)
+    {
+        TitleEntry.Text = investment.Title;
+        ValueEntry.Text = investment.Value.ToString("N2", new CultureInfo("pt-BR"));
+        IndexPercentEntry.Text = investment.IndexPercent.ToString("N2", new CultureInfo("pt-BR"));
+        BuyDatePicker.Date = investment.DateBuy.ToLocalTime();
+        DailyLiquiditySwitch.IsToggled = !investment.DueDate.HasValue;
+        DueDatePicker.Date = investment.DueDate?.ToLocalTime() ?? DateTime.Today.AddYears(1);
+        TaxesSwitch.IsToggled = investment.Taxes;
+
+        SelectType(investment.InvestmentType);
+        SelectIndex(investment.Index);
+        SelectBank(investment.Bank?.Code);
+        UpdateModeUi(investment.Title);
+    }
+
+    private void ResetForm()
     {
         TitleEntry.Text = string.Empty;
         ValueEntry.Text = string.Empty;
@@ -186,12 +277,56 @@ public partial class AddInvestmentPage : ContentPage
         DailyLiquiditySwitch.IsToggled = false;
         BuyDatePicker.Date = DateTime.Today;
         DueDatePicker.Date = DateTime.Today.AddYears(1);
+        if (BankPicker.ItemsSource is not null)
+            BankPicker.SelectedIndex = 0;
+        UpdateModeUi();
+    }
+
+    private void SelectType(string? value)
+    {
+        var option = TypeOptions.FirstOrDefault(item => string.Equals(item.Value, value ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+        TypePicker.SelectedItem = option ?? TypeOptions[0];
+    }
+
+    private void SelectIndex(string? value)
+    {
+        var option = IndexOptions.FirstOrDefault(item => string.Equals(item.Value, value ?? "CDI", StringComparison.OrdinalIgnoreCase));
+        IndexPicker.SelectedItem = option ?? IndexOptions[0];
+    }
+
+    private void SelectBank(int? code)
+    {
+        if (BankPicker.ItemsSource is not IEnumerable<BankDto> banks)
+            return;
+
+        var bank = banks.FirstOrDefault(item => item.Code == code);
+        if (bank is not null)
+            BankPicker.SelectedItem = bank;
     }
 
     private void SetBusy(bool busy)
     {
         SaveButton.IsEnabled = !busy;
-        SaveButton.Text = busy ? "Salvando..." : "Salvar investimento";
+        SaveButton.Text = busy
+            ? (_editingInvestmentId.HasValue ? "Salvando alteracoes..." : "Salvando...")
+            : (_editingInvestmentId.HasValue ? "Salvar alteracoes" : "Salvar investimento");
+    }
+
+    private void UpdateModeUi(string? investmentTitle = null)
+    {
+        var isEditing = _editingInvestmentId.HasValue;
+        Title = isEditing ? "Editar Investimento" : "Novo Investimento";
+        HeadingLabel.Text = isEditing ? "Editar investimento" : "Adicionar investimento";
+        DescriptionLabel.Text = isEditing
+            ? string.IsNullOrWhiteSpace(investmentTitle)
+                ? "Atualize os dados do investimento selecionado."
+                : $"Atualize os dados de {investmentTitle}."
+            : "Cadastre um investimento de renda fixa na sua carteira.";
+
+        if (!SaveButton.IsEnabled)
+            return;
+
+        SaveButton.Text = isEditing ? "Salvar alteracoes" : "Salvar investimento";
     }
 
     private void ShowError(string message)
@@ -204,5 +339,29 @@ public partial class AddInvestmentPage : ContentPage
     {
         ErrorLabel.Text = string.Empty;
         ErrorBorder.IsVisible = false;
+    }
+
+    private void ActivateNewInvestmentMode()
+    {
+        _editingInvestmentId = null;
+        _loadedInvestmentId = null;
+        HideError();
+        ResetForm();
+    }
+
+    private static async Task NavigateBackAsync()
+    {
+        var shell = Shell.Current;
+        if (shell is null)
+            return;
+
+        var navigation = shell.Navigation;
+        if (navigation?.NavigationStack?.Count > 1)
+        {
+            await shell.GoToAsync("..");
+            return;
+        }
+
+        await shell.GoToAsync("//meus-investimentos");
     }
 }

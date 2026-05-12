@@ -20,6 +20,24 @@ public sealed record InvestmentDto
     [JsonPropertyName("value")]
     public decimal Value { get; init; }
 
+    [JsonPropertyName("investment_type")]
+    public string? InvestmentType { get; init; }
+
+    [JsonPropertyName("money_box_id")]
+    public Guid? MoneyBoxId { get; init; }
+
+    [JsonPropertyName("index")]
+    public string Index { get; init; } = "CDI";
+
+    [JsonPropertyName("index_percent")]
+    public decimal IndexPercent { get; init; }
+
+    [JsonPropertyName("index_value")]
+    public decimal IndexValue { get; init; }
+
+    [JsonPropertyName("taxes")]
+    public bool Taxes { get; init; } = true;
+
     [JsonPropertyName("table_value")]
     public decimal? TableValue { get; init; }
 
@@ -62,6 +80,27 @@ public sealed record BankDto
 
 public sealed record CalculatedDto
 {
+    [JsonPropertyName("effective_index_percent_brute")]
+    public decimal EffectiveIndexPercentBrute { get; init; }
+
+    [JsonPropertyName("profit_brute")]
+    public decimal ProfitBrute { get; init; }
+
+    [JsonPropertyName("value_brute")]
+    public decimal ValueBrute { get; init; }
+
+    [JsonPropertyName("IOF")]
+    public decimal Iof { get; init; }
+
+    [JsonPropertyName("IOF_value")]
+    public decimal IofValue { get; init; }
+
+    [JsonPropertyName("IR")]
+    public decimal Ir { get; init; }
+
+    [JsonPropertyName("IR_value")]
+    public decimal IrValue { get; init; }
+
     [JsonPropertyName("value_liq")]
     public decimal ValueLiq { get; init; }
 

@@ -34,6 +34,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<DashboardPage>();
 		builder.Services.AddTransient<MyInvestmentsPage>();
 		builder.Services.AddTransient<AddInvestmentPage>();
+		builder.Services.AddTransient<InvestmentDetailsPage>();
 
 		return builder.Build();
 	}

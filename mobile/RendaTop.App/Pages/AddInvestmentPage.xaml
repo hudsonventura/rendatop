@@ -2,13 +2,27 @@
 <ContentPage
     x:Class="RendaTop.App.Pages.AddInvestmentPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:controls="clr-namespace:RendaTop.App.Controls"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    Title="Novo Investimento"
+    Title="Investimento"
     BackgroundColor="#F8FAFC">
-    <ScrollView>
-        <VerticalStackLayout Padding="18,16,18,28" Spacing="14">
-            <Label Text="Adicionar investimento" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
-            <Label Text="Cadastre um investimento de renda fixa na sua carteira." TextColor="#64748B" />
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="18,16,18,112" Spacing="14">
+            <!-- <Button
+                Text="Retornar"
+                ImageSource="icon_back_dark.svg"
+                ContentLayout="Left,10"
+                BackgroundColor="White"
+                BorderColor="#CBD5E1"
+                BorderWidth="1"
+                TextColor="#111827"
+                HorizontalOptions="Start"
+                Padding="14,10"
+                Clicked="OnBackClicked" /> -->
+
+            <Label x:Name="HeadingLabel" Text="Adicionar investimento" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+            <Label x:Name="DescriptionLabel" Text="Cadastre um investimento de renda fixa na sua carteira." TextColor="#64748B" />
 
             <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
                 <Border.StrokeShape>
@@ -98,6 +112,9 @@
                         Clicked="OnCancelClicked" />
                 </VerticalStackLayout>
             </Border>
-        </VerticalStackLayout>
-    </ScrollView>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <controls:FloatingActionMenu x:Name="PageFab" />
+    </Grid>
 </ContentPage>

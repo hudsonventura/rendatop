@@ -2,88 +2,80 @@
 <ContentPage
     x:Class="RendaTop.App.Pages.MyInvestmentsPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:controls="clr-namespace:RendaTop.App.Controls"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     Title="Meus Investimentos"
     BackgroundColor="#F8FAFC">
-    <RefreshView x:Name="Refresh" Refreshing="OnRefresh">
-        <ScrollView>
-            <VerticalStackLayout Padding="18,16,18,28" Spacing="16">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+    <Grid>
+        <RefreshView x:Name="Refresh" Refreshing="OnRefresh">
+            <ScrollView>
+                <VerticalStackLayout Padding="18,16,18,112" Spacing="16">
                     <VerticalStackLayout Spacing="4">
                         <Label Text="Meus Investimentos" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
                         <Label x:Name="SubtitleLabel" Text="Carteira ativa" TextColor="#64748B" />
                     </VerticalStackLayout>
-                    <Button
-                        Grid.Column="1"
-                        Text="+"
-                        WidthRequest="48"
-                        HeightRequest="48"
-                        CornerRadius="24"
-                        BackgroundColor="#111827"
-                        TextColor="White"
-                        FontSize="22"
-                        FontAttributes="Bold"
-                        Clicked="OnAddClicked" />
-                </Grid>
 
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                    <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Total atual" FontSize="12" TextColor="#64748B" />
+                                <Label x:Name="TotalLabel" FontSize="20" FontAttributes="Bold" TextColor="#111827" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="1" BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Ativos" FontSize="12" TextColor="#64748B" />
+                                <Label x:Name="CountLabel" FontSize="20" FontAttributes="Bold" TextColor="#111827" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+
+                    <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+
+                    <Label x:Name="EmptyLabel" Text="Nenhum investimento cadastrado ainda." TextColor="#64748B" IsVisible="False" />
+
+                    <CollectionView x:Name="InvestmentsCollection" SelectionMode="Single" SelectionChanged="OnSelectionChanged">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14" Margin="0,0,0,10">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16" />
+                                    </Border.StrokeShape>
+                                    <VerticalStackLayout Spacing="10">
+                                        <Label Text="{Binding Title}" FontAttributes="Bold" FontSize="16" TextColor="#111827" LineBreakMode="TailTruncation" />
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="{Binding BankName}" TextColor="#64748B" />
+                                            <Label Grid.Column="1" Text="{Binding CurrentValue}" FontAttributes="Bold" TextColor="#111827" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="{Binding IndexLabel}" TextColor="#64748B" />
+                                            <Label Grid.Column="1" Text="{Binding DueDateLabel}" TextColor="#64748B" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
                         <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="16" />
+                            <RoundRectangle CornerRadius="12" />
                         </Border.StrokeShape>
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Total atual" FontSize="12" TextColor="#64748B" />
-                            <Label x:Name="TotalLabel" FontSize="20" FontAttributes="Bold" TextColor="#111827" />
+                        <VerticalStackLayout Spacing="10">
+                            <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                            <Button Text="Tentar novamente" BackgroundColor="#991B1B" TextColor="White" Clicked="OnRetryClicked" />
                         </VerticalStackLayout>
                     </Border>
-                    <Border Grid.Column="1" BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="16" />
-                        </Border.StrokeShape>
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Ativos" FontSize="12" TextColor="#64748B" />
-                            <Label x:Name="CountLabel" FontSize="20" FontAttributes="Bold" TextColor="#111827" />
-                        </VerticalStackLayout>
-                    </Border>
-                </Grid>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
 
-                <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
-
-                <Label x:Name="EmptyLabel" Text="Nenhum investimento cadastrado ainda." TextColor="#64748B" IsVisible="False" />
-
-                <CollectionView x:Name="InvestmentsCollection" SelectionMode="None">
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate>
-                            <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14" Margin="0,0,0,10">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="16" />
-                                </Border.StrokeShape>
-                                <VerticalStackLayout Spacing="8">
-                                    <Label Text="{Binding Title}" FontAttributes="Bold" FontSize="16" TextColor="#111827" LineBreakMode="TailTruncation" />
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <Label Text="{Binding BankName}" TextColor="#64748B" />
-                                        <Label Grid.Column="1" Text="{Binding CurrentValue}" FontAttributes="Bold" TextColor="#111827" />
-                                    </Grid>
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <Label Text="{Binding IndexLabel}" TextColor="#64748B" />
-                                        <Label Grid.Column="1" Text="{Binding DueDateLabel}" TextColor="#64748B" />
-                                    </Grid>
-                                </VerticalStackLayout>
-                            </Border>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
-
-                <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="12" />
-                    </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="10">
-                        <Label x:Name="ErrorLabel" TextColor="#991B1B" />
-                        <Button Text="Tentar novamente" BackgroundColor="#991B1B" TextColor="White" Clicked="OnRetryClicked" />
-                    </VerticalStackLayout>
-                </Border>
-            </VerticalStackLayout>
-        </ScrollView>
-    </RefreshView>
+        <controls:FloatingActionMenu x:Name="PageFab" />
+    </Grid>
 </ContentPage>

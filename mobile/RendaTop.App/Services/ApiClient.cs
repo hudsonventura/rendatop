@@ -98,6 +98,18 @@ public sealed class ApiClient
         await PersistSessionCookieAsync();
     }
 
+    public async Task PatchAsync<TRequest>(string path, TRequest body, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Patch, NormalizeRequestPath(path))
+        {
+            Content = JsonContent.Create(body, options: _jsonOptions)
+        };
+
+        using var response = await _http.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        await PersistSessionCookieAsync();
+    }
+
     private static string NormalizeRequestPath(string path) => path.TrimStart('/');
 
     private string? GetJwtCookieValue()
