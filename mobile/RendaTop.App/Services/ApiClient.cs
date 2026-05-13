@@ -98,6 +98,13 @@ public sealed class ApiClient
         await PersistSessionCookieAsync();
     }
 
+    public async Task PutAsync<TRequest>(string path, TRequest body, CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.PutAsJsonAsync(NormalizeRequestPath(path), body, _jsonOptions, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        await PersistSessionCookieAsync();
+    }
+
     public async Task PatchAsync<TRequest>(string path, TRequest body, CancellationToken cancellationToken = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Patch, NormalizeRequestPath(path))

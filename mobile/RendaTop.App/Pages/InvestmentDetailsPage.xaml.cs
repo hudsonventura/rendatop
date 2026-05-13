@@ -23,8 +23,12 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
             if (_investmentId.HasValue)
                 await Shell.Current.GoToAsync($"{nameof(AddInvestmentPage)}?investmentId={_investmentId.Value}");
         });
-        PageFab.RedeemCommand = new Command(async () => await ShowPendingActionAsync("Resgate"));
-        PageFab.ReinvestCommand = new Command(async () => await ShowPendingActionAsync("Reinvestimento"));
+        PageFab.RedeemCommand = new Command(async () =>
+        {
+            if (_investmentId.HasValue)
+                await Shell.Current.GoToAsync($"{nameof(RedeemInvestmentPage)}?investmentId={_investmentId.Value}");
+        });
+        PageFab.ReinvestCommand = new Command(async () => await StartReinvestmentAsync());
         PageFab.ArchiveCommand = new Command(async () => await ArchiveInvestmentAsync());
         PageFab.DeleteCommand = new Command(async () => await DeleteInvestmentAsync());
     }
@@ -78,6 +82,49 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
             BuildIofTip(),
             "OK");
 
+    private async void OnEditRedemptionClicked(object? sender, EventArgs e)
+    {
+        if (_investmentId.HasValue && sender is BindableObject { BindingContext: RedemptionRow row })
+            await Shell.Current.GoToAsync($"{nameof(EditRedemptionPage)}?investmentId={_investmentId.Value}&redemptionId={row.Id}");
+    }
+
+    private async void OnDeleteRedemptionClicked(object? sender, EventArgs e)
+    {
+        if (sender is not BindableObject { BindingContext: RedemptionRow row })
+            return;
+
+        var confirmed = await DisplayAlertAsync(
+            "Excluir resgate",
+            $"Tem certeza que deseja excluir {row.Title}?",
+            "Excluir",
+            "Cancelar");
+
+        if (!confirmed)
+            return;
+
+        SetLoading(true);
+        HideError();
+
+        try
+        {
+            await _investmentService.DeleteRedemptionAsync(row.Id);
+            await _investmentService.RefreshInvestmentsCacheAsync();
+            await LoadInvestmentAsync();
+        }
+        catch (ApiException ex)
+        {
+            ShowError(ex.Message);
+        }
+        catch
+        {
+            ShowError("Nao foi possivel excluir o resgate.");
+        }
+        finally
+        {
+            SetLoading(false);
+        }
+    }
+
     private async Task LoadInvestmentAsync()
     {
         if (!_investmentId.HasValue)
@@ -128,7 +175,11 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
         BankLabel.Text = investment.Bank?.Name ?? "Banco";
         TypeLabel.Text = string.IsNullOrWhiteSpace(investment.InvestmentType) ? "Sem tipo" : NormalizeInvestmentType(investment.InvestmentType);
         IndexLabel.Text = BuildIndexLabel(investment);
-        InvestedValueLabel.Text = MoneyFormatter.Currency(investment.PrincipalForDisplay);
+        var currentInvested = MoneyFormatter.Currency(investment.PrincipalForDisplay);
+        var originalInvested = MoneyFormatter.Currency(investment.Value);
+        InvestedValueLabel.Text = currentInvested == originalInvested
+            ? currentInvested
+            : $"{currentInvested} / {originalInvested}";
         BuyDateLabel.Text = investment.DateBuy.ToLocalTime().ToString("dd/MM/yyyy");
         DueDateLabel.Text = investment.DueDate?.ToLocalTime().ToString("dd/MM/yyyy") ?? "Liquidez diaria";
         TaxesLabel.Text = investment.Taxes
@@ -137,6 +188,7 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
 
         BindCurrentValues(currentCalc, investment);
         BindProjectionValues(projectionCalc, investment);
+        BindRedemptions(investment);
 
         if (!investment.DueDate.HasValue)
         {
@@ -182,6 +234,20 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
         ProjectionIrPercentLabel.Text = $"Aliquota: {FormatPercent(calc?.Ir ?? 0m)}";
         ProjectionIofValueLabel.Text = MoneyFormatter.Currency(calc?.IofValue ?? 0m);
         ProjectionIofPercentLabel.Text = $"Aliquota: {FormatPercent(calc?.Iof ?? 0m)}";
+    }
+
+    private void BindRedemptions(InvestmentDto investment)
+    {
+        var redemptions = (investment.Redemptions ?? [])
+            .OrderByDescending(item => item.Date)
+            .Select(RedemptionRow.FromDto)
+            .ToList();
+
+        RedemptionsCollection.ItemsSource = redemptions;
+        RedemptionsEmptyLabel.IsVisible = redemptions.Count == 0;
+        RedeemedTotalLabel.Text = redemptions.Count == 0
+            ? string.Empty
+            : $"Total resgatado: {MoneyFormatter.Currency(redemptions.Sum(item => item.Amount))}";
     }
 
     private string BuildIrTip()
@@ -269,6 +335,7 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
         try
         {
             await _investmentService.ArchiveInvestmentAsync(_investmentId.Value, archived: true);
+            await _investmentService.ArchiveInvestmentInCacheAsync(_investmentId.Value, archived: true);
             await DisplayAlertAsync("Investimento arquivado", $"{_investmentTitle} foi arquivado com sucesso.", "OK");
             await NavigateBackAsync();
         }
@@ -284,6 +351,20 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
         {
             SetLoading(false);
         }
+    }
+
+    private async Task StartReinvestmentAsync()
+    {
+        if (!_investmentId.HasValue)
+            return;
+
+        if (!CanArchiveCurrentInvestment())
+        {
+            await DisplayAlertAsync("Reinvestimento indisponivel", ArchiveReinvestHint, "Entendi");
+            return;
+        }
+
+        await Shell.Current.GoToAsync($"{nameof(AddInvestmentPage)}?reinvestSourceInvestmentId={_investmentId.Value}");
     }
 
     private async Task DeleteInvestmentAsync()
@@ -306,8 +387,9 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
         try
         {
             await _investmentService.DeleteInvestmentAsync(_investmentId.Value);
+            await _investmentService.DeleteInvestmentInCacheAsync(_investmentId.Value);
             await DisplayAlertAsync("Investimento excluido", $"{_investmentTitle} foi excluido com sucesso.", "OK");
-            await NavigateBackAsync();
+            await NavigateToInvestmentsAsync();
         }
         catch (ApiException ex)
         {
@@ -379,7 +461,24 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
         await shell.GoToAsync("//meus-investimentos");
     }
 
-    private static Task ShowPendingActionAsync(string actionName)
-        => Shell.Current?.DisplayAlertAsync(actionName, "Vamos implementar esta acao na proxima etapa.", "OK")
-           ?? Task.CompletedTask;
+    private static async Task NavigateToInvestmentsAsync()
+    {
+        var shell = Shell.Current;
+        if (shell is null)
+            return;
+
+        await shell.GoToAsync("//meus-investimentos");
+    }
+
+    private sealed record RedemptionRow(Guid Id, string Title, decimal Amount, string DateLabel, string AmountLabel)
+    {
+        public static RedemptionRow FromDto(RedemptionDto redemption) =>
+            new(
+                redemption.Id,
+                redemption.Title,
+                redemption.Value,
+                redemption.Date.ToLocalTime().ToString("dd/MM/yyyy"),
+                MoneyFormatter.Currency(redemption.Value));
+    }
+
 }

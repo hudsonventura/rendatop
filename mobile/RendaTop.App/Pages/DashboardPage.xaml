@@ -65,16 +65,17 @@
                         <Label Text="Distribuicao por banco" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
                         <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
                         <Label x:Name="BankEmptyLabel" Text="Nenhum investimento ativo para distribuir." TextColor="#64748B" IsVisible="False" />
+                        <controls:BankAllocationDonutChart x:Name="BankChart" />
                         <CollectionView x:Name="BankCollection" SelectionMode="None">
                             <CollectionView.ItemTemplate>
                                 <DataTemplate>
                                     <VerticalStackLayout Spacing="7" Padding="0,5">
                                         <Grid ColumnDefinitions="12,*,Auto" ColumnSpacing="8">
-                                            <BoxView Grid.Column="0" Color="{Binding Color}" WidthRequest="10" HeightRequest="10" CornerRadius="5" VerticalOptions="Center" />
+                                            <BoxView Grid.Column="0" Color="{Binding DisplayColor}" WidthRequest="10" HeightRequest="10" CornerRadius="5" VerticalOptions="Center" />
                                             <Label Grid.Column="1" Text="{Binding BankName}" FontAttributes="Bold" TextColor="#111827" />
                                             <Label Grid.Column="2" Text="{Binding PercentText}" TextColor="#64748B" />
                                         </Grid>
-                                        <ProgressBar Progress="{Binding Percent}" ProgressColor="#22C55E" BackgroundColor="#E2E8F0" />
+                                        <ProgressBar Progress="{Binding Percent}" ProgressColor="{Binding DisplayColor}" BackgroundColor="#E2E8F0" />
                                         <Label Text="{Binding Amount}" FontSize="12" TextColor="#64748B" />
                                     </VerticalStackLayout>
                                 </DataTemplate>

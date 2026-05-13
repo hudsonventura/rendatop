@@ -25,6 +25,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ApiClient>();
 		builder.Services.AddSingleton<SessionService>();
 		builder.Services.AddSingleton<AuthService>();
+		builder.Services.AddSingleton<InvestmentCacheService>();
 		builder.Services.AddSingleton<InvestmentService>();
 		builder.Services.AddSingleton<AppShell>();
 		builder.Services.AddTransient<SplashPage>();
@@ -35,6 +36,8 @@ public static class MauiProgram
 		builder.Services.AddTransient<MyInvestmentsPage>();
 		builder.Services.AddTransient<AddInvestmentPage>();
 		builder.Services.AddTransient<InvestmentDetailsPage>();
+		builder.Services.AddTransient<RedeemInvestmentPage>();
+		builder.Services.AddTransient<EditRedemptionPage>();
 
 		return builder.Build();
 	}

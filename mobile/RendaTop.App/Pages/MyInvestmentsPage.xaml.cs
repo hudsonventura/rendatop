@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using RendaTop.App.Models;
 using RendaTop.App.Services;
 
@@ -7,49 +6,75 @@ namespace RendaTop.App.Pages;
 public partial class MyInvestmentsPage : ContentPage
 {
     private readonly InvestmentService _investmentService;
-    private readonly ObservableCollection<InvestmentRow> _rows = [];
+    private CancellationTokenSource? _loadCts;
 
     public MyInvestmentsPage(InvestmentService investmentService)
     {
         _investmentService = investmentService;
         InitializeComponent();
-        InvestmentsCollection.ItemsSource = _rows;
         PageFab.AddCommand = new Command(async () => await Shell.Current.GoToAsync(nameof(AddInvestmentPage)));
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await LoadInvestmentsAsync();
+        _loadCts?.Cancel();
+        _loadCts = new CancellationTokenSource();
+        _ = LoadInitialStateAsync(_loadCts.Token);
+    }
+
+    protected override void OnDisappearing()
+    {
+        _loadCts?.Cancel();
+        base.OnDisappearing();
     }
 
     private async void OnRefresh(object? sender, EventArgs e)
-        => await LoadInvestmentsAsync();
+        => await RefreshFromBackendAsync(showLoading: false);
 
     private async void OnRetryClicked(object? sender, EventArgs e)
-        => await LoadInvestmentsAsync();
+        => await RefreshFromBackendAsync(showLoading: true);
 
-    private async Task LoadInvestmentsAsync()
+    private async Task LoadInitialStateAsync(CancellationToken cancellationToken)
     {
-        SetLoading(true);
         HideError();
 
         try
         {
-            var investments = (await _investmentService.GetInvestmentsAsync())
-                .Where(item => !item.Archived)
-                .OrderBy(item => item.DueDate ?? DateTime.MaxValue)
-                .ToList();
+            var cached = await _investmentService.GetCachedInvestmentsAsync(cancellationToken);
+            ApplyInvestments(cached);
 
-            _rows.Clear();
-            foreach (var row in investments.Select(InvestmentRow.FromDto))
-                _rows.Add(row);
+            if (cached.Count == 0)
+            {
+                await RefreshFromBackendAsync(showLoading: true, cancellationToken);
+                return;
+            }
 
-            InvestmentsCollection.SelectedItem = null;
-            EmptyLabel.IsVisible = _rows.Count == 0;
-            CountLabel.Text = _rows.Count.ToString();
-            TotalLabel.Text = MoneyFormatter.Currency(investments.Sum(item => item.CurrentValueForDisplay));
-            SubtitleLabel.Text = _rows.Count == 1 ? "1 investimento ativo" : $"{_rows.Count} investimentos ativos";
+            if (_investmentService.ShouldRefreshInBackground(cached))
+                _ = RefreshInBackgroundAsync(cancellationToken);
+        }
+        catch (ApiException ex)
+        {
+            ShowError(ex.Message);
+        }
+        catch
+        {
+            ShowError("Nao foi possivel carregar seus investimentos.");
+        }
+    }
+
+    private async Task RefreshFromBackendAsync(bool showLoading, CancellationToken cancellationToken = default)
+    {
+        if (showLoading)
+            SetLoading(true);
+
+        HideError();
+
+        try
+        {
+            await _investmentService.RefreshInvestmentsCacheAsync(cancellationToken);
+            var fresh = await _investmentService.GetCachedInvestmentsAsync(cancellationToken);
+            ApplyInvestments(fresh);
         }
         catch (ApiException ex)
         {
@@ -62,6 +87,23 @@ public partial class MyInvestmentsPage : ContentPage
         finally
         {
             SetLoading(false);
+        }
+    }
+
+    private async Task RefreshInBackgroundAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _investmentService.RefreshInvestmentsCacheInBackgroundAsync(cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
+            var fresh = await _investmentService.GetCachedInvestmentsAsync(cancellationToken);
+            await MainThread.InvokeOnMainThreadAsync(() => ApplyInvestments(fresh));
+        }
+        catch
+        {
+            // Keep the cached list visible if background refresh fails.
         }
     }
 
@@ -91,6 +133,22 @@ public partial class MyInvestmentsPage : ContentPage
     {
         ErrorLabel.Text = string.Empty;
         ErrorBorder.IsVisible = false;
+    }
+
+    private void ApplyInvestments(IReadOnlyList<InvestmentDto> source)
+    {
+        var investments = source
+            .Where(item => !item.Archived)
+            .OrderBy(item => item.DueDate ?? DateTime.MaxValue)
+            .ToList();
+
+        InvestmentsCollection.ItemsSource = investments.Select(InvestmentRow.FromDto).ToList();
+
+        InvestmentsCollection.SelectedItem = null;
+        EmptyLabel.IsVisible = investments.Count == 0;
+        CountLabel.Text = investments.Count.ToString();
+        TotalLabel.Text = MoneyFormatter.Currency(investments.Sum(item => item.CurrentValueForDisplay));
+        SubtitleLabel.Text = investments.Count == 1 ? "1 investimento ativo" : $"{investments.Count} investimentos ativos";
     }
 
     private sealed record InvestmentRow(

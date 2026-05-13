@@ -6,11 +6,13 @@ public sealed class AuthService
 {
     private readonly ApiClient _apiClient;
     private readonly SessionService _session;
+    private readonly InvestmentCacheService _investmentCache;
 
-    public AuthService(ApiClient apiClient, SessionService session)
+    public AuthService(ApiClient apiClient, SessionService session, InvestmentCacheService investmentCache)
     {
         _apiClient = apiClient;
         _session = session;
+        _investmentCache = investmentCache;
     }
 
     public Uri GoogleLoginUri => _apiClient.BuildUri("/auth/google/login");
@@ -26,7 +28,10 @@ public sealed class AuthService
             throw new ApiException("Resposta de login invalida.", 500);
 
         if (!response.RequiresTotp)
+        {
+            await _investmentCache.ClearAsync();
             await _session.SaveLoginAsync(response);
+        }
 
         return response;
     }
@@ -40,6 +45,7 @@ public sealed class AuthService
         if (response is null)
             throw new ApiException("Resposta de TOTP invalida.", 500);
 
+        await _investmentCache.ClearAsync();
         await _session.SaveLoginAsync(response);
     }
 
@@ -61,6 +67,7 @@ public sealed class AuthService
         if (response is null)
             throw new ApiException("Resposta de verificacao invalida.", 500);
 
+        await _investmentCache.ClearAsync();
         await _session.SaveLoginAsync(response);
     }
 
@@ -81,6 +88,7 @@ public sealed class AuthService
         }
         finally
         {
+            await _investmentCache.ClearAsync();
             await _session.ClearAsync();
         }
     }

@@ -28,19 +28,19 @@ public partial class DashboardPage : ContentPage
     }
 
     private async void OnRefresh(object? sender, EventArgs e)
-        => await LoadDashboardAsync();
+        => await LoadDashboardAsync(forceRefresh: true);
 
     private async void OnRetryClicked(object? sender, EventArgs e)
-        => await LoadDashboardAsync();
+        => await LoadDashboardAsync(forceRefresh: true);
 
-    private async Task LoadDashboardAsync()
+    private async Task LoadDashboardAsync(bool forceRefresh = false)
     {
         SetLoading(true);
         HideError();
 
         try
         {
-            var summary = await _investments.GetDashboardSummaryAsync();
+            var summary = await _investments.GetDashboardSummaryAsync(forceRefresh);
             ApplySummary(summary);
             _loaded = true;
         }
@@ -65,10 +65,12 @@ public partial class DashboardPage : ContentPage
         ProfitLabel.Text = summary.Profit;
         DueCountLabel.Text = summary.DueSoonCount;
 
+        BankChart.ItemsSource = summary.BankAllocation;
         BankCollection.ItemsSource = summary.BankAllocation;
         DueCollection.ItemsSource = summary.DueSoon;
         BankEmptyLabel.IsVisible = summary.BankAllocation.Count == 0;
         DueEmptyLabel.IsVisible = summary.DueSoon.Count == 0;
+        BankChart.IsVisible = summary.BankAllocation.Count > 0;
     }
 
     private string GetFirstName()

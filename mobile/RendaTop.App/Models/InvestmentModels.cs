@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
+using Microsoft.Maui.Graphics;
 
 namespace RendaTop.App.Models;
 
@@ -52,6 +53,9 @@ public sealed record InvestmentDto
 
     [JsonPropertyName("table_calculated")]
     public List<CalculatedDto>? TableCalculated { get; init; }
+
+    [JsonPropertyName("redemptions")]
+    public List<RedemptionDto>? Redemptions { get; init; }
 
     public decimal PrincipalForDisplay => Math.Max(0m, TableValue ?? Value);
 
@@ -156,6 +160,33 @@ public sealed record ArchiveInvestmentRequestDto
     public bool Archived { get; init; }
 }
 
+public sealed record RedemptionRequestDto
+{
+    [JsonPropertyName("title")]
+    public string Title { get; init; } = string.Empty;
+
+    [JsonPropertyName("date")]
+    public DateTime Date { get; init; }
+
+    [JsonPropertyName("value")]
+    public decimal Value { get; init; }
+}
+
+public sealed record RedemptionDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; init; }
+
+    [JsonPropertyName("title")]
+    public string Title { get; init; } = string.Empty;
+
+    [JsonPropertyName("date")]
+    public DateTime Date { get; init; }
+
+    [JsonPropertyName("value")]
+    public decimal Value { get; init; }
+}
+
 public sealed record InvestmentOption(string Label, string Value);
 
 public sealed record InvestmentIndexOption(string Label, string Value);
@@ -165,7 +196,42 @@ public sealed record BankAllocationItem(
     string Color,
     string Amount,
     string PercentText,
-    double Percent);
+    double Percent)
+{
+    public Microsoft.Maui.Graphics.Color DisplayColor => ParseColor(Color);
+
+    private static Microsoft.Maui.Graphics.Color ParseColor(string? value)
+    {
+        const string fallback = "#94A3B8";
+
+        if (string.IsNullOrWhiteSpace(value))
+            return Microsoft.Maui.Graphics.Color.FromArgb(fallback);
+
+        var normalized = value.Trim();
+        if (!normalized.StartsWith('#'))
+            normalized = $"#{normalized}";
+
+        if (normalized.Length is 4 or 5)
+        {
+            var hex = normalized[1..];
+            normalized = hex.Length switch
+            {
+                3 => $"#{hex[0]}{hex[0]}{hex[1]}{hex[1]}{hex[2]}{hex[2]}",
+                4 => $"#{hex[0]}{hex[0]}{hex[1]}{hex[1]}{hex[2]}{hex[2]}{hex[3]}{hex[3]}",
+                _ => normalized
+            };
+        }
+
+        try
+        {
+            return Microsoft.Maui.Graphics.Color.FromArgb(normalized);
+        }
+        catch
+        {
+            return Microsoft.Maui.Graphics.Color.FromArgb(fallback);
+        }
+    }
+}
 
 public sealed record DueSoonItem(
     string Title,

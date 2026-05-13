@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.RedeemInvestmentPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:controls="clr-namespace:RendaTop.App.Controls"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Resgatar investimento"
+    BackgroundColor="#F8FAFC">
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="18,16,18,112" Spacing="14">
+                <!-- <Button
+                    Text="Voltar"
+                    ImageSource="icon_back_dark.svg"
+                    ContentLayout="Left,10"
+                    BackgroundColor="White"
+                    BorderColor="#CBD5E1"
+                    BorderWidth="1"
+                    TextColor="#111827"
+                    HorizontalOptions="Start"
+                    Padding="14,10"
+                    Clicked="OnBackClicked" /> -->
+
+                <Label x:Name="HeadingLabel" Text="Criar resgate" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                <Label x:Name="DescriptionLabel" Text="Informe os dados do resgate para o investimento." TextColor="#64748B" />
+
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="14">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Valor liquido atual" FontSize="12" TextColor="#64748B" />
+                                <Label x:Name="CurrentValueLabel" FontSize="22" FontAttributes="Bold" TextColor="#111827" />
+                            </VerticalStackLayout>
+                            <Button
+                                Grid.Column="1"
+                                Text="Resgate total"
+                                BackgroundColor="White"
+                                BorderColor="#CBD5E1"
+                                BorderWidth="1"
+                                TextColor="#111827"
+                                Padding="12,8"
+                                VerticalOptions="Center"
+                                Clicked="OnFullRedeemClicked" />
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Identificacao do resgate" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="TitleEntry" Placeholder="Ex.: Resgate parcial" TextColor="#111827" PlaceholderColor="#64748B" />
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Data do resgate" FontAttributes="Bold" TextColor="#334155" />
+                                <DatePicker x:Name="RedeemDatePicker" TextColor="#111827" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Valor a ser resgatado" FontAttributes="Bold" TextColor="#334155" />
+                                <Entry x:Name="ValueEntry" Keyboard="Numeric" Placeholder="Ex.: 1.500,00" TextColor="#111827" PlaceholderColor="#64748B" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Label
+                            x:Name="HelperLabel"
+                            Text="O resgate so sera considerado concluido quando o backend confirmar a operacao."
+                            FontSize="12"
+                            TextColor="#64748B" />
+
+                        <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+
+                        <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                            <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                        </Border>
+
+                        <Button
+                            x:Name="SaveButton"
+                            Text="Confirmar resgate"
+                            BackgroundColor="#111827"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            HeightRequest="50"
+                            Clicked="OnSaveClicked" />
+
+                        <Button
+                            Text="Cancelar"
+                            BackgroundColor="White"
+                            BorderColor="#CBD5E1"
+                            BorderWidth="1"
+                            TextColor="#111827"
+                            HeightRequest="48"
+                            Clicked="OnCancelClicked" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <controls:FloatingActionMenu x:Name="PageFab" />
+    </Grid>
+</ContentPage>

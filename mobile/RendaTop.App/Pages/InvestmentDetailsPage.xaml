@@ -237,6 +237,62 @@
                         <Label x:Name="InfoLabel" TextColor="#1D4ED8" />
                     </Border>
 
+                    <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Label Text="Resgates" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                                <Label x:Name="RedeemedTotalLabel" Grid.Column="1" TextColor="#64748B" VerticalTextAlignment="Center" />
+                            </Grid>
+
+                            <Label x:Name="RedemptionsEmptyLabel" Text="Nenhum resgate registrado." TextColor="#64748B" IsVisible="False" />
+
+                            <CollectionView x:Name="RedemptionsCollection" SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BackgroundColor="#F8FAFC" Stroke="#E2E8F0" Padding="12" Margin="0,0,0,8">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="14" />
+                                            </Border.StrokeShape>
+                                            <VerticalStackLayout Spacing="8">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                                    <Label Text="{Binding Title}" FontAttributes="Bold" TextColor="#111827" LineBreakMode="TailTruncation" />
+                                                    <Label Grid.Column="1" Text="{Binding AmountLabel}" FontAttributes="Bold" TextColor="#111827" />
+                                                </Grid>
+
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                                    <Label Text="{Binding DateLabel}" TextColor="#64748B" />
+                                                    <HorizontalStackLayout Grid.Column="1" Spacing="8">
+                                                        <Button
+                                                            Text="Editar"
+                                                            FontSize="12"
+                                                            Padding="10,6"
+                                                            BackgroundColor="White"
+                                                            BorderColor="#CBD5E1"
+                                                            BorderWidth="1"
+                                                            TextColor="#111827"
+                                                            Clicked="OnEditRedemptionClicked" />
+                                                        <Button
+                                                            Text="Excluir"
+                                                            FontSize="12"
+                                                            Padding="10,6"
+                                                            BackgroundColor="White"
+                                                            BorderColor="#FCA5A5"
+                                                            BorderWidth="1"
+                                                            TextColor="#991B1B"
+                                                            Clicked="OnDeleteRedemptionClicked" />
+                                                    </HorizontalStackLayout>
+                                                </Grid>
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </Border>
+
                     <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="12" />

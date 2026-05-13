@@ -33,6 +33,8 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
     private readonly InvestmentService _investmentService;
     private Guid? _editingInvestmentId;
     private Guid? _loadedInvestmentId;
+    private Guid? _reinvestSourceInvestmentId;
+    private bool _isReinvesting;
 
     public AddInvestmentPage(InvestmentService investmentService)
     {
@@ -50,11 +52,20 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         _editingInvestmentId = null;
+        _reinvestSourceInvestmentId = null;
+        _isReinvesting = false;
 
         if (query.TryGetValue("investmentId", out var rawValue)
             && Guid.TryParse(rawValue?.ToString(), out var investmentId))
         {
             _editingInvestmentId = investmentId;
+        }
+
+        if (query.TryGetValue("reinvestSourceInvestmentId", out var rawReinvestValue)
+            && Guid.TryParse(rawReinvestValue?.ToString(), out var reinvestSourceId))
+        {
+            _reinvestSourceInvestmentId = reinvestSourceId;
+            _isReinvesting = true;
         }
     }
 
@@ -63,6 +74,7 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
         base.OnAppearing();
         await LoadBanksAsync();
         await LoadInvestmentForEditionAsync();
+        await LoadInvestmentForReinvestmentAsync();
     }
 
     protected override bool OnBackButtonPressed()
@@ -134,6 +146,38 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
         }
     }
 
+    private async Task LoadInvestmentForReinvestmentAsync()
+    {
+        if (!_reinvestSourceInvestmentId.HasValue || _editingInvestmentId.HasValue)
+            return;
+
+        if (_loadedInvestmentId == _reinvestSourceInvestmentId)
+            return;
+
+        SetBusy(true);
+        HideError();
+
+        try
+        {
+            var investment = await _investmentService.GetInvestmentWithCalculatedAsync(_reinvestSourceInvestmentId.Value);
+            FillForm(investment);
+            _loadedInvestmentId = investment.Id;
+            UpdateModeUi(investment.Title);
+        }
+        catch (ApiException ex)
+        {
+            ShowError(ex.Message);
+        }
+        catch
+        {
+            ShowError("Nao foi possivel carregar o investimento para reinvestimento.");
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
     private void OnDailyLiquidityToggled(object? sender, ToggledEventArgs e)
     {
         DueDatePicker.IsEnabled = !e.Value;
@@ -155,10 +199,34 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
             if (_editingInvestmentId.HasValue)
             {
                 await _investmentService.UpdateInvestmentAsync(_editingInvestmentId.Value, request!);
+                await _investmentService.RefreshInvestmentsCacheAsync();
             }
             else
             {
-                await _investmentService.CreateInvestmentAsync(request!);
+                var createdId = await _investmentService.CreateInvestmentAsync(request!);
+                await _investmentService.UpsertInvestmentInCacheAsync(BuildCreatedInvestment(createdId, request!));
+
+                if (_reinvestSourceInvestmentId.HasValue)
+                {
+                    try
+                    {
+                        await _investmentService.ArchiveInvestmentAsync(_reinvestSourceInvestmentId.Value, archived: true);
+                        await _investmentService.ArchiveInvestmentInCacheAsync(_reinvestSourceInvestmentId.Value, archived: true);
+                    }
+                    catch (ApiException ex)
+                    {
+                        await _investmentService.RefreshInvestmentsCacheAsync();
+                        ShowError($"Novo investimento criado, mas nao foi possivel arquivar o original. {ex.Message}");
+                        return;
+                    }
+                    catch
+                    {
+                        await _investmentService.RefreshInvestmentsCacheAsync();
+                        ShowError("Novo investimento criado, mas nao foi possivel arquivar o investimento original.");
+                        return;
+                    }
+                }
+
                 ResetForm();
             }
 
@@ -308,25 +376,30 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
     {
         SaveButton.IsEnabled = !busy;
         SaveButton.Text = busy
-            ? (_editingInvestmentId.HasValue ? "Salvando alteracoes..." : "Salvando...")
-            : (_editingInvestmentId.HasValue ? "Salvar alteracoes" : "Salvar investimento");
+            ? (_editingInvestmentId.HasValue ? "Salvando alteracoes..." : _isReinvesting ? "Confirmando reinvestimento..." : "Salvando...")
+            : (_editingInvestmentId.HasValue ? "Salvar alteracoes" : _isReinvesting ? "Confirmar reinvestimento" : "Salvar investimento");
     }
 
     private void UpdateModeUi(string? investmentTitle = null)
     {
         var isEditing = _editingInvestmentId.HasValue;
-        Title = isEditing ? "Editar Investimento" : "Novo Investimento";
-        HeadingLabel.Text = isEditing ? "Editar investimento" : "Adicionar investimento";
+        var isReinvesting = _isReinvesting && !isEditing;
+        Title = isEditing ? "Editar Investimento" : isReinvesting ? "Reinvestir Investimento" : "Novo Investimento";
+        HeadingLabel.Text = isEditing ? "Editar investimento" : isReinvesting ? "Reinvestir investimento" : "Adicionar investimento";
         DescriptionLabel.Text = isEditing
             ? string.IsNullOrWhiteSpace(investmentTitle)
                 ? "Atualize os dados do investimento selecionado."
                 : $"Atualize os dados de {investmentTitle}."
-            : "Cadastre um investimento de renda fixa na sua carteira.";
+            : isReinvesting
+                ? string.IsNullOrWhiteSpace(investmentTitle)
+                    ? "Revise os dados para criar o novo investimento e arquivar o anterior."
+                    : $"Revise os dados de {investmentTitle} para criar o novo investimento e arquivar o anterior."
+                : "Cadastre um investimento de renda fixa na sua carteira.";
 
         if (!SaveButton.IsEnabled)
             return;
 
-        SaveButton.Text = isEditing ? "Salvar alteracoes" : "Salvar investimento";
+        SaveButton.Text = isEditing ? "Salvar alteracoes" : isReinvesting ? "Confirmar reinvestimento" : "Salvar investimento";
     }
 
     private void ShowError(string message)
@@ -345,8 +418,35 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
     {
         _editingInvestmentId = null;
         _loadedInvestmentId = null;
+        _reinvestSourceInvestmentId = null;
+        _isReinvesting = false;
         HideError();
         ResetForm();
+    }
+
+    private InvestmentDto BuildCreatedInvestment(Guid investmentId, InvestmentRequestDto request)
+    {
+        var bank = BankPicker.SelectedItem as BankDto;
+
+        return new InvestmentDto
+        {
+            Id = investmentId,
+            Title = request.Title,
+            DateBuy = request.DateBuy,
+            DueDate = request.DateExpectedSell,
+            Value = request.Value,
+            InvestmentType = request.InvestmentType,
+            MoneyBoxId = request.MoneyBoxId,
+            Index = request.Index,
+            IndexPercent = request.IndexPercent,
+            IndexValue = request.IndexValue,
+            Taxes = request.Taxes,
+            TableValue = request.Value,
+            Archived = request.Archived,
+            Bank = bank,
+            Calculated = [],
+            TableCalculated = []
+        };
     }
 
     private static async Task NavigateBackAsync()

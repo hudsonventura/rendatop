@@ -4,14 +4,64 @@ namespace RendaTop.App.Services;
 
 public sealed class InvestmentService
 {
-    private readonly ApiClient _apiClient;
+    private static readonly TimeSpan BackgroundRefreshInterval = TimeSpan.FromMinutes(10);
 
-    public InvestmentService(ApiClient apiClient)
+    private readonly ApiClient _apiClient;
+    private readonly InvestmentCacheService _cache;
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private Task? _backgroundRefreshTask;
+
+    public InvestmentService(ApiClient apiClient, InvestmentCacheService cache)
     {
         _apiClient = apiClient;
+        _cache = cache;
     }
 
-    public async Task<IReadOnlyList<InvestmentDto>> GetInvestmentsAsync(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<InvestmentDto>> GetInvestmentsAsync(
+        bool forceRefresh = false,
+        CancellationToken cancellationToken = default)
+        => _cache.GetOrFetchAsync(FetchInvestmentsAsync, forceRefresh, cancellationToken);
+
+    public Task<IReadOnlyList<InvestmentDto>> GetCachedInvestmentsAsync(CancellationToken cancellationToken = default)
+        => _cache.GetCachedAsync(cancellationToken);
+
+    public bool ShouldRefreshInBackground(IReadOnlyCollection<InvestmentDto> cachedInvestments)
+    {
+        if (cachedInvestments.Count == 0)
+            return false;
+
+        var lastSync = _cache.LastSyncUtc;
+        if (!lastSync.HasValue)
+            return true;
+
+        return DateTimeOffset.UtcNow - lastSync.Value >= BackgroundRefreshInterval;
+    }
+
+    public async Task RefreshInvestmentsCacheAsync(CancellationToken cancellationToken = default)
+        => await _cache.SetAsync(await FetchInvestmentsAsync(cancellationToken), cancellationToken);
+
+    public Task RefreshInvestmentsCacheInBackgroundAsync(CancellationToken cancellationToken = default)
+    {
+        if (_backgroundRefreshTask is { IsCompleted: false })
+            return _backgroundRefreshTask;
+
+        _backgroundRefreshTask = Task.Run(async () =>
+        {
+            await _refreshGate.WaitAsync(cancellationToken);
+            try
+            {
+                await RefreshInvestmentsCacheAsync(cancellationToken);
+            }
+            finally
+            {
+                _refreshGate.Release();
+            }
+        }, cancellationToken);
+
+        return _backgroundRefreshTask;
+    }
+
+    private async Task<IReadOnlyList<InvestmentDto>> FetchInvestmentsAsync(CancellationToken cancellationToken)
     {
         var investments = await _apiClient.GetAsync<List<InvestmentDto>>("/Investments", cancellationToken);
         return investments ?? [];
@@ -22,7 +72,7 @@ public sealed class InvestmentService
            ?? throw new ApiException("Investimento nao encontrado.", 404);
 
     public async Task<InvestmentDto> GetInvestmentWithCalculatedAsync(Guid investmentId, CancellationToken cancellationToken = default)
-        => (await GetInvestmentsAsync(cancellationToken)).FirstOrDefault(item => item.Id == investmentId)
+        => (await GetInvestmentsAsync(cancellationToken: cancellationToken)).FirstOrDefault(item => item.Id == investmentId)
            ?? throw new ApiException("Investimento nao encontrado.", 404);
 
     public async Task<IReadOnlyList<BankDto>> GetBanksAsync(CancellationToken cancellationToken = default)
@@ -31,9 +81,13 @@ public sealed class InvestmentService
         return banks ?? [];
     }
 
-    public async Task CreateInvestmentAsync(InvestmentRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<Guid> CreateInvestmentAsync(InvestmentRequestDto request, CancellationToken cancellationToken = default)
     {
-        await _apiClient.PostAsync<InvestmentRequestDto, Guid>("/Investments", request, cancellationToken);
+        var investmentId = await _apiClient.PostAsync<InvestmentRequestDto, Guid>("/Investments", request, cancellationToken);
+        if (investmentId == Guid.Empty)
+            throw new ApiException("Nao foi possivel obter o id do investimento criado.", 500);
+
+        return investmentId;
     }
 
     public Task UpdateInvestmentAsync(Guid investmentId, InvestmentRequestDto request, CancellationToken cancellationToken = default)
@@ -48,9 +102,20 @@ public sealed class InvestmentService
     public Task DeleteInvestmentAsync(Guid investmentId, CancellationToken cancellationToken = default)
         => _apiClient.DeleteAsync($"/Investments/{investmentId}", cancellationToken);
 
-    public async Task<DashboardSummary> GetDashboardSummaryAsync(CancellationToken cancellationToken = default)
+    public Task RedeemInvestmentAsync(Guid investmentId, RedemptionRequestDto request, CancellationToken cancellationToken = default)
+        => _apiClient.PutAsync($"/Investments/{investmentId}", request, cancellationToken);
+
+    public Task UpdateRedemptionAsync(Guid redemptionId, RedemptionRequestDto request, CancellationToken cancellationToken = default)
+        => _apiClient.PatchAsync($"/Redemptions/{redemptionId}", request, cancellationToken);
+
+    public Task DeleteRedemptionAsync(Guid redemptionId, CancellationToken cancellationToken = default)
+        => _apiClient.DeleteAsync($"/Redemptions/{redemptionId}", cancellationToken);
+
+    public async Task<DashboardSummary> GetDashboardSummaryAsync(
+        bool forceRefresh = false,
+        CancellationToken cancellationToken = default)
     {
-        var investments = await GetInvestmentsAsync(cancellationToken);
+        var investments = await GetInvestmentsAsync(forceRefresh, cancellationToken);
         var active = investments.Where(item => !item.Archived).ToList();
         var invested = active.Sum(item => item.PrincipalForDisplay);
         var current = active.Sum(item => item.CurrentValueForDisplay);
@@ -109,4 +174,13 @@ public sealed class InvestmentService
             bankAllocation,
             dueSoon);
     }
+
+    public Task ArchiveInvestmentInCacheAsync(Guid investmentId, bool archived = true, CancellationToken cancellationToken = default)
+        => _cache.ArchiveAsync(investmentId, archived, cancellationToken);
+
+    public Task DeleteInvestmentInCacheAsync(Guid investmentId, CancellationToken cancellationToken = default)
+        => _cache.RemoveAsync(investmentId, cancellationToken);
+
+    public Task UpsertInvestmentInCacheAsync(InvestmentDto investment, CancellationToken cancellationToken = default)
+        => _cache.UpsertAsync(investment, cancellationToken);
 }
