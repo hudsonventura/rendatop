@@ -150,6 +150,12 @@ public sealed record InvestmentRequestDto
     public bool AiExtracted { get; init; }
 }
 
+public sealed record ArchiveInvestmentRequestDto
+{
+    [JsonPropertyName("archived")]
+    public bool Archived { get; init; }
+}
+
 public sealed record InvestmentOption(string Label, string Value);
 
 public sealed record InvestmentIndexOption(string Label, string Value);

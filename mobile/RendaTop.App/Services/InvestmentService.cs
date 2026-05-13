@@ -39,6 +39,15 @@ public sealed class InvestmentService
     public Task UpdateInvestmentAsync(Guid investmentId, InvestmentRequestDto request, CancellationToken cancellationToken = default)
         => _apiClient.PatchAsync($"/Investments/{investmentId}", request, cancellationToken);
 
+    public Task ArchiveInvestmentAsync(Guid investmentId, bool archived = true, CancellationToken cancellationToken = default)
+        => _apiClient.PatchAsync(
+            $"/Investments/{investmentId}/archive",
+            new ArchiveInvestmentRequestDto { Archived = archived },
+            cancellationToken);
+
+    public Task DeleteInvestmentAsync(Guid investmentId, CancellationToken cancellationToken = default)
+        => _apiClient.DeleteAsync($"/Investments/{investmentId}", cancellationToken);
+
     public async Task<DashboardSummary> GetDashboardSummaryAsync(CancellationToken cancellationToken = default)
     {
         var investments = await GetInvestmentsAsync(cancellationToken);

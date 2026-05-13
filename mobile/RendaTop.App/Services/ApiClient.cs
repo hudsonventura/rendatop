@@ -110,6 +110,13 @@ public sealed class ApiClient
         await PersistSessionCookieAsync();
     }
 
+    public async Task DeleteAsync(string path, CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.DeleteAsync(NormalizeRequestPath(path), cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        await PersistSessionCookieAsync();
+    }
+
     private static string NormalizeRequestPath(string path) => path.TrimStart('/');
 
     private string? GetJwtCookieValue()

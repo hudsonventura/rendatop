@@ -6,8 +6,12 @@ namespace RendaTop.App.Pages;
 
 public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
 {
+    private const string ArchiveReinvestHint = "Voce so podera reinvestir o valor deste investimento ou arquiva-lo quando chegar a data de resgate.";
+
     private readonly InvestmentService _investmentService;
     private Guid? _investmentId;
+    private string _investmentTitle = "este investimento";
+    private InvestmentDto? _currentInvestment;
 
     public InvestmentDetailsPage(InvestmentService investmentService)
     {
@@ -21,8 +25,8 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
         });
         PageFab.RedeemCommand = new Command(async () => await ShowPendingActionAsync("Resgate"));
         PageFab.ReinvestCommand = new Command(async () => await ShowPendingActionAsync("Reinvestimento"));
-        PageFab.ArchiveCommand = new Command(async () => await ShowPendingActionAsync("Arquivamento"));
-        PageFab.DeleteCommand = new Command(async () => await ShowPendingActionAsync("Exclusao"));
+        PageFab.ArchiveCommand = new Command(async () => await ArchiveInvestmentAsync());
+        PageFab.DeleteCommand = new Command(async () => await DeleteInvestmentAsync());
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -88,6 +92,7 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
         try
         {
             var investment = await _investmentService.GetInvestmentWithCalculatedAsync(_investmentId.Value);
+            _currentInvestment = investment;
             BindInvestment(investment);
         }
         catch (ApiException ex)
@@ -114,6 +119,7 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
             : currentCalc;
 
         Title = investment.Title;
+        _investmentTitle = investment.Title;
         TitleLabel.Text = investment.Title;
         SubtitleLabel.Text = investment.DueDate.HasValue
             ? $"Acompanhe impostos, rendimentos e valor estimado para {investment.DueDate.Value:dd/MM/yyyy}."
@@ -237,6 +243,86 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
         ErrorBorder.IsVisible = false;
     }
 
+    private async Task ArchiveInvestmentAsync()
+    {
+        if (!_investmentId.HasValue)
+            return;
+
+        if (!CanArchiveCurrentInvestment())
+        {
+            await ShowArchiveUnavailableModalAsync();
+            return;
+        }
+
+        var confirmed = await DisplayAlertAsync(
+            "Arquivar investimento",
+            $"Deseja arquivar {_investmentTitle}? Ele deixara de aparecer em Meus Investimentos por padrao.",
+            "Arquivar",
+            "Cancelar");
+
+        if (!confirmed)
+            return;
+
+        SetLoading(true);
+        HideError();
+
+        try
+        {
+            await _investmentService.ArchiveInvestmentAsync(_investmentId.Value, archived: true);
+            await DisplayAlertAsync("Investimento arquivado", $"{_investmentTitle} foi arquivado com sucesso.", "OK");
+            await NavigateBackAsync();
+        }
+        catch (ApiException ex)
+        {
+            ShowError(ex.Message);
+        }
+        catch
+        {
+            ShowError("Nao foi possivel arquivar o investimento.");
+        }
+        finally
+        {
+            SetLoading(false);
+        }
+    }
+
+    private async Task DeleteInvestmentAsync()
+    {
+        if (!_investmentId.HasValue)
+            return;
+
+        var confirmed = await DisplayAlertAsync(
+            "Excluir investimento",
+            $"Deseja excluir {_investmentTitle}? Esta acao nao pode ser desfeita.",
+            "Excluir",
+            "Cancelar");
+
+        if (!confirmed)
+            return;
+
+        SetLoading(true);
+        HideError();
+
+        try
+        {
+            await _investmentService.DeleteInvestmentAsync(_investmentId.Value);
+            await DisplayAlertAsync("Investimento excluido", $"{_investmentTitle} foi excluido com sucesso.", "OK");
+            await NavigateBackAsync();
+        }
+        catch (ApiException ex)
+        {
+            ShowError(ex.Message);
+        }
+        catch
+        {
+            ShowError("Nao foi possivel excluir o investimento.");
+        }
+        finally
+        {
+            SetLoading(false);
+        }
+    }
+
     private static string FormatPercent(decimal value)
         => $"{value.ToString(value % 1 == 0 ? "N0" : "N1", new CultureInfo("pt-BR"))}%";
 
@@ -259,6 +345,23 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
             _ => investment.Index
         };
     }
+
+    private bool CanArchiveCurrentInvestment()
+    {
+        var dueDate = _currentInvestment?.DueDate;
+        if (!dueDate.HasValue)
+            return false;
+
+        var due = dueDate.Value.ToLocalTime().Date;
+        var today = DateTime.Today;
+        return due <= today;
+    }
+
+    private Task ShowArchiveUnavailableModalAsync()
+        => DisplayAlertAsync(
+            "Arquivar investimento",
+            ArchiveReinvestHint,
+            "Entendi");
 
     private static async Task NavigateBackAsync()
     {
