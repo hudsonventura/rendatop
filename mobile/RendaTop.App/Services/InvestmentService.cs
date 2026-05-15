@@ -116,6 +116,17 @@ public sealed class InvestmentService
         CancellationToken cancellationToken = default)
     {
         var investments = await GetInvestmentsAsync(forceRefresh, cancellationToken);
+        return BuildDashboardSummary(investments);
+    }
+
+    public async Task<DashboardSummary> GetCachedDashboardSummaryAsync(CancellationToken cancellationToken = default)
+    {
+        var investments = await GetCachedInvestmentsAsync(cancellationToken);
+        return BuildDashboardSummary(investments);
+    }
+
+    private static DashboardSummary BuildDashboardSummary(IReadOnlyList<InvestmentDto> investments)
+    {
         var active = investments.Where(item => !item.Archived).ToList();
         var invested = active.Sum(item => item.PrincipalForDisplay);
         var current = active.Sum(item => item.CurrentValueForDisplay);

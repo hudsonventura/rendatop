@@ -15,7 +15,6 @@ public partial class EditRedemptionPage : ContentPage, IQueryAttributable
     {
         _investmentService = investmentService;
         InitializeComponent();
-        PageFab.AddCommand = new Command(async () => await Shell.Current.GoToAsync(nameof(AddInvestmentPage)));
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)

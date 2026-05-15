@@ -40,7 +40,6 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
     {
         _investmentService = investmentService;
         InitializeComponent();
-        PageFab.AddCommand = new Command(ActivateNewInvestmentMode);
         TypePicker.ItemsSource = TypeOptions;
         TypePicker.SelectedIndex = 0;
         IndexPicker.ItemsSource = IndexOptions;

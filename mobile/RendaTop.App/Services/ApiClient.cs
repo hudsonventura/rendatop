@@ -68,6 +68,9 @@ public sealed class ApiClient
         await Task.CompletedTask;
     }
 
+    public async Task<bool> HasPersistedSessionCookieAsync()
+        => !string.IsNullOrWhiteSpace(await SafeSecureGetAsync(JwtStorageKey));
+
     public async Task<TResponse?> GetAsync<TResponse>(string path, CancellationToken cancellationToken = default)
     {
         using var response = await _http.GetAsync(NormalizeRequestPath(path), cancellationToken);
@@ -98,6 +101,22 @@ public sealed class ApiClient
         await PersistSessionCookieAsync();
     }
 
+    public async Task<TResponse?> PostMultipartAsync<TResponse>(
+        string path,
+        MultipartFormDataContent content,
+        CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, NormalizeRequestPath(path))
+        {
+            Content = content
+        };
+
+        using var response = await _http.SendAsync(request, cancellationToken);
+        var result = await ReadResponseAsync<TResponse>(response, cancellationToken);
+        await PersistSessionCookieAsync();
+        return result;
+    }
+
     public async Task PutAsync<TRequest>(string path, TRequest body, CancellationToken cancellationToken = default)
     {
         using var response = await _http.PutAsJsonAsync(NormalizeRequestPath(path), body, _jsonOptions, cancellationToken);
@@ -115,6 +134,19 @@ public sealed class ApiClient
         using var response = await _http.SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
         await PersistSessionCookieAsync();
+    }
+
+    public async Task<TResponse?> PatchAsync<TRequest, TResponse>(string path, TRequest body, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Patch, NormalizeRequestPath(path))
+        {
+            Content = JsonContent.Create(body, options: _jsonOptions)
+        };
+
+        using var response = await _http.SendAsync(request, cancellationToken);
+        var result = await ReadResponseAsync<TResponse>(response, cancellationToken);
+        await PersistSessionCookieAsync();
+        return result;
     }
 
     public async Task DeleteAsync(string path, CancellationToken cancellationToken = default)
@@ -150,14 +182,14 @@ public sealed class ApiClient
             return;
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        var message = ExtractErrorMessage(content);
+        var message = ExtractErrorMessage(content, response.StatusCode);
         throw new ApiException(message, (int)response.StatusCode);
     }
 
-    private static string ExtractErrorMessage(string content)
+    private static string ExtractErrorMessage(string content, HttpStatusCode statusCode)
     {
         if (string.IsNullOrWhiteSpace(content))
-            return "Nao foi possivel concluir a requisicao.";
+            return $"Nao foi possivel concluir a requisicao. HTTP {(int)statusCode}.";
 
         try
         {

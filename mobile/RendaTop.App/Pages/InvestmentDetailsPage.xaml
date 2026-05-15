@@ -27,6 +27,13 @@
                         <Label x:Name="SubtitleLabel" TextColor="#64748B" />
                     </VerticalStackLayout>
 
+                    <Border x:Name="OfflineBorder" BackgroundColor="#FFF7ED" Stroke="#FDBA74" Padding="12" IsVisible="False">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Label Text="Modo offline ativo. Este investimento fica disponivel apenas para leitura." TextColor="#9A3412" />
+                    </Border>
+
                     <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
 
                     <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
@@ -273,6 +280,7 @@
                                                             BorderColor="#CBD5E1"
                                                             BorderWidth="1"
                                                             TextColor="#111827"
+                                                            IsEnabled="{Binding CanWrite}"
                                                             Clicked="OnEditRedemptionClicked" />
                                                         <Button
                                                             Text="Excluir"
@@ -282,6 +290,7 @@
                                                             BorderColor="#FCA5A5"
                                                             BorderWidth="1"
                                                             TextColor="#991B1B"
+                                                            IsEnabled="{Binding CanWrite}"
                                                             Clicked="OnDeleteRedemptionClicked" />
                                                     </HorizontalStackLayout>
                                                 </Grid>

@@ -2,7 +2,6 @@
 <ContentPage
     x:Class="RendaTop.App.Pages.MyInvestmentsPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:controls="clr-namespace:RendaTop.App.Controls"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     Title="Meus Investimentos"
     BackgroundColor="#F8FAFC">
@@ -16,10 +15,20 @@
                 Margin="0,0,0,94">
                 <CollectionView.Header>
                     <VerticalStackLayout Padding="18,16,18,16" Spacing="16">
-                        <VerticalStackLayout Spacing="4">
-                            <Label Text="Meus Investimentos" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
-                            <Label x:Name="SubtitleLabel" Text="Carteira ativa" TextColor="#64748B" />
-                        </VerticalStackLayout>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Meus Investimentos" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                                <Label x:Name="SubtitleLabel" Text="Carteira ativa" TextColor="#64748B" />
+                            </VerticalStackLayout>
+                            <Button x:Name="CreateButton" Grid.Column="1" Text="Novo investimento" BackgroundColor="#111827" TextColor="White" Padding="14,10" VerticalOptions="Center" Clicked="OnCreateClicked" />
+                        </Grid>
+
+                        <Border x:Name="OfflineBorder" BackgroundColor="#FFF7ED" Stroke="#FDBA74" Padding="14" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <Label Text="Modo offline ativo. Sua carteira fica disponivel para leitura, mas novas operacoes exigem conexao." TextColor="#9A3412" />
+                        </Border>
 
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                             <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
@@ -83,6 +92,5 @@
             </CollectionView>
         </RefreshView>
 
-        <controls:FloatingActionMenu x:Name="PageFab" />
     </Grid>
 </ContentPage>

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.EditRecurringInvestmentPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Recorrencia"
+    BackgroundColor="#F8FAFC">
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="18,16,18,112" Spacing="14">
+                <!-- <Button
+                    Text="Voltar"
+                    ImageSource="icon_back_dark.svg"
+                    ContentLayout="Left,10"
+                    BackgroundColor="White"
+                    BorderColor="#CBD5E1"
+                    BorderWidth="1"
+                    TextColor="#111827"
+                    HorizontalOptions="Start"
+                    Padding="14,10"
+                    Clicked="OnBackClicked" /> -->
+
+                <Label x:Name="HeadingLabel" Text="Nova recorrencia" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                <Label x:Name="DescriptionLabel" Text="Configure quando e como o investimento sera criado automaticamente." TextColor="#64748B" />
+
+                <Border x:Name="PremiumBorder" BackgroundColor="#FFF7ED" Stroke="#FDBA74" Padding="14" IsVisible="False">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+                    <Label
+                        Text="Investimentos recorrentes exigem um plano pago ativo. Se voce ja tinha recorrencias cadastradas, elas continuam visiveis aqui, mas a geracao automatica fica pausada sem um plano elegivel."
+                        TextColor="#9A3412" />
+                </Border>
+
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="14">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Titulo" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="TitleEntry" Placeholder="Ex.: Aporte semanal CDI" TextColor="#111827" PlaceholderColor="#64748B" />
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Banco" FontAttributes="Bold" TextColor="#334155" />
+                                <Picker x:Name="BankPicker" ItemDisplayBinding="{Binding DisplayName}" TextColor="#111827" Title="Selecione o banco" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Tipo" FontAttributes="Bold" TextColor="#334155" />
+                                <Picker x:Name="TypePicker" ItemDisplayBinding="{Binding Label}" TextColor="#111827" Title="Opcional" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Frequencia" FontAttributes="Bold" TextColor="#334155" />
+                                <Picker x:Name="FrequencyPicker" ItemDisplayBinding="{Binding Label}" TextColor="#111827" SelectedIndexChanged="OnFrequencyChanged" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Valor do investimento" FontAttributes="Bold" TextColor="#334155" />
+                                <Entry x:Name="ValueEntry" Keyboard="Numeric" Placeholder="1000,00" TextColor="#111827" PlaceholderColor="#64748B" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Indexador" FontAttributes="Bold" TextColor="#334155" />
+                                <Picker x:Name="IndexPicker" ItemDisplayBinding="{Binding Label}" TextColor="#111827" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Valor do indexador" FontAttributes="Bold" TextColor="#334155" />
+                                <Entry x:Name="IndexPercentEntry" Keyboard="Numeric" Placeholder="Ex.: 110 ou 13,5" TextColor="#111827" PlaceholderColor="#64748B" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="Liquidez diaria" FontAttributes="Bold" TextColor="#334155" />
+                                <Label Text="Sem vencimento definido" FontSize="12" TextColor="#64748B" />
+                            </VerticalStackLayout>
+                            <Switch x:Name="DailyLiquiditySwitch" Grid.Column="1" Toggled="OnDailyLiquidityToggled" />
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Duracao em dias" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="DurationDaysEntry" Keyboard="Numeric" Placeholder="Ex.: 365" TextColor="#111827" PlaceholderColor="#64748B" />
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="Possui impostos" FontAttributes="Bold" TextColor="#334155" />
+                                <Label Text="Desative para recorrencias isentas" FontSize="12" TextColor="#64748B" />
+                            </VerticalStackLayout>
+                            <Switch x:Name="TaxesSwitch" Grid.Column="1" IsToggled="True" />
+                        </Grid>
+
+                        <Border x:Name="WeeklyBorder" BackgroundColor="#F8FAFC" Stroke="#E2E8F0" Padding="12">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="Dias da semana" FontAttributes="Bold" TextColor="#111827" />
+                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                    <CheckBox x:Name="SundayCheck" />
+                                    <Label Grid.Column="1" Text="Domingo" VerticalTextAlignment="Center" TextColor="#111827" />
+                                    <CheckBox x:Name="MondayCheck" Grid.Row="1" />
+                                    <Label Grid.Row="1" Grid.Column="1" Text="Segunda-feira" VerticalTextAlignment="Center" TextColor="#111827" />
+                                    <CheckBox x:Name="TuesdayCheck" Grid.Row="2" />
+                                    <Label Grid.Row="2" Grid.Column="1" Text="Terca-feira" VerticalTextAlignment="Center" TextColor="#111827" />
+                                    <CheckBox x:Name="WednesdayCheck" Grid.Row="3" />
+                                    <Label Grid.Row="3" Grid.Column="1" Text="Quarta-feira" VerticalTextAlignment="Center" TextColor="#111827" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                    <CheckBox x:Name="ThursdayCheck" />
+                                    <Label Grid.Column="1" Text="Quinta-feira" VerticalTextAlignment="Center" TextColor="#111827" />
+                                    <CheckBox x:Name="FridayCheck" Grid.Row="1" />
+                                    <Label Grid.Row="1" Grid.Column="1" Text="Sexta-feira" VerticalTextAlignment="Center" TextColor="#111827" />
+                                    <CheckBox x:Name="SaturdayCheck" Grid.Row="2" />
+                                    <Label Grid.Row="2" Grid.Column="1" Text="Sabado" VerticalTextAlignment="Center" TextColor="#111827" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Border x:Name="MonthlyBorder" BackgroundColor="#F8FAFC" Stroke="#E2E8F0" Padding="12" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="12">
+                                <VerticalStackLayout Spacing="6">
+                                    <Label Text="Dia do mes" FontAttributes="Bold" TextColor="#111827" />
+                                    <Entry x:Name="DayOfMonthEntry" Keyboard="Numeric" Placeholder="1 a 31" TextColor="#111827" PlaceholderColor="#64748B" />
+                                </VerticalStackLayout>
+
+                                <Label Text="Meses da recorrencia" FontAttributes="Bold" TextColor="#111827" />
+                                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                    <CheckBox x:Name="JanuaryCheck" />
+                                    <Label Grid.Column="1" Text="Jan" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="FebruaryCheck" Grid.Row="1" />
+                                    <Label Grid.Row="1" Grid.Column="1" Text="Fev" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="MarchCheck" Grid.Row="2" />
+                                    <Label Grid.Row="2" Grid.Column="1" Text="Mar" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="AprilCheck" Grid.Row="3" />
+                                    <Label Grid.Row="3" Grid.Column="1" Text="Abr" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="MayCheck" Grid.Row="4" />
+                                    <Label Grid.Row="4" Grid.Column="1" Text="Mai" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="JuneCheck" Grid.Row="5" />
+                                    <Label Grid.Row="5" Grid.Column="1" Text="Jun" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="JulyCheck" Grid.Row="6" />
+                                    <Label Grid.Row="6" Grid.Column="1" Text="Jul" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="AugustCheck" Grid.Row="7" />
+                                    <Label Grid.Row="7" Grid.Column="1" Text="Ago" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="SeptemberCheck" Grid.Row="8" />
+                                    <Label Grid.Row="8" Grid.Column="1" Text="Set" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="OctoberCheck" Grid.Row="9" />
+                                    <Label Grid.Row="9" Grid.Column="1" Text="Out" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="NovemberCheck" Grid.Row="10" />
+                                    <Label Grid.Row="10" Grid.Column="1" Text="Nov" VerticalTextAlignment="Center" TextColor="#111827" />
+
+                                    <CheckBox x:Name="DecemberCheck" Grid.Row="11" />
+                                    <Label Grid.Row="11" Grid.Column="1" Text="Dez" VerticalTextAlignment="Center" TextColor="#111827" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="Recorrencia ativa" FontAttributes="Bold" TextColor="#334155" />
+                                <Label Text="Quando ativa, o servico diario podera gerar o investimento automaticamente." FontSize="12" TextColor="#64748B" />
+                            </VerticalStackLayout>
+                            <Switch x:Name="ActiveSwitch" Grid.Column="1" IsToggled="True" />
+                        </Grid>
+
+                        <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                            <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                        </Border>
+
+                        <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+
+                        <Button
+                            x:Name="SaveButton"
+                            Text="Criar recorrencia"
+                            BackgroundColor="#111827"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            HeightRequest="50"
+                            Clicked="OnSaveClicked" />
+
+                        <Button
+                            Text="Cancelar"
+                            BackgroundColor="White"
+                            BorderColor="#CBD5E1"
+                            BorderWidth="1"
+                            TextColor="#111827"
+                            HeightRequest="48"
+                            Clicked="OnCancelClicked" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+
+    </Grid>
+</ContentPage>

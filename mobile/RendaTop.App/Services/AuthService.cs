@@ -7,12 +7,16 @@ public sealed class AuthService
     private readonly ApiClient _apiClient;
     private readonly SessionService _session;
     private readonly InvestmentCacheService _investmentCache;
+    private readonly NotificationService _notifications;
+    private readonly LocalSnapshotStore _snapshots;
 
-    public AuthService(ApiClient apiClient, SessionService session, InvestmentCacheService investmentCache)
+    public AuthService(ApiClient apiClient, SessionService session, InvestmentCacheService investmentCache, NotificationService notifications, LocalSnapshotStore snapshots)
     {
         _apiClient = apiClient;
         _session = session;
         _investmentCache = investmentCache;
+        _notifications = notifications;
+        _snapshots = snapshots;
     }
 
     public Uri GoogleLoginUri => _apiClient.BuildUri("/auth/google/login");
@@ -30,6 +34,8 @@ public sealed class AuthService
         if (!response.RequiresTotp)
         {
             await _investmentCache.ClearAsync();
+            await _snapshots.ClearAsync();
+            _notifications.Clear();
             await _session.SaveLoginAsync(response);
         }
 
@@ -46,6 +52,8 @@ public sealed class AuthService
             throw new ApiException("Resposta de TOTP invalida.", 500);
 
         await _investmentCache.ClearAsync();
+        await _snapshots.ClearAsync();
+        _notifications.Clear();
         await _session.SaveLoginAsync(response);
     }
 
@@ -68,6 +76,8 @@ public sealed class AuthService
             throw new ApiException("Resposta de verificacao invalida.", 500);
 
         await _investmentCache.ClearAsync();
+        await _snapshots.ClearAsync();
+        _notifications.Clear();
         await _session.SaveLoginAsync(response);
     }
 
@@ -89,6 +99,8 @@ public sealed class AuthService
         finally
         {
             await _investmentCache.ClearAsync();
+            await _snapshots.ClearAsync();
+            _notifications.Clear();
             await _session.ClearAsync();
         }
     }

@@ -2,7 +2,6 @@
 <ContentPage
     x:Class="RendaTop.App.Pages.EditRedemptionPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:controls="clr-namespace:RendaTop.App.Controls"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     Title="Editar resgate"
     BackgroundColor="#F8FAFC">
@@ -76,6 +75,5 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <controls:FloatingActionMenu x:Name="PageFab" />
     </Grid>
 </ContentPage>

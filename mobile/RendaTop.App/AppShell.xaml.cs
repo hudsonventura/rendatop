@@ -22,21 +22,35 @@ public partial class AppShell : Shell
 		Items.Add(CreateShellContent<Pages.InvestmentDetailsPage>("investment-details", "Detalhes do Investimento", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.RedeemInvestmentPage>("redeem-investment", "Criar Resgate", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.EditRedemptionPage>("edit-redemption", "Editar Resgate", showInFlyout: false));
+		Items.Add(CreateShellContent<Pages.EditRecurringInvestmentPage>("edit-recurring-investment", "Recorrencia", showInFlyout: false));
+		Items.Add(CreateShellContent<Pages.EditMoneyBoxPage>("edit-money-box", "Cofrinho", showInFlyout: false));
+		Items.Add(CreateShellContent<Pages.CalendarDayEventsPage>("calendar-day-events", "Eventos do Dia", showInFlyout: false));
+		Items.Add(CreateShellContent<Pages.CalendarEventDetailsPage>("calendar-event-details", "Detalhes do Evento", showInFlyout: false));
+		Items.Add(CreateShellContent<Pages.SubscriptionCheckoutPage>("subscription-checkout", "Pagamento", showInFlyout: false));
+		Items.Add(CreateShellContent<Pages.CreateSupportTicketPage>("create-support-ticket", "Novo Chamado", showInFlyout: false));
+		Items.Add(CreateShellContent<Pages.SupportTicketDetailsPage>("support-ticket-details", "Detalhes do Chamado", showInFlyout: false));
 		Items.Add(CreateFlyoutItem<Pages.DashboardPage>("dashboard", "Dashboard"));
+		Items.Add(CreateFlyoutItem<Pages.CalendarPage>("calendar", "Calendario"));
 		Items.Add(CreateFlyoutItem<Pages.MyInvestmentsPage>("meus-investimentos", "Meus Investimentos"));
-		Items.Add(CreateFutureFlyoutItem("investimentos-recorrentes", "Investimentos Recorrentes", "Automacoes de aportes conforme permissao do plano."));
-		Items.Add(CreateFutureFlyoutItem("cofrinhos", "Cofrinhos", "Organizacao da carteira por objetivos."));
-		Items.Add(CreateFutureFlyoutItem("calendar", "Calendario", "Vencimentos e compartilhamento ICS conforme plano."));
-		Items.Add(CreateFutureFlyoutItem("notifications", "Notificacoes", "Central de alertas e preferencias."));
-		Items.Add(CreateFutureFlyoutItem("settings", "Configuracoes", "Dados da conta, seguranca e canais de aviso."));
-		Items.Add(CreateFutureFlyoutItem("subscription", "Assinatura", "Planos Free, Plus e Pro."));
-		Items.Add(CreateFutureFlyoutItem("atendimento", "Atendimento", "Chamados e mensagens de suporte."));
+		Items.Add(CreateFlyoutItem<Pages.NotificationsPage>("notifications", "Notificacoes"));
+		Items.Add(CreateFlyoutItem<Pages.RecurringInvestmentsPage>("investimentos-recorrentes", "Investimentos Recorrentes"));
+		Items.Add(CreateFlyoutItem<Pages.MoneyBoxesPage>("cofrinhos", "Cofrinhos"));
+		Items.Add(CreateFlyoutItem<Pages.SettingsPage>("settings", "Configuracoes"));
+		Items.Add(CreateFlyoutItem<Pages.SubscriptionPage>("subscription", "Assinatura"));
+		Items.Add(CreateFlyoutItem<Pages.SupportPage>("atendimento", "Atendimento"));
 
 		Routing.RegisterRoute(nameof(Pages.SignupVerificationPage), typeof(Pages.SignupVerificationPage));
 		Routing.RegisterRoute(nameof(Pages.AddInvestmentPage), typeof(Pages.AddInvestmentPage));
 		Routing.RegisterRoute(nameof(Pages.InvestmentDetailsPage), typeof(Pages.InvestmentDetailsPage));
 		Routing.RegisterRoute(nameof(Pages.RedeemInvestmentPage), typeof(Pages.RedeemInvestmentPage));
 		Routing.RegisterRoute(nameof(Pages.EditRedemptionPage), typeof(Pages.EditRedemptionPage));
+		Routing.RegisterRoute(nameof(Pages.EditRecurringInvestmentPage), typeof(Pages.EditRecurringInvestmentPage));
+		Routing.RegisterRoute(nameof(Pages.EditMoneyBoxPage), typeof(Pages.EditMoneyBoxPage));
+		Routing.RegisterRoute(nameof(Pages.CalendarDayEventsPage), typeof(Pages.CalendarDayEventsPage));
+		Routing.RegisterRoute(nameof(Pages.CalendarEventDetailsPage), typeof(Pages.CalendarEventDetailsPage));
+		Routing.RegisterRoute(nameof(Pages.SubscriptionCheckoutPage), typeof(Pages.SubscriptionCheckoutPage));
+		Routing.RegisterRoute(nameof(Pages.CreateSupportTicketPage), typeof(Pages.CreateSupportTicketPage));
+		Routing.RegisterRoute(nameof(Pages.SupportTicketDetailsPage), typeof(Pages.SupportTicketDetailsPage));
 	}
 
 	private ShellContent CreateShellContent<TPage>(string route, string title, bool showInFlyout)

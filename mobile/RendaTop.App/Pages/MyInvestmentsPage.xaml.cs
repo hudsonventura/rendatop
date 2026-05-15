@@ -1,3 +1,4 @@
+using RendaTop.App.Controls;
 using RendaTop.App.Models;
 using RendaTop.App.Services;
 
@@ -6,18 +7,22 @@ namespace RendaTop.App.Pages;
 public partial class MyInvestmentsPage : ContentPage
 {
     private readonly InvestmentService _investmentService;
+    private readonly ConnectivityService _connectivity;
+    private readonly NotificationTitleView _titleView;
     private CancellationTokenSource? _loadCts;
 
-    public MyInvestmentsPage(InvestmentService investmentService)
+    public MyInvestmentsPage(InvestmentService investmentService, ConnectivityService connectivity, NotificationService notifications)
     {
         _investmentService = investmentService;
+        _connectivity = connectivity;
         InitializeComponent();
-        PageFab.AddCommand = new Command(async () => await Shell.Current.GoToAsync(nameof(AddInvestmentPage)));
+        _titleView = NotificationChrome.Apply(this, "Meus Investimentos", notifications);
     }
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        _ = _titleView.RefreshAsync();
         _loadCts?.Cancel();
         _loadCts = new CancellationTokenSource();
         _ = LoadInitialStateAsync(_loadCts.Token);
@@ -35,22 +40,27 @@ public partial class MyInvestmentsPage : ContentPage
     private async void OnRetryClicked(object? sender, EventArgs e)
         => await RefreshFromBackendAsync(showLoading: true);
 
+    private async void OnCreateClicked(object? sender, EventArgs e)
+        => await Shell.Current.GoToAsync(nameof(AddInvestmentPage));
+
     private async Task LoadInitialStateAsync(CancellationToken cancellationToken)
     {
         HideError();
 
         try
         {
+            OfflineBorder.IsVisible = _connectivity.IsOffline;
+            CreateButton.IsEnabled = !_connectivity.IsOffline;
             var cached = await _investmentService.GetCachedInvestmentsAsync(cancellationToken);
             ApplyInvestments(cached);
 
-            if (cached.Count == 0)
+            if (cached.Count == 0 && !_connectivity.IsOffline)
             {
                 await RefreshFromBackendAsync(showLoading: true, cancellationToken);
                 return;
             }
 
-            if (_investmentService.ShouldRefreshInBackground(cached))
+            if (!_connectivity.IsOffline && _investmentService.ShouldRefreshInBackground(cached))
                 _ = RefreshInBackgroundAsync(cancellationToken);
         }
         catch (ApiException ex)
@@ -72,6 +82,12 @@ public partial class MyInvestmentsPage : ContentPage
 
         try
         {
+            if (_connectivity.IsOffline)
+            {
+                ApplyInvestments(await _investmentService.GetCachedInvestmentsAsync(cancellationToken));
+                return;
+            }
+
             await _investmentService.RefreshInvestmentsCacheAsync(cancellationToken);
             var fresh = await _investmentService.GetCachedInvestmentsAsync(cancellationToken);
             ApplyInvestments(fresh);

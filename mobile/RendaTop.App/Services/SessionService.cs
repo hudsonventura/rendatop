@@ -9,10 +9,12 @@ public sealed class SessionService
     private const string UserTypeKey = "rendatop.user.type";
 
     private readonly ApiClient _apiClient;
+    private readonly ConnectivityService _connectivity;
 
-    public SessionService(ApiClient apiClient)
+    public SessionService(ApiClient apiClient, ConnectivityService connectivity)
     {
         _apiClient = apiClient;
+        _connectivity = connectivity;
     }
 
     public string Name => Preferences.Default.Get(NameKey, string.Empty);
@@ -23,17 +25,30 @@ public sealed class SessionService
 
     public async Task<bool> IsAuthenticatedAsync()
     {
+        if (_connectivity.IsOffline)
+            return await HasOfflineSessionAsync();
+
         try
         {
             await _apiClient.GetAsync("/Authenticated");
             return true;
         }
-        catch
+        catch (ApiException ex) when (ex.StatusCode is 401 or 403)
         {
             await ClearAsync();
             return false;
         }
+        catch
+        {
+            return await HasOfflineSessionAsync();
+        }
     }
+
+    public async Task<bool> HasOfflineSessionAsync()
+        => !string.IsNullOrWhiteSpace(Name)
+           && !string.IsNullOrWhiteSpace(Email)
+           && !string.IsNullOrWhiteSpace(UserType)
+           && await _apiClient.HasPersistedSessionCookieAsync();
 
     public async Task SaveLoginAsync(LoginStartResponse login)
     {
@@ -45,6 +60,12 @@ public sealed class SessionService
     {
         SaveUser(login.Name, login.Email, login.UserType);
         await _apiClient.PersistSessionCookieAsync();
+    }
+
+    public Task UpdateProfileAsync(string? name, string? email, string? userType)
+    {
+        SaveUser(name, email, userType);
+        return Task.CompletedTask;
     }
 
     public async Task ClearAsync()

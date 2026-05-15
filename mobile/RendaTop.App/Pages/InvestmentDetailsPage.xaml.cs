@@ -9,13 +9,15 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
     private const string ArchiveReinvestHint = "Voce so podera reinvestir o valor deste investimento ou arquiva-lo quando chegar a data de resgate.";
 
     private readonly InvestmentService _investmentService;
+    private readonly ConnectivityService _connectivity;
     private Guid? _investmentId;
     private string _investmentTitle = "este investimento";
     private InvestmentDto? _currentInvestment;
 
-    public InvestmentDetailsPage(InvestmentService investmentService)
+    public InvestmentDetailsPage(InvestmentService investmentService, ConnectivityService connectivity)
     {
         _investmentService = investmentService;
+        _connectivity = connectivity;
         InitializeComponent();
         PageFab.AddCommand = new Command(async () => await Shell.Current.GoToAsync(nameof(AddInvestmentPage)));
         PageFab.EditCommand = new Command(async () =>
@@ -138,6 +140,8 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
 
         try
         {
+            OfflineBorder.IsVisible = _connectivity.IsOffline;
+            PageFab.IsVisible = !_connectivity.IsOffline;
             var investment = await _investmentService.GetInvestmentWithCalculatedAsync(_investmentId.Value);
             _currentInvestment = investment;
             BindInvestment(investment);
@@ -240,7 +244,7 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
     {
         var redemptions = (investment.Redemptions ?? [])
             .OrderByDescending(item => item.Date)
-            .Select(RedemptionRow.FromDto)
+            .Select(item => RedemptionRow.FromDto(item, !_connectivity.IsOffline))
             .ToList();
 
         RedemptionsCollection.ItemsSource = redemptions;
@@ -470,15 +474,16 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
         await shell.GoToAsync("//meus-investimentos");
     }
 
-    private sealed record RedemptionRow(Guid Id, string Title, decimal Amount, string DateLabel, string AmountLabel)
+    private sealed record RedemptionRow(Guid Id, string Title, decimal Amount, string DateLabel, string AmountLabel, bool CanWrite)
     {
-        public static RedemptionRow FromDto(RedemptionDto redemption) =>
+        public static RedemptionRow FromDto(RedemptionDto redemption, bool canWrite) =>
             new(
                 redemption.Id,
                 redemption.Title,
                 redemption.Value,
                 redemption.Date.ToLocalTime().ToString("dd/MM/yyyy"),
-                MoneyFormatter.Currency(redemption.Value));
+                MoneyFormatter.Currency(redemption.Value),
+                canWrite);
     }
 
 }

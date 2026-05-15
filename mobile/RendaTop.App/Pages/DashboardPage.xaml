@@ -2,7 +2,7 @@
 <ContentPage
     x:Class="RendaTop.App.Pages.DashboardPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:controls="clr-namespace:RendaTop.App.Controls"
+    xmlns:micro="clr-namespace:Microcharts.Maui;assembly=Microcharts.Maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     Title="Dashboard"
     BackgroundColor="#F8FAFC">
@@ -65,13 +65,17 @@
                         <Label Text="Distribuicao por banco" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
                         <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
                         <Label x:Name="BankEmptyLabel" Text="Nenhum investimento ativo para distribuir." TextColor="#64748B" IsVisible="False" />
-                        <controls:BankAllocationDonutChart x:Name="BankChart" />
+                        <micro:ChartView x:Name="BankChart" HeightRequest="300" Margin="0,4,0,8" />
                         <CollectionView x:Name="BankCollection" SelectionMode="None">
                             <CollectionView.ItemTemplate>
                                 <DataTemplate>
                                     <VerticalStackLayout Spacing="7" Padding="0,5">
                                         <Grid ColumnDefinitions="12,*,Auto" ColumnSpacing="8">
-                                            <BoxView Grid.Column="0" Color="{Binding DisplayColor}" WidthRequest="10" HeightRequest="10" CornerRadius="5" VerticalOptions="Center" />
+                                            <Border Grid.Column="0" BackgroundColor="{Binding DisplayColor}" StrokeThickness="0" WidthRequest="10" HeightRequest="10" VerticalOptions="Center">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="5" />
+                                                </Border.StrokeShape>
+                                            </Border>
                                             <Label Grid.Column="1" Text="{Binding BankName}" FontAttributes="Bold" TextColor="#111827" />
                                             <Label Grid.Column="2" Text="{Binding PercentText}" TextColor="#64748B" />
                                         </Grid>
@@ -129,6 +133,5 @@
             </ScrollView>
         </RefreshView>
 
-        <controls:FloatingActionMenu x:Name="PageFab" />
     </Grid>
 </ContentPage>
