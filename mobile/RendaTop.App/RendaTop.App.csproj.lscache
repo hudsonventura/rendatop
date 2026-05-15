@@ -63,12 +63,14 @@ Controls/
  NotificationTitleView.cs
 MauiProgram.cs
 Models/
+ AppPlatformModels.cs
  AuthModels.cs
  CalendarModels.cs
  InvestmentModels.cs
  MoneyBoxModels.cs
  NotificationModels.cs
  RecurringInvestmentModels.cs
+ StoreBillingModels.cs
  SubscriptionModels.cs
  SupportTicketModels.cs
  UserSettingsModels.cs
@@ -99,6 +101,7 @@ Pages/
  SignupPage.xaml.cs
  SignupVerificationPage.xaml.cs
  SplashPage.xaml.cs
+ StoreSubscriptionCheckoutPage.xaml.cs
  SubscriptionCheckoutPage.xaml.cs
  SubscriptionPage.xaml.cs
  SupportPage.xaml.cs
@@ -110,6 +113,7 @@ Services/
  ApiClient.cs
  ApiException.cs
  AppConfig.cs
+ AppPlatformService.cs
  AuthService.cs
  CalendarService.cs
  ConnectivityService.cs
@@ -121,6 +125,7 @@ Services/
  PasswordPolicy.cs
  RecurringInvestmentService.cs
  SessionService.cs
+ StoreBillingService.cs
  SubscriptionService.cs
  SupportTicketService.cs
  UserSettingsService.cs
@@ -468,6 +473,7 @@ Pages/
  SignupPage.xaml
  SignupVerificationPage.xaml
  SplashPage.xaml
+ StoreSubscriptionCheckoutPage.xaml
  SubscriptionCheckoutPage.xaml
  SubscriptionPage.xaml
  SupportPage.xaml

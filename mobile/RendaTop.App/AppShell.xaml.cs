@@ -27,6 +27,7 @@ public partial class AppShell : Shell
 		Items.Add(CreateShellContent<Pages.CalendarDayEventsPage>("calendar-day-events", "Eventos do Dia", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.CalendarEventDetailsPage>("calendar-event-details", "Detalhes do Evento", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.SubscriptionCheckoutPage>("subscription-checkout", "Pagamento", showInFlyout: false));
+		Items.Add(CreateShellContent<Pages.StoreSubscriptionCheckoutPage>("store-subscription-checkout", "Pagamento na Loja", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.CreateSupportTicketPage>("create-support-ticket", "Novo Chamado", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.SupportTicketDetailsPage>("support-ticket-details", "Detalhes do Chamado", showInFlyout: false));
 		Items.Add(CreateFlyoutItem<Pages.DashboardPage>("dashboard", "Dashboard"));
@@ -49,6 +50,7 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute(nameof(Pages.CalendarDayEventsPage), typeof(Pages.CalendarDayEventsPage));
 		Routing.RegisterRoute(nameof(Pages.CalendarEventDetailsPage), typeof(Pages.CalendarEventDetailsPage));
 		Routing.RegisterRoute(nameof(Pages.SubscriptionCheckoutPage), typeof(Pages.SubscriptionCheckoutPage));
+		Routing.RegisterRoute(nameof(Pages.StoreSubscriptionCheckoutPage), typeof(Pages.StoreSubscriptionCheckoutPage));
 		Routing.RegisterRoute(nameof(Pages.CreateSupportTicketPage), typeof(Pages.CreateSupportTicketPage));
 		Routing.RegisterRoute(nameof(Pages.SupportTicketDetailsPage), typeof(Pages.SupportTicketDetailsPage));
 	}
