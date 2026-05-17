@@ -21,6 +21,7 @@ public class LoginController : ControllerBase
     private const int EmailVerificationPeriodSeconds = 300;
     private const int EmailVerificationAllowedDriftSteps = 1;
     private static readonly TimeSpan EmailVerificationResendInterval = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan MobileSsoHandoffLifetime = TimeSpan.FromMinutes(5);
 
     private readonly Context _context;
     private readonly IDatabase _redis;
@@ -404,7 +405,7 @@ Se você não solicitou essa alteração, ignore este email.";
     /// </summary>
     [HttpGet("auth/google/login")]
     [AllowAnonymous]
-    public IActionResult GoogleLogin()
+    public IActionResult GoogleLogin([FromQuery] string? client = null)
     {
         var googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
         if (string.IsNullOrWhiteSpace(googleClientId))
@@ -413,6 +414,7 @@ Se você não solicitou essa alteração, ignore este email.";
         var redirectUri = GetGoogleRedirectUri();
         var state = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
         SetOAuthStateCookie("oauth_google_state", state);
+        SetOAuthClientCookie(client);
 
         var googleAuthUrl =
             "https://accounts.google.com/o/oauth2/v2/auth" +
@@ -434,34 +436,81 @@ Se você não solicitou essa alteração, ignore este email.";
     [AllowAnonymous]
     public async Task<IActionResult> GoogleCallback([FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error)
     {
+        var oauthClient = ReadAndClearOAuthClientCookie();
+
         try
         {
             if (!string.IsNullOrWhiteSpace(error))
-                return Redirect(BuildFrontLoginRedirect("google_error", "Autenticação Google cancelada ou recusada."));
+                return Redirect(BuildSsoRedirect(oauthClient, "google_error", "Autenticacao Google cancelada ou recusada."));
 
             if (string.IsNullOrWhiteSpace(code))
-                return Redirect(BuildFrontLoginRedirect("google_error", "Código de autenticação Google ausente."));
+                return Redirect(BuildSsoRedirect(oauthClient, "google_error", "Codigo de autenticacao Google ausente."));
 
             ValidateOAuthState("oauth_google_state", state);
 
             var googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
             var googleClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
             if (string.IsNullOrWhiteSpace(googleClientId) || string.IsNullOrWhiteSpace(googleClientSecret))
-                return Redirect(BuildFrontLoginRedirect("google_error", "Configuração do Google SSO incompleta no servidor."));
+                return Redirect(BuildSsoRedirect(oauthClient, "google_error", "Configuracao do Google SSO incompleta no servidor."));
 
             var redirectUri = GetGoogleRedirectUri();
             var userInfo = await GetGoogleUserInfo(code, googleClientId, googleClientSecret, redirectUri);
 
             if (!userInfo.EmailVerified || string.IsNullOrWhiteSpace(userInfo.Email))
-                return Redirect(BuildFrontLoginRedirect("google_error", "Conta Google sem email verificado."));
+                return Redirect(BuildSsoRedirect(oauthClient, "google_error", "Conta Google sem email verificado."));
 
-            var login = EnsureUserAndCreateSession(userInfo.Email, userInfo.Name, AuthProvider.Google);
+            var user = EnsureUserForSocialLogin(userInfo.Email, userInfo.Name, AuthProvider.Google);
+
+            if (IsMobileOAuthClient(oauthClient))
+            {
+                var handoffToken = CreateMobileSsoHandoff(user);
+                return Redirect(BuildMobileLoginRedirect("success", handoffToken: handoffToken));
+            }
+
+            var login = SetSession(user);
             return Redirect(BuildFrontLoginRedirect("google_success", null, login));
         }
         catch (Exception ex)
         {
-            return Redirect(BuildFrontLoginRedirect("google_error", ex.Message));
+            return Redirect(BuildSsoRedirect(oauthClient, "google_error", ex.Message));
         }
+    }
+
+    [HttpPost("auth/mobile/session")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public IActionResult CreateMobileSession([FromBody] MobileSessionExchangeRequest request)
+    {
+        var handoffToken = request.handoff_token?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(handoffToken))
+            throw new ExpectedException("Token de handoff ausente.", HttpStatusCode.BadRequest);
+
+        var redisKey = GetMobileSsoHandoffKey(handoffToken);
+        var handoffJson = _redis.StringGet(redisKey);
+        if (handoffJson.IsNullOrEmpty)
+            throw new ExpectedException("Login social expirado. Tente novamente.", HttpStatusCode.Unauthorized);
+
+        _redis.KeyDelete(redisKey);
+
+        MobileSsoHandoffPayload? payload;
+        try
+        {
+            payload = JsonSerializer.Deserialize<MobileSsoHandoffPayload>(handoffJson.ToString());
+        }
+        catch
+        {
+            throw new ExpectedException("Token de handoff invalido.", HttpStatusCode.Unauthorized);
+        }
+
+        if (payload is null)
+            throw new ExpectedException("Token de handoff invalido.", HttpStatusCode.Unauthorized);
+
+        var user = _context.users.FirstOrDefault(x => x.id == payload.UserId)
+            ?? throw new ExpectedException("Usuario autenticado nao encontrado.", HttpStatusCode.Unauthorized);
+
+        return CreateSession(user);
     }
 
     /// <summary>
@@ -524,7 +573,8 @@ Se você não solicitou essa alteração, ignore este email.";
             if (string.IsNullOrWhiteSpace(userInfo.Email))
                 return Redirect(BuildFrontLoginRedirect("microsoft_error", "Não foi possível identificar o email da conta Microsoft."));
 
-            var login = EnsureUserAndCreateSession(userInfo.Email, userInfo.Name, AuthProvider.Microsoft);
+            var user = EnsureUserForSocialLogin(userInfo.Email, userInfo.Name, AuthProvider.Microsoft);
+            var login = SetSession(user);
             return Redirect(BuildFrontLoginRedirect("microsoft_success", null, login));
         }
         catch (Exception ex)
@@ -537,7 +587,7 @@ Se você não solicitou essa alteração, ignore este email.";
 
     private static string GetTotpChallengeKey(string challengeId) => $"login:totp:challenge:{challengeId}";
 
-    private LoginResponse EnsureUserAndCreateSession(string emailInput, string? nameInput, AuthProvider authProvider)
+    private User EnsureUserForSocialLogin(string emailInput, string? nameInput, AuthProvider authProvider)
     {
         var email = emailInput.Trim().ToLowerInvariant();
         var name = string.IsNullOrWhiteSpace(nameInput) ? email : nameInput.Trim();
@@ -580,7 +630,7 @@ Se você não solicitou essa alteração, ignore este email.";
                 _context.SaveChanges();
         }
 
-        return SetSession(user);
+        return user;
     }
 
     private LoginResponse SetSession(User user)
@@ -622,6 +672,21 @@ Se você não solicitou essa alteração, ignore este email.";
         });
     }
 
+    private void SetOAuthClientCookie(string? client)
+    {
+        if (string.IsNullOrWhiteSpace(client))
+            return;
+
+        Response.Cookies.Append("oauth_client", client.Trim(), new CookieOptions
+        {
+            HttpOnly = true,
+            SameSite = SameSiteMode.Lax,
+            Secure = IsSecureCookie(),
+            Expires = DateTimeOffset.UtcNow.AddMinutes(10),
+            Path = "/"
+        });
+    }
+
     private void ValidateOAuthState(string cookieName, string? stateFromQuery)
     {
         var stateFromCookie = Request.Cookies[cookieName];
@@ -629,6 +694,13 @@ Se você não solicitou essa alteração, ignore este email.";
 
         if (string.IsNullOrWhiteSpace(stateFromCookie) || stateFromCookie != stateFromQuery)
             throw new ExpectedException("Falha de validação do estado OAuth.");
+    }
+
+    private string? ReadAndClearOAuthClientCookie()
+    {
+        var client = Request.Cookies["oauth_client"];
+        Response.Cookies.Delete("oauth_client", new CookieOptions { Path = "/" });
+        return string.IsNullOrWhiteSpace(client) ? null : client.Trim();
     }
 
     private string GetGoogleRedirectUri()
@@ -808,6 +880,51 @@ Se você não solicitou essa alteração, ignore este email.";
         return $"{baseUrl}?{string.Join("&", parameters)}";
     }
 
+    private string BuildSsoRedirect(string? oauthClient, string status, string? message = null, LoginResponse? login = null)
+        => IsMobileOAuthClient(oauthClient)
+            ? BuildMobileLoginRedirect(status, message)
+            : BuildFrontLoginRedirect(status, message, login);
+
+    private string BuildMobileLoginRedirect(string status, string? message = null, string? handoffToken = null)
+    {
+        var redirectUri = GetMobileRedirectUri();
+        var query = new List<string> { $"status={Uri.EscapeDataString(status)}" };
+
+        if (!string.IsNullOrWhiteSpace(message))
+            query.Add($"message={Uri.EscapeDataString(message)}");
+
+        if (!string.IsNullOrWhiteSpace(handoffToken))
+            query.Add($"handoff_token={Uri.EscapeDataString(handoffToken)}");
+
+        var separator = redirectUri.Contains('?', StringComparison.Ordinal) ? "&" : "?";
+        return $"{redirectUri}{separator}{string.Join("&", query)}";
+    }
+
+    private static bool IsMobileOAuthClient(string? oauthClient)
+        => string.Equals(oauthClient, "mobile", StringComparison.OrdinalIgnoreCase);
+
+    private string CreateMobileSsoHandoff(User user)
+    {
+        var handoffToken = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
+        var payload = new MobileSsoHandoffPayload(user.id);
+        _redis.StringSet(GetMobileSsoHandoffKey(handoffToken), JsonSerializer.Serialize(payload), MobileSsoHandoffLifetime);
+        return handoffToken;
+    }
+
+    private string GetMobileRedirectUri()
+    {
+        var configured = Environment.GetEnvironmentVariable("GOOGLE_MOBILE_REDIRECT_URI")
+            ?? Environment.GetEnvironmentVariable("SSO_MOBILE_REDIRECT_URI");
+
+        if (!string.IsNullOrWhiteSpace(configured))
+            return configured.Trim();
+
+        return "br.com.rendatop.app://auth/callback";
+    }
+
+    private static string GetMobileSsoHandoffKey(string handoffToken)
+        => $"auth:mobile:handoff:{handoffToken}";
+
     private static async Task<GoogleUserInfo> GetGoogleUserInfo(string authorizationCode, string clientId, string clientSecret, string redirectUri)
     {
         using var client = new HttpClient();
@@ -981,3 +1098,5 @@ public record PasswordResetRequestResponse(string message);
 public record ActionTokenPayload(Guid UserId, string Email, long Exp, string Purpose);
 public record GoogleUserInfo(string Email, string Name, bool EmailVerified);
 public record MicrosoftUserInfo(string Email, string Name);
+public record MobileSessionExchangeRequest(string handoff_token);
+public record MobileSsoHandoffPayload(Guid UserId);

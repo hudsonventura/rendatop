@@ -71,7 +71,28 @@ public partial class LoginPage : ContentPage
     }
 
     private async void OnGoogleClicked(object? sender, EventArgs e)
-        => await Launcher.Default.OpenAsync(_auth.GoogleLoginUri);
+    {
+        HideError();
+        SetExternalAuthBusy(true, "Conectando ao Google...");
+
+        try
+        {
+            await _auth.LoginWithGoogleAsync();
+            await Shell.Current.GoToAsync("//dashboard");
+        }
+        catch (ApiException ex)
+        {
+            ShowError(ex.Message);
+        }
+        catch
+        {
+            ShowError("Nao foi possivel concluir o login com Google. Verifique sua conexao e tente novamente.");
+        }
+        finally
+        {
+            SetExternalAuthBusy(false);
+        }
+    }
 
     private async void OnMicrosoftClicked(object? sender, EventArgs e)
         => await Launcher.Default.OpenAsync(_auth.MicrosoftLoginUri);
@@ -111,7 +132,19 @@ public partial class LoginPage : ContentPage
     private void SetBusy(bool busy)
     {
         LoginButton.IsEnabled = !busy;
+        GoogleLoginButton.IsEnabled = !busy;
+        MicrosoftLoginButton.IsEnabled = !busy;
         LoginButton.Text = busy ? "Entrando..." : _totpRequired ? "Validar codigo" : "Entrar";
+    }
+
+    private void SetExternalAuthBusy(bool busy, string? text = null)
+    {
+        LoginButton.IsEnabled = !busy;
+        GoogleLoginButton.IsEnabled = !busy;
+        MicrosoftLoginButton.IsEnabled = !busy;
+        GoogleLoginButton.Text = busy
+            ? text ?? "Conectando..."
+            : "Login com Google / GMail";
     }
 
     private void ShowError(string message)

@@ -10,6 +10,9 @@ public sealed record TotpLoginRequest(
     [property: JsonPropertyName("challenge_id")] string ChallengeId,
     [property: JsonPropertyName("code")] string Code);
 
+public sealed record MobileSessionExchangeRequest(
+    [property: JsonPropertyName("handoff_token")] string HandoffToken);
+
 public sealed record SignupRequest(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("email")] string Email,

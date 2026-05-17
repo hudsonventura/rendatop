@@ -68,7 +68,10 @@
                             Clicked="OnLoginClicked" />
 
                         <Button
+                            x:Name="GoogleLoginButton"
                             Text="Login com Google / GMail"
+                            ImageSource="icon_google.svg"
+                            ContentLayout="Left,12"
                             BackgroundColor="White"
                             BorderColor="#CBD5E1"
                             BorderWidth="1"
@@ -77,7 +80,10 @@
                             Clicked="OnGoogleClicked" />
 
                         <Button
+                            x:Name="MicrosoftLoginButton"
                             Text="Entrar com a Microsoft / Outlook"
+                            ImageSource="icon_microsoft.svg"
+                            ContentLayout="Left,12"
                             BackgroundColor="White"
                             BorderColor="#CBD5E1"
                             BorderWidth="1"
