@@ -29,6 +29,6 @@ public partial class SplashPage : ContentPage
         var isAuthenticated = _connectivity.IsOffline
             ? await _session.HasOfflineSessionAsync()
             : await _session.IsAuthenticatedAsync();
-        await Shell.Current.GoToAsync(isAuthenticated ? "//dashboard" : "//login");
+        await Shell.Current.GoToAsync(isAuthenticated ? "//dashboard" : "//welcome");
     }
 }

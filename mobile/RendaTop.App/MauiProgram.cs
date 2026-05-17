@@ -42,6 +42,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<SupportTicketService>();
 		builder.Services.AddSingleton<AppShell>();
 		builder.Services.AddTransient<SplashPage>();
+		builder.Services.AddTransient<WelcomePage>();
 		builder.Services.AddTransient<LoginPage>();
 		builder.Services.AddTransient<SignupPage>();
 		builder.Services.AddTransient<SignupVerificationPage>();

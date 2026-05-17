@@ -8,6 +8,18 @@
     <ScrollView>
         <Grid Padding="24" MinimumHeightRequest="720">
             <VerticalStackLayout Spacing="22" VerticalOptions="Center">
+                <!-- <Button
+                    Text="Retornar"
+                    ImageSource="icon_back_dark.svg"
+                    ContentLayout="Left,10"
+                    BackgroundColor="White"
+                    BorderColor="#CBD5E1"
+                    BorderWidth="1"
+                    TextColor="#111827"
+                    HorizontalOptions="Start"
+                    Padding="14,10"
+                    Clicked="OnBackClicked" /> -->
+
                 <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
                     <Image Source="brand_icon.svg" HeightRequest="72" WidthRequest="72" />
                     <Label Text="RendaTop" FontSize="28" FontAttributes="Bold" HorizontalTextAlignment="Center" TextColor="#111827" />

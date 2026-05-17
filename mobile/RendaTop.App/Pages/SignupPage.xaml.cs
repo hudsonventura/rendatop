@@ -12,6 +12,12 @@ public partial class SignupPage : ContentPage
         InitializeComponent();
     }
 
+    protected override bool OnBackButtonPressed()
+    {
+        MainThread.BeginInvokeOnMainThread(async () => await NavigateBackAsync());
+        return true;
+    }
+
     private async void OnSignupClicked(object? sender, EventArgs e)
     {
         HideError();
@@ -62,7 +68,10 @@ public partial class SignupPage : ContentPage
     }
 
     private async void OnLoginClicked(object? sender, EventArgs e)
-        => await Shell.Current.GoToAsync("//login");
+        => await NavigateBackAsync();
+
+    private async void OnBackClicked(object? sender, EventArgs e)
+        => await NavigateBackAsync();
 
     private void SetBusy(bool busy)
     {
@@ -80,5 +89,20 @@ public partial class SignupPage : ContentPage
     {
         ErrorLabel.Text = string.Empty;
         ErrorBorder.IsVisible = false;
+    }
+
+    private static async Task NavigateBackAsync()
+    {
+        var shell = Shell.Current;
+        if (shell is null)
+            return;
+
+        if (shell.Navigation.NavigationStack.Count > 1)
+        {
+            await shell.GoToAsync("..");
+            return;
+        }
+
+        await shell.GoToAsync("//welcome");
     }
 }

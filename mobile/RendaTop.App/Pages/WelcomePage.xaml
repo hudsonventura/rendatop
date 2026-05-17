@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.WelcomePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#111827">
+    <Grid>
+        <Image
+            Source="welcome_wallpaper.jpg"
+            Aspect="AspectFill" />
+
+        <Grid BackgroundColor="#33000000" />
+
+        <Grid Padding="20,24,20,28" RowDefinitions="*,Auto">
+            <VerticalStackLayout
+                HorizontalOptions="Center"
+                VerticalOptions="Center"
+                Spacing="14">
+                <Border
+                    BackgroundColor="#111827"
+                    StrokeThickness="0"
+                    WidthRequest="92"
+                    HeightRequest="92"
+                    StrokeShape="RoundRectangle 22">
+                    <Image
+                        Source="brand_icon.svg"
+                        WidthRequest="92"
+                        HeightRequest="92"
+                        Aspect="AspectFit" />
+                </Border>
+
+                <VerticalStackLayout Spacing="4">
+                    <Label
+                        Text="RendaTop"
+                        HorizontalTextAlignment="Center"
+                        HorizontalOptions="Center"
+                        TextColor="White"
+                        FontSize="30"
+                        FontAttributes="Bold" />
+
+                    <Label
+                        Text="Gestao de investimentos"
+                        HorizontalTextAlignment="Center"
+                        HorizontalOptions="Center"
+                        TextColor="#D1D5DB"
+                        FontSize="15" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
+            <Grid Grid.Row="1" RowDefinitions="Auto,Auto" RowSpacing="12">
+                <Button
+                    Text="Fazer login"
+                    BackgroundColor="White"
+                    TextColor="#111827"
+                    HeightRequest="52"
+                    FontAttributes="Bold"
+                    Clicked="OnLoginClicked" />
+
+                <Button
+                    Grid.Row="1"
+                    Text="Criar conta"
+                    BackgroundColor="#111827"
+                    TextColor="White"
+                    BorderColor="#FFFFFF"
+                    BorderWidth="1"
+                    HeightRequest="52"
+                    FontAttributes="Bold"
+                    Clicked="OnSignupClicked" />
+            </Grid>
+        </Grid>
+    </Grid>
+</ContentPage>

@@ -14,6 +14,12 @@ public partial class LoginPage : ContentPage
         InitializeComponent();
     }
 
+    protected override bool OnBackButtonPressed()
+    {
+        MainThread.BeginInvokeOnMainThread(async () => await NavigateBackAsync());
+        return true;
+    }
+
     private async void OnLoginClicked(object? sender, EventArgs e)
     {
         HideError();
@@ -71,7 +77,10 @@ public partial class LoginPage : ContentPage
         => await Launcher.Default.OpenAsync(_auth.MicrosoftLoginUri);
 
     private async void OnSignupClicked(object? sender, EventArgs e)
-        => await Shell.Current.GoToAsync("//signup");
+        => await Shell.Current.GoToAsync(nameof(SignupPage));
+
+    private async void OnBackClicked(object? sender, EventArgs e)
+        => await NavigateBackAsync();
 
     private void ShowTotpStep()
     {
@@ -115,5 +124,20 @@ public partial class LoginPage : ContentPage
     {
         ErrorLabel.Text = string.Empty;
         ErrorBorder.IsVisible = false;
+    }
+
+    private static async Task NavigateBackAsync()
+    {
+        var shell = Shell.Current;
+        if (shell is null)
+            return;
+
+        if (shell.Navigation.NavigationStack.Count > 1)
+        {
+            await shell.GoToAsync("..");
+            return;
+        }
+
+        await shell.GoToAsync("//welcome");
     }
 }
