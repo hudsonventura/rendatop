@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.DashboardPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:micro="clr-namespace:Microcharts.Maui;assembly=Microcharts.Maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Dashboard"
+    BackgroundColor="#F8FAFC">
+    <Grid>
+        <RefreshView x:Name="Refresh" Refreshing="OnRefresh">
+            <ScrollView>
+                <VerticalStackLayout Padding="18,16,18,112" Spacing="18">
+                <VerticalStackLayout Spacing="4">
+                    <Label x:Name="WelcomeLabel" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                    <Label Text="Resumo da sua carteira e vencimentos proximos" FontSize="14" TextColor="#64748B" />
+                </VerticalStackLayout>
+
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+                    <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="16" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Investido" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="InvestedLabel" FontSize="19" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="1" BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="16" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Valor atual" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="CurrentLabel" FontSize="19" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="1" BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="16" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Ganho liquido" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="ProfitLabel" FontSize="19" FontAttributes="Bold" TextColor="#16A34A" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.Column="1" BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="16" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Vencem em 30 dias" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="DueCountLabel" FontSize="19" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Distribuicao por banco" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                        <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+                        <Label x:Name="BankEmptyLabel" Text="Nenhum investimento ativo para distribuir." TextColor="#64748B" IsVisible="False" />
+                        <micro:ChartView x:Name="BankChart" HeightRequest="300" Margin="0,4,0,8" />
+                        <CollectionView x:Name="BankCollection" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <VerticalStackLayout Spacing="7" Padding="0,5">
+                                        <Grid ColumnDefinitions="12,*,Auto" ColumnSpacing="8">
+                                            <Border Grid.Column="0" BackgroundColor="{Binding DisplayColor}" StrokeThickness="0" WidthRequest="10" HeightRequest="10" VerticalOptions="Center">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="5" />
+                                                </Border.StrokeShape>
+                                            </Border>
+                                            <Label Grid.Column="1" Text="{Binding BankName}" FontAttributes="Bold" TextColor="#111827" />
+                                            <Label Grid.Column="2" Text="{Binding PercentText}" TextColor="#64748B" />
+                                        </Grid>
+                                        <ProgressBar Progress="{Binding Percent}" ProgressColor="{Binding DisplayColor}" BackgroundColor="#E2E8F0" />
+                                        <Label Text="{Binding Amount}" FontSize="12" TextColor="#64748B" />
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Vencimentos dos proximos 30 dias" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                        <Label x:Name="DueEmptyLabel" Text="Nenhum vencimento nos proximos 30 dias." TextColor="#64748B" IsVisible="False" />
+                        <CollectionView x:Name="DueCollection" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Stroke="#E2E8F0" BackgroundColor="#F8FAFC" Padding="12" Margin="0,0,0,8">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="14" />
+                                        </Border.StrokeShape>
+                                        <VerticalStackLayout Spacing="6">
+                                            <Label Text="{Binding Title}" FontAttributes="Bold" TextColor="#111827" LineBreakMode="TailTruncation" />
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <Label Text="{Binding BankName}" TextColor="#64748B" />
+                                                <Label Grid.Column="1" Text="{Binding DaysText}" FontAttributes="Bold" TextColor="#16A34A" />
+                                            </Grid>
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <Label Text="{Binding DueDate}" TextColor="#64748B" />
+                                                <Label Grid.Column="1" Text="{Binding Amount}" TextColor="#111827" FontAttributes="Bold" />
+                                            </Grid>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="12" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="10">
+                        <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                        <Button Text="Tentar novamente" BackgroundColor="#991B1B" TextColor="White" Clicked="OnRetryClicked" />
+                    </VerticalStackLayout>
+                </Border>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+
+    </Grid>
+</ContentPage>

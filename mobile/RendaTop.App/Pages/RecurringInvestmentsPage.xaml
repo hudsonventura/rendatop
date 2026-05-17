@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.RecurringInvestmentsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Investimentos Recorrentes"
+    BackgroundColor="#F8FAFC">
+    <Grid>
+        <RefreshView x:Name="Refresh" Refreshing="OnRefresh">
+            <CollectionView
+                x:Name="ItemsCollection"
+                SelectionMode="None"
+                ItemSizingStrategy="MeasureFirstItem"
+                Margin="0,0,0,94">
+                <CollectionView.Header>
+                    <VerticalStackLayout Padding="18,16,18,16" Spacing="16">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Investimentos recorrentes" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                                <Label Text="Modelos semanais ou mensais para gerar investimentos automaticamente." TextColor="#64748B" />
+                            </VerticalStackLayout>
+                            <Button x:Name="CreateButton" Grid.Column="1" Text="Nova recorrencia" BackgroundColor="#111827" TextColor="White" Padding="14,10" VerticalOptions="Center" Clicked="OnCreateClicked" />
+                        </Grid>
+
+                        <Border x:Name="OfflineBorder" BackgroundColor="#FFF7ED" Stroke="#FDBA74" Padding="14" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <Label Text="Modo offline ativo. Voce pode consultar as recorrencias em leitura, mas nao pode criar, editar, pausar ou excluir agora." TextColor="#9A3412" />
+                        </Border>
+
+                        <Border x:Name="PremiumBorder" BackgroundColor="#FFF7ED" Stroke="#FDBA74" Padding="14" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Recurso Premium" FontAttributes="Bold" TextColor="#9A3412" />
+                                <Label
+                                    Text="Investimentos recorrentes exigem um plano pago ativo. Se voce ja tinha recorrencias cadastradas, elas continuam visiveis aqui, mas a geracao automatica fica pausada sem um plano elegivel."
+                                    TextColor="#9A3412" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+
+                        <Border x:Name="NoticeBorder" BackgroundColor="#EFF6FF" Stroke="#93C5FD" Padding="12" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                            <Label x:Name="NoticeLabel" TextColor="#1D4ED8" />
+                        </Border>
+
+                        <Label x:Name="EmptyLabel" Text="Nenhuma recorrencia cadastrada." TextColor="#64748B" IsVisible="False" />
+                    </VerticalStackLayout>
+                </CollectionView.Header>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14" Margin="18,0,18,10">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding Title}" FontAttributes="Bold" FontSize="16" TextColor="#111827" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding FrequencyLabel}" TextColor="#64748B" />
+                                    </VerticalStackLayout>
+                                    <Border Grid.Column="1" BackgroundColor="{Binding StatusBackground}" Stroke="{Binding StatusStroke}" Padding="8,4" VerticalOptions="Start">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="999" />
+                                        </Border.StrokeShape>
+                                        <Label Text="{Binding StatusLabel}" FontSize="12" TextColor="{Binding StatusText}" />
+                                    </Border>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+                                    <VerticalStackLayout Spacing="3">
+                                        <Label Text="Banco" FontSize="12" TextColor="#64748B" />
+                                        <Label Text="{Binding BankName}" FontAttributes="Bold" TextColor="#111827" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="3">
+                                        <Label Text="Tipo" FontSize="12" TextColor="#64748B" />
+                                        <Label Text="{Binding InvestmentTypeLabel}" FontAttributes="Bold" TextColor="#111827" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="2" Spacing="3">
+                                        <Label Text="Aplicacao" FontSize="12" TextColor="#64748B" />
+                                        <Label Text="{Binding ValueLabel}" FontAttributes="Bold" TextColor="#111827" />
+                                    </VerticalStackLayout>
+
+                                    <VerticalStackLayout Grid.Row="1" Spacing="3">
+                                        <Label Text="Indexador" FontSize="12" TextColor="#64748B" />
+                                        <Label Text="{Binding IndexLabel}" FontAttributes="Bold" TextColor="#111827" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="3">
+                                        <Label Text="Duracao" FontSize="12" TextColor="#64748B" />
+                                        <Label Text="{Binding DurationLabel}" FontAttributes="Bold" TextColor="#111827" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Row="1" Grid.Column="2" Spacing="3">
+                                        <Label Text="Proxima geracao" FontSize="12" TextColor="#64748B" />
+                                        <Label Text="{Binding NextOccurrenceLabel}" FontAttributes="Bold" TextColor="#111827" />
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                                    <VerticalStackLayout Spacing="3">
+                                        <Label Text="Ultima geracao" FontSize="12" TextColor="#64748B" />
+                                        <Label Text="{Binding LastGeneratedLabel}" FontAttributes="Bold" TextColor="#111827" />
+                                    </VerticalStackLayout>
+                                    <Button Grid.Column="1" Text="Editar" Padding="12,8" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" IsEnabled="{Binding CanWrite}" Clicked="OnEditClicked" />
+                                    <Button Grid.Column="2" Text="Excluir" Padding="12,8" BackgroundColor="White" BorderColor="#FCA5A5" BorderWidth="1" TextColor="#991B1B" IsEnabled="{Binding CanWrite}" Clicked="OnDeleteClicked" />
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <VerticalStackLayout Spacing="3">
+                                        <Label Text="Geracao automatica" FontAttributes="Bold" TextColor="#111827" />
+                                        <Label Text="O servico diario roda todos os dias as 06:00 UTC." FontSize="12" TextColor="#64748B" />
+                                    </VerticalStackLayout>
+                                    <Switch Grid.Column="1" IsToggled="{Binding Active}" IsEnabled="{Binding CanWrite}" Toggled="OnActiveToggled" HorizontalOptions="End" VerticalOptions="Center" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.Footer>
+                    <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" Margin="18,0,18,20" IsVisible="False">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                            <Button Text="Tentar novamente" BackgroundColor="#991B1B" TextColor="White" Clicked="OnRetryClicked" />
+                        </VerticalStackLayout>
+                    </Border>
+                </CollectionView.Footer>
+            </CollectionView>
+        </RefreshView>
+
+    </Grid>
+</ContentPage>

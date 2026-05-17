@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.LoginPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#F8FAFC">
+    <ScrollView>
+        <Grid Padding="24" MinimumHeightRequest="720">
+            <VerticalStackLayout Spacing="22" VerticalOptions="Center">
+                <!-- <Button
+                    Text="Retornar"
+                    ImageSource="icon_back_dark.svg"
+                    ContentLayout="Left,10"
+                    BackgroundColor="White"
+                    BorderColor="#CBD5E1"
+                    BorderWidth="1"
+                    TextColor="#111827"
+                    HorizontalOptions="Start"
+                    Padding="14,10"
+                    Clicked="OnBackClicked" /> -->
+
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                    <Image Source="brand_icon.svg" HeightRequest="72" WidthRequest="72" />
+                    <Label Text="RendaTop" FontSize="28" FontAttributes="Bold" HorizontalTextAlignment="Center" TextColor="#111827" />
+                    <Label Text="Acesse sua carteira de investimentos" FontSize="15" HorizontalTextAlignment="Center" TextColor="#64748B" />
+                </VerticalStackLayout>
+
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="22">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="20" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="16">
+                        <Label x:Name="TitleLabel" Text="Bem-vindo" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                        <Label x:Name="DescriptionLabel" Text="Informe seus dados para acessar sua conta" TextColor="#64748B" />
+
+                        <VerticalStackLayout Spacing="7">
+                            <Label Text="Email" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="EmailEntry" Keyboard="Email" Placeholder="seu@email.com" ReturnType="Next" TextColor="#111827" PlaceholderColor="#64748B" BackgroundColor="#FFFFFF" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="7">
+                            <Label Text="Senha" FontAttributes="Bold" TextColor="#334155" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Entry x:Name="PasswordEntry" Grid.Column="0" IsPassword="True" Placeholder="Sua senha" ReturnType="Done" TextColor="#111827" PlaceholderColor="#64748B" BackgroundColor="#FFFFFF" />
+                                <Button
+                                    x:Name="PasswordVisibilityButton"
+                                    Grid.Column="1"
+                                    Text="Mostrar"
+                                    BackgroundColor="Transparent"
+                                    TextColor="#111827"
+                                    Clicked="OnTogglePasswordClicked" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout x:Name="TotpSection" Spacing="7" IsVisible="False">
+                            <Label Text="Codigo do app Authenticator" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="TotpEntry" Keyboard="Numeric" MaxLength="6" Placeholder="000000" TextColor="#111827" PlaceholderColor="#64748B" BackgroundColor="#FFFFFF" />
+                        </VerticalStackLayout>
+
+                        <Button
+                            x:Name="LoginButton"
+                            Text="Entrar"
+                            BackgroundColor="#111827"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            HeightRequest="48"
+                            Clicked="OnLoginClicked" />
+
+                        <Button
+                            x:Name="GoogleLoginButton"
+                            Text="Login com Google / GMail"
+                            ImageSource="icon_google.svg"
+                            ContentLayout="Left,12"
+                            BackgroundColor="White"
+                            BorderColor="#CBD5E1"
+                            BorderWidth="1"
+                            TextColor="#111827"
+                            HeightRequest="46"
+                            Clicked="OnGoogleClicked" />
+
+                        <Button
+                            x:Name="MicrosoftLoginButton"
+                            Text="Entrar com a Microsoft / Outlook"
+                            ImageSource="icon_microsoft.svg"
+                            ContentLayout="Left,12"
+                            BackgroundColor="White"
+                            BorderColor="#CBD5E1"
+                            BorderWidth="1"
+                            TextColor="#111827"
+                            HeightRequest="46"
+                            Clicked="OnMicrosoftClicked" />
+
+                        <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                            <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                        </Border>
+
+                        <Button
+                            Text="Criar conta"
+                            BackgroundColor="Transparent"
+                            TextColor="#111827"
+                            FontAttributes="Bold"
+                            Clicked="OnSignupClicked" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </Grid>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout Cartão</title>
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #111827; }
+    .wrap { padding: 16px; }
+    .group { margin-bottom: 14px; }
+    label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #334155; }
+    input, select { width: 100%; padding: 12px; border: 1px solid #CBD5E1; border-radius: 10px; box-sizing: border-box; font-size: 14px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .radio-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .radio-box { border: 1px solid #CBD5E1; border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
+    button { width: 100%; margin-top: 8px; background: #111827; color: #fff; border: 0; border-radius: 10px; padding: 14px; font-weight: 700; font-size: 15px; }
+    .error { display:none; margin-top: 12px; background:#FEF2F2; color:#991B1B; padding: 12px; border-radius: 10px; border:1px solid #FCA5A5; }
+    .hint { font-size: 12px; color: #64748B; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="group">
+      <label>Tipo de cartão</label>
+      <div class="radio-row">
+        <label class="radio-box"><input type="radio" name="cardType" value="credit_card" checked> Cartão de crédito</label>
+        <label class="radio-box"><input type="radio" name="cardType" value="debit_card"> Cartão de débito</label>
+      </div>
+    </div>
+    <div class="group">
+      <label for="cardNumber">Número do cartão</label>
+      <input id="cardNumber" maxlength="19" placeholder="0000 0000 0000 0000" />
+    </div>
+    <div class="row">
+      <div class="group">
+        <label for="expirationDate">Validade</label>
+        <input id="expirationDate" maxlength="5" placeholder="MM/YY" />
+      </div>
+      <div class="group">
+        <label for="cvv">Código de Segurança (CVC)</label>
+        <input id="cvv" maxlength="4" placeholder="123" />
+      </div>
+    </div>
+    <div class="group">
+      <label for="cardholderName">Nome Impresso no cartão</label>
+      <input id="cardholderName" placeholder="Nome completo" />
+    </div>
+    <div class="group">
+      <label for="docNumber">CPF</label>
+      <input id="docNumber" maxlength="14" value="__DEFAULT_CPF__" placeholder="000.000.000-00" />
+      <div class="hint">Valor da assinatura: R$ __AMOUNT__ / mês</div>
+    </div>
+    <button id="payButton" type="button">Continuar</button>
+    <div id="error" class="error"></div>
+  </div>
+  <script>
+    const publicKey = "__MP_PUBLIC_KEY__";
+    const errorEl = document.getElementById("error");
+
+    function showError(message) {
+      errorEl.style.display = "block";
+      errorEl.textContent = message || "Erro ao processar cartão.";
+    }
+
+    function sanitizeCpf(value) {
+      return String(value || "").replace(/\D/g, "").slice(0, 11);
+    }
+
+    function formatCardNumber(value) {
+      return String(value || "").replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
+    }
+
+    function formatExpiration(value) {
+      const digits = String(value || "").replace(/\D/g, "").slice(0, 4);
+      return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+    }
+
+    document.getElementById("cardNumber").addEventListener("input", (e) => {
+      e.target.value = formatCardNumber(e.target.value);
+    });
+
+    document.getElementById("expirationDate").addEventListener("input", (e) => {
+      e.target.value = formatExpiration(e.target.value);
+    });
+
+    document.getElementById("docNumber").addEventListener("input", (e) => {
+      e.target.value = sanitizeCpf(e.target.value);
+    });
+
+    document.getElementById("payButton").addEventListener("click", async () => {
+      errorEl.style.display = "none";
+      try {
+        if (!publicKey) {
+          showError("Chave pública do Mercado Pago não configurada no app.");
+          return;
+        }
+
+        const cardNumber = document.getElementById("cardNumber").value.replace(/\s/g, "");
+        const expirationValue = document.getElementById("expirationDate").value;
+        const cvv = document.getElementById("cvv").value;
+        const cardholderName = document.getElementById("cardholderName").value;
+        const cpf = sanitizeCpf(document.getElementById("docNumber").value);
+        const cardType = document.querySelector("input[name='cardType']:checked")?.value || "credit_card";
+
+        if (!cardNumber || !expirationValue || !cvv || !cardholderName || cpf.length !== 11) {
+          showError("Preencha os dados do cartão e um CPF válido.");
+          return;
+        }
+
+        const expDigits = expirationValue.replace(/\D/g, "");
+        if (expDigits.length !== 4) {
+          showError("Informe a validade no formato MM/YY.");
+          return;
+        }
+
+        const expMonth = expDigits.slice(0, 2);
+        const expYear = `20${expDigits.slice(2, 4)}`;
+
+        const mp = new MercadoPago(publicKey);
+        let paymentMethodId = "";
+        let issuerId = "";
+
+        try {
+          const pmResponse = await mp.getPaymentMethods({ bin: cardNumber.substring(0, 6) });
+          if (pmResponse.results && pmResponse.results.length > 0) {
+            paymentMethodId = pmResponse.results[0].id || "";
+            issuerId = String(pmResponse.results[0].issuer?.id || "");
+          }
+        } catch {}
+
+        if (!paymentMethodId) {
+          showError("Não foi possível identificar a bandeira do cartão.");
+          return;
+        }
+
+        const tokenResponse = await mp.createCardToken({
+          cardNumber,
+          cardholderName,
+          cardExpirationMonth: expMonth,
+          cardExpirationYear: expYear,
+          securityCode: cvv,
+          identificationType: "CPF",
+          identificationNumber: cpf
+        });
+
+        window.location.href = `rendatop://card-token?status=ok&token=${encodeURIComponent(tokenResponse.id)}&payment_method_id=${encodeURIComponent(paymentMethodId)}&issuer_id=${encodeURIComponent(issuerId)}&card_type=${encodeURIComponent(cardType)}&cpf=${encodeURIComponent(cpf)}`;
+      } catch (err) {
+        const message = err?.message || "Erro ao processar cartão.";
+        window.location.href = `rendatop://card-token?status=error&message=${encodeURIComponent(message)}`;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.CalendarDayEventsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Eventos do dia"
+    BackgroundColor="#F8FAFC">
+    <ScrollView>
+        <VerticalStackLayout Padding="18,16,18,24" Spacing="16">
+            <Button
+                Text="Voltar"
+                ImageSource="icon_back_dark.svg"
+                ContentLayout="Left,10"
+                BackgroundColor="White"
+                BorderColor="#CBD5E1"
+                BorderWidth="1"
+                TextColor="#111827"
+                HorizontalOptions="Start"
+                Padding="14,10"
+                Clicked="OnBackClicked" />
+
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="HeadingLabel" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                <Label x:Name="DescriptionLabel" TextColor="#64748B" />
+            </VerticalStackLayout>
+
+            <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+            <Label x:Name="EmptyLabel" Text="Nao ha eventos neste dia." TextColor="#64748B" IsVisible="False" />
+
+            <CollectionView x:Name="EventsCollection" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14" Margin="0,0,0,10">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="12">
+                                <HorizontalStackLayout Spacing="8">
+                                    <Border BackgroundColor="{Binding TypeColor}" StrokeThickness="0" Padding="10,4">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="999" />
+                                        </Border.StrokeShape>
+                                        <Label Text="{Binding TypeLabel}" FontSize="11" FontAttributes="Bold" TextColor="White" />
+                                    </Border>
+                                </HorizontalStackLayout>
+
+                                <Label Text="{Binding Title}" FontSize="17" FontAttributes="Bold" TextColor="#111827" />
+                                <Label Text="{Binding BankName}" TextColor="#475569" />
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <Label Text="{Binding IndexLabel}" TextColor="#64748B" />
+                                    <Label Grid.Column="1" Text="{Binding InvestedValueLabel}" FontAttributes="Bold" TextColor="#111827" />
+                                </Grid>
+
+                                <Button
+                                    Text="Ver detalhes"
+                                    BackgroundColor="#111827"
+                                    TextColor="White"
+                                    Clicked="OnViewDetailsClicked" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="10">
+                    <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                    <Button Text="Tentar novamente" BackgroundColor="#991B1B" TextColor="White" Clicked="OnRetryClicked" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

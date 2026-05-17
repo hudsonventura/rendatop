@@ -37,6 +37,7 @@ public class AuthenticationMiddleware
         if (path.StartsWith("/scalar", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/openapi", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/public/calendar", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/auth/mobile", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/auth/google", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/auth/microsoft", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/Auth/login", StringComparison.OrdinalIgnoreCase) ||

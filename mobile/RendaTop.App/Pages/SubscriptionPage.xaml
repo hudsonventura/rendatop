@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.SubscriptionPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Assinatura"
+    BackgroundColor="#F8FAFC">
+    <ScrollView>
+        <VerticalStackLayout Padding="18,16,18,24" Spacing="16">
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Assinatura" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                <Label Text="Escolha o plano ideal para voce" TextColor="#64748B" />
+            </VerticalStackLayout>
+
+            <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+
+            <Border x:Name="NoticeBorder" BackgroundColor="#EFF6FF" Stroke="#93C5FD" Padding="12" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Label x:Name="NoticeLabel" TextColor="#1D4ED8" />
+            </Border>
+
+            <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+            </Border>
+
+            <CollectionView x:Name="PlansCollection" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border BackgroundColor="White" Stroke="{Binding BorderColor}" StrokeThickness="1.5" Padding="16" Margin="0,0,0,12">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="18" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="14">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <VerticalStackLayout Spacing="6">
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Label Text="{Binding Name}" FontSize="20" FontAttributes="Bold" TextColor="#111827" />
+                                            <Border x:Name="PlanBadge" BackgroundColor="{Binding BadgeBackground}" StrokeThickness="0" Padding="10,4" IsVisible="{Binding HasBadge}">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="999" />
+                                                </Border.StrokeShape>
+                                                <Label Text="{Binding BadgeText}" FontSize="11" FontAttributes="Bold" TextColor="{Binding BadgeTextColor}" />
+                                            </Border>
+                                        </HorizontalStackLayout>
+                                        <Label Text="{Binding PriceLabel}" FontSize="28" FontAttributes="Bold" TextColor="#111827" />
+                                    </VerticalStackLayout>
+                                    <Button
+                                        Grid.Column="1"
+                                        Text="{Binding ActionLabel}"
+                                        VerticalOptions="Start"
+                                        BackgroundColor="{Binding ActionBackground}"
+                                        BorderColor="{Binding ActionBorder}"
+                                        BorderWidth="{Binding ActionBorderWidth}"
+                                        TextColor="{Binding ActionTextColor}"
+                                        Clicked="OnPlanActionClicked" />
+                                </Grid>
+
+                                <CollectionView ItemsSource="{Binding FeatureItems}" SelectionMode="None">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Label Text="{Binding}" FontSize="13" TextColor="#475569" Margin="0,0,0,6" />
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Border x:Name="ActiveSubscriptionBorder" BackgroundColor="White" Stroke="#E2E8F0" Padding="16" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Assinatura ativa" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Plano" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="ActivePlanLabel" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Pagamento" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="ActivePaymentMethodLabel" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" Spacing="4">
+                            <Label Text="Proximo vencimento" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="ActiveDueDateLabel" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Border x:Name="CancelScheduledBorder" BackgroundColor="#FFFBEB" Stroke="#F59E0B" Padding="12" IsVisible="False">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="Seu cancelamento ja esta programado para o fim do periodo atual. Nenhuma nova cobranca sera enviada." TextColor="#92400E" />
+                            <Button Text="Cancelar solicitacao" BackgroundColor="White" BorderColor="#F59E0B" BorderWidth="1" TextColor="#92400E" Clicked="OnRevertScheduledCancellationClicked" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="PendingSubscriptionBorder" BackgroundColor="White" Stroke="#F59E0B" Padding="16" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Assinatura a ativar" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Plano" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="PendingPlanLabel" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Pagamento" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="PendingPaymentMethodLabel" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" Spacing="4">
+                            <Label Text="Status" FontSize="12" TextColor="#64748B" />
+                            <Label Text="Aguardando compensacao bancaria" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Button Text="Cancelar pendencia" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnCancelPendingClicked" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="PendingChargeBorder" BackgroundColor="White" Stroke="#F59E0B" Padding="16" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="12">
+                    <Label x:Name="PendingChargeTitleLabel" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                    <Label x:Name="PendingChargePlanLabel" TextColor="#64748B" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Status" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="PendingChargeStatusLabel" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Valor" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="PendingChargeAmountLabel" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" Spacing="4">
+                            <Label Text="Vencimento" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="PendingChargeDueLabel" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Image x:Name="PendingChargeImage" HeightRequest="220" Aspect="AspectFit" IsVisible="False" />
+
+                    <VerticalStackLayout x:Name="PixSection" Spacing="10" IsVisible="False">
+                        <Label Text="PIX Copia e Cola" FontSize="12" TextColor="#64748B" />
+                        <Editor x:Name="PixCodeEditor" IsReadOnly="True" AutoSize="TextChanges" BackgroundColor="#F8FAFC" TextColor="#111827" />
+                        <Button Text="Copiar Chave PIX" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnCopyPixClicked" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout x:Name="BoletoLineSection" Spacing="10" IsVisible="False">
+                        <Label Text="Linha digitavel" FontSize="12" TextColor="#64748B" />
+                        <Editor x:Name="BoletoLineEditor" IsReadOnly="True" AutoSize="TextChanges" BackgroundColor="#F8FAFC" TextColor="#111827" />
+                        <Button Text="Copiar linha digitavel" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnCopyBoletoLineClicked" />
+                    </VerticalStackLayout>
+
+                    <Button x:Name="OpenBoletoButton" Text="Abrir boleto" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" IsVisible="False" Clicked="OnOpenBoletoClicked" />
+                    <Button Text="Atualizar status" BackgroundColor="#111827" TextColor="White" Clicked="OnRefreshPaymentStatusClicked" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

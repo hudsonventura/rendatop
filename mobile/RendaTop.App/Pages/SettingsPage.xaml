@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.SettingsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Configuracoes"
+    BackgroundColor="#F8FAFC">
+    <ScrollView>
+        <VerticalStackLayout Padding="18,16,18,24" Spacing="16">
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Configuracoes" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                <Label Text="Atualize seus dados e preferencias de notificacao" TextColor="#64748B" />
+            </VerticalStackLayout>
+
+            <Border x:Name="OfflineBorder" BackgroundColor="#FFF7ED" Stroke="#FDBA74" Padding="14" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16" />
+                </Border.StrokeShape>
+                <Label Text="Modo offline ativo. As configuracoes ficam disponiveis apenas para leitura ate a conexao voltar." TextColor="#9A3412" />
+            </Border>
+
+            <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+
+            <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Dados da conta" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Nome" FontAttributes="Bold" TextColor="#334155" />
+                        <Entry x:Name="NameEntry" Placeholder="Seu nome completo" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Email" FontAttributes="Bold" TextColor="#334155" />
+                        <Entry x:Name="EmailEntry" Keyboard="Email" Placeholder="seu@email.com" />
+                        <Label x:Name="EmailHintLabel" FontSize="12" TextColor="#64748B" />
+                    </VerticalStackLayout>
+
+                    <Border x:Name="PendingEmailBorder" BackgroundColor="#FFF7ED" Stroke="#FDBA74" Padding="12" IsVisible="False">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Label x:Name="PendingEmailInfoLabel" TextColor="#9A3412" />
+                            <Entry x:Name="EmailCodeEntry" Keyboard="Numeric" MaxLength="6" Placeholder="Codigo de verificacao" />
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                <Button x:Name="VerifyEmailButton" Text="Confirmar codigo" BackgroundColor="#111827" TextColor="White" Clicked="OnVerifyPendingEmailClicked" />
+                                <Button x:Name="ResendEmailButton" Grid.Column="1" Text="Reenviar codigo" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnResendPendingEmailClicked" />
+                                <Button x:Name="CancelEmailButton" Grid.Row="1" Grid.ColumnSpan="2" Text="Cancelar alteracao de email" BackgroundColor="Transparent" TextColor="#9A3412" Clicked="OnCancelPendingEmailClicked" />
+                            </Grid>
+                            <Border x:Name="PendingEmailErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="10" IsVisible="False">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Label x:Name="PendingEmailErrorLabel" TextColor="#991B1B" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="CPF" FontAttributes="Bold" TextColor="#334155" />
+                        <Entry x:Name="CpfEntry" IsReadOnly="True" Placeholder="CPF nao informado" />
+                        <Label Text="Preenchido automaticamente apos um pagamento valido." FontSize="12" TextColor="#64748B" />
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Nova senha" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="PasswordEntry" IsPassword="True" Placeholder="Digite uma nova senha" TextChanged="OnPasswordChanged" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="6">
+                            <Label Text="Confirmar nova senha" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="ConfirmPasswordEntry" IsPassword="True" Placeholder="Repita a nova senha" TextChanged="OnPasswordChanged" />
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Border x:Name="PasswordRequirementsBorder" BackgroundColor="#F8FAFC" Stroke="#E2E8F0" Padding="12" IsVisible="False">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Sua senha deve conter:" FontSize="12" FontAttributes="Bold" TextColor="#111827" />
+                            <Label x:Name="PasswordRequirement1" FontSize="12" />
+                            <Label x:Name="PasswordRequirement2" FontSize="12" />
+                            <Label x:Name="PasswordRequirement3" FontSize="12" />
+                            <Label x:Name="PasswordRequirement4" FontSize="12" />
+                            <Label x:Name="PasswordRequirement5" FontSize="12" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Notificacoes" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+
+                    <Border BackgroundColor="#F8FAFC" Stroke="#E2E8F0" Padding="12">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="4">
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Label Text="WhatsApp" FontAttributes="Bold" TextColor="#111827" />
+                                        <Label x:Name="WhatsAppPremiumLabel" Text="Recurso Premium" FontSize="11" TextColor="#475569" IsVisible="False" />
+                                    </HorizontalStackLayout>
+                                    <Label x:Name="WhatsAppDescriptionLabel" FontSize="12" TextColor="#64748B" />
+                                </VerticalStackLayout>
+                                <Switch x:Name="NotifyWhatsAppSwitch" Grid.Column="1" Toggled="OnNotifyWhatsAppToggled" />
+                            </Grid>
+                            <Entry x:Name="PhoneEntry" Keyboard="Telephone" Placeholder="99999999999" TextChanged="OnPhoneChanged" />
+                            <Label Text="Informe o numero com 11 digitos. Voce pode testar antes mesmo de salvar as configuracoes." FontSize="12" TextColor="#64748B" />
+                            <Button x:Name="TestWhatsAppButton" Text="Test WhatsApp" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnTestWhatsAppClicked" />
+                            <Border x:Name="WhatsAppErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="10" IsVisible="False">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Label x:Name="WhatsAppErrorLabel" TextColor="#991B1B" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border BackgroundColor="#F8FAFC" Stroke="#E2E8F0" Padding="12">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Telegram" FontAttributes="Bold" TextColor="#111827" />
+                                    <Label Text="Receber notificacoes por Telegram" FontSize="12" TextColor="#64748B" />
+                                </VerticalStackLayout>
+                                <Switch x:Name="NotifyTelegramSwitch" Grid.Column="1" Toggled="OnNotifyTelegramToggled" />
+                            </Grid>
+                            <Entry x:Name="TelegramChatIdEntry" Placeholder="Ex.: 123456789" />
+                            <Label Text="Obrigatorio apenas quando as notificacoes por Telegram estiverem ativas." FontSize="12" TextColor="#64748B" />
+                            <Button x:Name="TestTelegramButton" Text="Test Telegram" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnTestTelegramClicked" />
+                            <Border x:Name="TelegramErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="10" IsVisible="False">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Label x:Name="TelegramErrorLabel" TextColor="#991B1B" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border BackgroundColor="#F8FAFC" Stroke="#E2E8F0" Padding="12">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Email" FontAttributes="Bold" TextColor="#111827" />
+                                    <Label Text="Receber notificacoes por Email" FontSize="12" TextColor="#64748B" />
+                                </VerticalStackLayout>
+                                <Switch x:Name="NotifyEmailSwitch" Grid.Column="1" />
+                            </Grid>
+                            <Button x:Name="TestEmailButton" Text="Test Email" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnTestEmailClicked" />
+                            <Border x:Name="EmailErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="10" IsVisible="False">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Label x:Name="EmailErrorLabel" TextColor="#991B1B" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Calendario publico (.ics) para Outlook" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                    <Label Text="Gere um link publico para assinar no Outlook. Quando habilitado, o link publico exibira vencimento e conteudo dos investimentos. Nao compartilhe este link com ninguem." FontSize="12" TextColor="#64748B" />
+
+                    <Border BackgroundColor="#F8FAFC" Stroke="#E2E8F0" Padding="12">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="4">
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Label Text="Compartilhar calendario" FontAttributes="Bold" TextColor="#111827" />
+                                        <Label x:Name="CalendarPremiumLabel" Text="Recurso Premium" FontSize="11" TextColor="#475569" IsVisible="False" />
+                                    </HorizontalStackLayout>
+                                    <Label x:Name="CalendarDescriptionLabel" FontSize="12" TextColor="#64748B" />
+                                </VerticalStackLayout>
+                                <Switch x:Name="CalendarPublicSwitch" Grid.Column="1" />
+                            </Grid>
+
+                            <VerticalStackLayout x:Name="CalendarLinkSection" Spacing="10" IsVisible="False">
+                                <Entry x:Name="CalendarUrlEntry" IsReadOnly="True" Placeholder="Salve as alteracoes para gerar o link" />
+                                <Button Text="Copiar link" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnCopyCalendarLinkClicked" />
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Autenticacao em 2 fatores (TOTP)" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                    <Label Text="Quando habilitado, o login comum exigira o codigo TOTP. Isso aumenta a seguranca da sua conta. TOTP nao funciona com login via Microsoft ou GMail (SSO)." FontSize="12" TextColor="#64748B" />
+
+                    <VerticalStackLayout x:Name="TotpDisabledSection" Spacing="10">
+                        <Button Text="Ativar segundo fator de autenticacao (TOTP)" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnGenerateTotpClicked" />
+                        <VerticalStackLayout x:Name="TotpSetupSection" Spacing="10" IsVisible="False">
+                            <Entry x:Name="TotpSecretEntry" IsReadOnly="True" Placeholder="Chave manual TOTP" />
+                            <Entry x:Name="TotpCodeEntry" Keyboard="Numeric" MaxLength="6" Placeholder="Codigo TOTP (6 digitos)" />
+                            <Button x:Name="EnableTotpButton" Text="Habilitar TOTP" BackgroundColor="#111827" TextColor="White" Clicked="OnEnableTotpClicked" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout x:Name="TotpEnabledSection" Spacing="10" IsVisible="False">
+                        <Label Text="TOTP habilitado." TextColor="#166534" />
+                        <Entry x:Name="DisableTotpCodeEntry" Keyboard="Numeric" MaxLength="6" Placeholder="Codigo TOTP atual" />
+                        <Button x:Name="DisableTotpButton" Text="Desabilitar TOTP" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnDisableTotpClicked" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border x:Name="SuccessBorder" BackgroundColor="#ECFDF5" Stroke="#86EFAC" Padding="12" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Label x:Name="SuccessLabel" TextColor="#166534" />
+            </Border>
+
+            <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+            </Border>
+
+            <Button x:Name="SaveButton" Text="Salvar configuracoes" BackgroundColor="#111827" TextColor="White" HeightRequest="48" FontAttributes="Bold" Clicked="OnSaveClicked" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

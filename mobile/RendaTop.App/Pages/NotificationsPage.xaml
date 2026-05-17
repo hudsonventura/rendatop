@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.NotificationsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Notificacoes"
+    BackgroundColor="#F8FAFC">
+    <Grid>
+        <RefreshView x:Name="Refresh" Refreshing="OnRefresh">
+            <CollectionView
+                x:Name="NotificationsCollection"
+                SelectionMode="None"
+                ItemSizingStrategy="MeasureFirstItem"
+                Margin="0,0,0,20">
+                <CollectionView.Header>
+                    <VerticalStackLayout Padding="18,16,18,16" Spacing="16">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Notificacoes" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                            <Label Text="Historico dos ultimos 3 meses da sua conta" TextColor="#64748B" />
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="16" />
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Spacing="6">
+                                    <Label Text="Nao lidas" FontSize="12" TextColor="#64748B" />
+                                    <Label x:Name="UnreadLabel" FontSize="20" FontAttributes="Bold" TextColor="#111827" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Grid.Column="1" BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="16" />
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Spacing="6">
+                                    <Label Text="Total" FontSize="12" TextColor="#64748B" />
+                                    <Label x:Name="TotalLabel" FontSize="20" FontAttributes="Bold" TextColor="#111827" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <Button
+                                Text="Atualizar"
+                                BackgroundColor="White"
+                                BorderColor="#CBD5E1"
+                                BorderWidth="1"
+                                TextColor="#111827"
+                                Clicked="OnReloadClicked" />
+                            <Button
+                                x:Name="MarkAllButton"
+                                Grid.Column="1"
+                                Text="Marcar todas"
+                                BackgroundColor="#111827"
+                                TextColor="White"
+                                Clicked="OnMarkAllClicked" />
+                        </Grid>
+
+                        <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+                        <Label x:Name="EmptyLabel" Text="Nenhuma notificacao encontrada nos ultimos 3 meses." TextColor="#64748B" IsVisible="False" />
+                    </VerticalStackLayout>
+                </CollectionView.Header>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14" Margin="18,0,18,10">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="12">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                    <Border
+                                        BackgroundColor="{Binding StatusBackground}"
+                                        Stroke="{Binding StatusStroke}"
+                                        Padding="10,4"
+                                        HorizontalOptions="Start"
+                                        VerticalOptions="Center">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="999" />
+                                        </Border.StrokeShape>
+                                        <Label Text="{Binding StatusText}" FontSize="11" FontAttributes="Bold" TextColor="{Binding StatusColor}" />
+                                    </Border>
+                                    <Label
+                                        Grid.Column="1"
+                                        Text="{Binding Title}"
+                                        FontSize="16"
+                                        FontAttributes="Bold"
+                                        TextColor="#111827"
+                                        VerticalOptions="Center"
+                                        LineBreakMode="TailTruncation" />
+                                    <Button
+                                        x:Name="MarkReadButton"
+                                        Grid.Column="2"
+                                        Text="Marcar lida"
+                                        FontSize="12"
+                                        Padding="10,6"
+                                        BackgroundColor="White"
+                                        BorderColor="#CBD5E1"
+                                        BorderWidth="1"
+                                        TextColor="#111827"
+                                        IsEnabled="{Binding CanMarkAsRead}"
+                                        Clicked="OnMarkReadClicked" />
+                                </Grid>
+
+                                <Label Text="{Binding Message}" TextColor="#475569" LineBreakMode="WordWrap" />
+                                <Label Text="{Binding CreatedAtLabel}" FontSize="12" TextColor="#64748B" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.Footer>
+                    <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" Margin="18,0,18,20" IsVisible="False">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                            <Button Text="Tentar novamente" BackgroundColor="#991B1B" TextColor="White" Clicked="OnRetryClicked" />
+                        </VerticalStackLayout>
+                    </Border>
+                </CollectionView.Footer>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

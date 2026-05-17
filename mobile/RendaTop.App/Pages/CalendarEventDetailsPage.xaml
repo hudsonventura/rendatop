@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.CalendarEventDetailsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Detalhes do evento"
+    BackgroundColor="#0F172A">
+    <ScrollView>
+        <VerticalStackLayout Padding="18,16,18,24" Spacing="16">
+            <Button
+                Text="Voltar"
+                ImageSource="icon_back_dark.svg"
+                ContentLayout="Left,10"
+                BackgroundColor="White"
+                BorderColor="#CBD5E1"
+                BorderWidth="1"
+                TextColor="#111827"
+                HorizontalOptions="Start"
+                Padding="14,10"
+                Clicked="OnBackClicked" />
+
+            <Border BackgroundColor="#111827" Stroke="#334155" Padding="18">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="16">
+                    <VerticalStackLayout Spacing="4">
+                        <Label x:Name="TitleLabel" FontSize="28" FontAttributes="Bold" TextColor="White" />
+                        <Label Text="Detalhes do investimento" TextColor="#94A3B8" />
+                    </VerticalStackLayout>
+
+                    <HorizontalStackLayout>
+                        <Border x:Name="TypeBadge" StrokeThickness="0" Padding="12,5">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="999" />
+                            </Border.StrokeShape>
+                            <Label x:Name="TypeLabel" FontSize="12" FontAttributes="Bold" TextColor="White" />
+                        </Border>
+                    </HorizontalStackLayout>
+
+                    <VerticalStackLayout Spacing="12">
+                        <Label x:Name="DateLabel" TextColor="#E5E7EB" />
+                        <Label x:Name="BankLabel" TextColor="#E5E7EB" />
+                    </VerticalStackLayout>
+
+                    <BoxView HeightRequest="1" Color="#334155" />
+
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="16">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Valor investido" FontSize="12" TextColor="#94A3B8" />
+                            <Label x:Name="InvestedValueLabel" FontSize="18" FontAttributes="Bold" TextColor="White" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Indexador" FontSize="12" TextColor="#94A3B8" />
+                            <Label x:Name="IndexLabel" FontSize="18" FontAttributes="Bold" TextColor="White" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Row="1" Spacing="4">
+                            <Label Text="Valor liquido atual" FontSize="12" TextColor="#94A3B8" />
+                            <Label x:Name="CurrentValueLabel" FontSize="18" FontAttributes="Bold" TextColor="#22C55E" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="4">
+                            <Label Text="Lucro liquido" FontSize="12" TextColor="#94A3B8" />
+                            <Label x:Name="ProfitLabel" FontSize="18" FontAttributes="Bold" TextColor="#22C55E" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+
+            <Border x:Name="ErrorBorder" BackgroundColor="#7F1D1D" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="10">
+                    <Label x:Name="ErrorLabel" TextColor="#FEE2E2" />
+                    <Button Text="Tentar novamente" BackgroundColor="#991B1B" TextColor="White" Clicked="OnRetryClicked" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

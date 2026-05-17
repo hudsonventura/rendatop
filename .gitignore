@@ -65,3 +65,4 @@ client/dist/*
 server/bin/*
 server/obj/*
 .codex
+*.lscache

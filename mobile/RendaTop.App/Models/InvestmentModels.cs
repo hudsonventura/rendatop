@@ -1,0 +1,256 @@
+using System.Globalization;
+using System.Text.Json.Serialization;
+using Microsoft.Maui.Graphics;
+
+namespace RendaTop.App.Models;
+
+public sealed record InvestmentDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; init; }
+
+    [JsonPropertyName("title")]
+    public string Title { get; init; } = string.Empty;
+
+    [JsonPropertyName("date_buy")]
+    public DateTime DateBuy { get; init; }
+
+    [JsonPropertyName("due_date")]
+    public DateTime? DueDate { get; init; }
+
+    [JsonPropertyName("value")]
+    public decimal Value { get; init; }
+
+    [JsonPropertyName("investment_type")]
+    public string? InvestmentType { get; init; }
+
+    [JsonPropertyName("money_box_id")]
+    public Guid? MoneyBoxId { get; init; }
+
+    [JsonPropertyName("index")]
+    public string Index { get; init; } = "CDI";
+
+    [JsonPropertyName("index_percent")]
+    public decimal IndexPercent { get; init; }
+
+    [JsonPropertyName("index_value")]
+    public decimal IndexValue { get; init; }
+
+    [JsonPropertyName("taxes")]
+    public bool Taxes { get; init; } = true;
+
+    [JsonPropertyName("table_value")]
+    public decimal? TableValue { get; init; }
+
+    [JsonPropertyName("archived")]
+    public bool Archived { get; init; }
+
+    [JsonPropertyName("bank")]
+    public BankDto? Bank { get; init; }
+
+    [JsonPropertyName("calculated")]
+    public List<CalculatedDto>? Calculated { get; init; }
+
+    [JsonPropertyName("table_calculated")]
+    public List<CalculatedDto>? TableCalculated { get; init; }
+
+    [JsonPropertyName("redemptions")]
+    public List<RedemptionDto>? Redemptions { get; init; }
+
+    public decimal PrincipalForDisplay => Math.Max(0m, TableValue ?? Value);
+
+    public decimal CurrentValueForDisplay =>
+        Math.Max(0m, TableCalculated?.FirstOrDefault()?.ValueLiq
+                     ?? Calculated?.FirstOrDefault()?.ValueLiq
+                     ?? PrincipalForDisplay);
+}
+
+public sealed record BankDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; init; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = "Banco";
+
+    [JsonPropertyName("color")]
+    public string Color { get; init; } = "#94A3B8";
+
+    [JsonPropertyName("code")]
+    public int Code { get; init; }
+
+    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? $"Banco {Code}" : Name;
+}
+
+public sealed record CalculatedDto
+{
+    [JsonPropertyName("effective_index_percent_brute")]
+    public decimal EffectiveIndexPercentBrute { get; init; }
+
+    [JsonPropertyName("profit_brute")]
+    public decimal ProfitBrute { get; init; }
+
+    [JsonPropertyName("value_brute")]
+    public decimal ValueBrute { get; init; }
+
+    [JsonPropertyName("IOF")]
+    public decimal Iof { get; init; }
+
+    [JsonPropertyName("IOF_value")]
+    public decimal IofValue { get; init; }
+
+    [JsonPropertyName("IR")]
+    public decimal Ir { get; init; }
+
+    [JsonPropertyName("IR_value")]
+    public decimal IrValue { get; init; }
+
+    [JsonPropertyName("value_liq")]
+    public decimal ValueLiq { get; init; }
+
+    [JsonPropertyName("profit_liq")]
+    public decimal ProfitLiq { get; init; }
+}
+
+public sealed record InvestmentRequestDto
+{
+    [JsonPropertyName("title")]
+    public string Title { get; init; } = string.Empty;
+
+    [JsonPropertyName("investment_type")]
+    public string? InvestmentType { get; init; }
+
+    [JsonPropertyName("money_box_id")]
+    public Guid? MoneyBoxId { get; init; }
+
+    [JsonPropertyName("bank_code")]
+    public int BankCode { get; init; }
+
+    [JsonPropertyName("date_buy")]
+    public DateTime DateBuy { get; init; }
+
+    [JsonPropertyName("date_expected_sell")]
+    public DateTime? DateExpectedSell { get; init; }
+
+    [JsonPropertyName("value")]
+    public decimal Value { get; init; }
+
+    [JsonPropertyName("index")]
+    public string Index { get; init; } = "CDI";
+
+    [JsonPropertyName("index_percent")]
+    public decimal IndexPercent { get; init; }
+
+    [JsonPropertyName("index_value")]
+    public decimal IndexValue { get; init; }
+
+    [JsonPropertyName("taxes")]
+    public bool Taxes { get; init; } = true;
+
+    [JsonPropertyName("archived")]
+    public bool Archived { get; init; }
+
+    [JsonPropertyName("ai_extracted")]
+    public bool AiExtracted { get; init; }
+}
+
+public sealed record ArchiveInvestmentRequestDto
+{
+    [JsonPropertyName("archived")]
+    public bool Archived { get; init; }
+}
+
+public sealed record RedemptionRequestDto
+{
+    [JsonPropertyName("title")]
+    public string Title { get; init; } = string.Empty;
+
+    [JsonPropertyName("date")]
+    public DateTime Date { get; init; }
+
+    [JsonPropertyName("value")]
+    public decimal Value { get; init; }
+}
+
+public sealed record RedemptionDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; init; }
+
+    [JsonPropertyName("title")]
+    public string Title { get; init; } = string.Empty;
+
+    [JsonPropertyName("date")]
+    public DateTime Date { get; init; }
+
+    [JsonPropertyName("value")]
+    public decimal Value { get; init; }
+}
+
+public sealed record InvestmentOption(string Label, string Value);
+
+public sealed record InvestmentIndexOption(string Label, string Value);
+
+public sealed record BankAllocationItem(
+    string BankName,
+    string Color,
+    string Amount,
+    string PercentText,
+    double Percent)
+{
+    public Microsoft.Maui.Graphics.Color DisplayColor => ParseColor(Color);
+
+    private static Microsoft.Maui.Graphics.Color ParseColor(string? value)
+    {
+        const string fallback = "#94A3B8";
+
+        if (string.IsNullOrWhiteSpace(value))
+            return Microsoft.Maui.Graphics.Color.FromArgb(fallback);
+
+        var normalized = value.Trim();
+        if (!normalized.StartsWith('#'))
+            normalized = $"#{normalized}";
+
+        if (normalized.Length is 4 or 5)
+        {
+            var hex = normalized[1..];
+            normalized = hex.Length switch
+            {
+                3 => $"#{hex[0]}{hex[0]}{hex[1]}{hex[1]}{hex[2]}{hex[2]}",
+                4 => $"#{hex[0]}{hex[0]}{hex[1]}{hex[1]}{hex[2]}{hex[2]}{hex[3]}{hex[3]}",
+                _ => normalized
+            };
+        }
+
+        try
+        {
+            return Microsoft.Maui.Graphics.Color.FromArgb(normalized);
+        }
+        catch
+        {
+            return Microsoft.Maui.Graphics.Color.FromArgb(fallback);
+        }
+    }
+}
+
+public sealed record DueSoonItem(
+    string Title,
+    string BankName,
+    string DueDate,
+    string Amount,
+    string DaysText);
+
+public sealed record DashboardSummary(
+    string Invested,
+    string Current,
+    string Profit,
+    string DueSoonCount,
+    IReadOnlyList<BankAllocationItem> BankAllocation,
+    IReadOnlyList<DueSoonItem> DueSoon);
+
+public static class MoneyFormatter
+{
+    private static readonly CultureInfo Brazil = new("pt-BR");
+
+    public static string Currency(decimal value) => value.ToString("C", Brazil);
+}
