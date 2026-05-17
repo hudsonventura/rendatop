@@ -518,7 +518,7 @@ Se você não solicitou essa alteração, ignore este email.";
     /// </summary>
     [HttpGet("auth/microsoft/login")]
     [AllowAnonymous]
-    public IActionResult MicrosoftLogin()
+    public IActionResult MicrosoftLogin([FromQuery] string? client = null)
     {
         var clientId = Environment.GetEnvironmentVariable("MICROSOFT_CLIENT_ID");
         var tenantId = Environment.GetEnvironmentVariable("MICROSOFT_TENANT_ID") ?? "common";
@@ -528,6 +528,7 @@ Se você não solicitou essa alteração, ignore este email.";
         var redirectUri = GetMicrosoftRedirectUri();
         var state = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
         SetOAuthStateCookie("oauth_microsoft_state", state);
+        SetOAuthClientCookie(client);
 
         var microsoftAuthUrl =
             $"https://login.microsoftonline.com/{Uri.EscapeDataString(tenantId)}/oauth2/v2.0/authorize" +
@@ -549,13 +550,15 @@ Se você não solicitou essa alteração, ignore este email.";
     [AllowAnonymous]
     public async Task<IActionResult> MicrosoftCallback([FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error, [FromQuery] string? error_description)
     {
+        var oauthClient = ReadAndClearOAuthClientCookie();
+
         try
         {
             if (!string.IsNullOrWhiteSpace(error))
-                return Redirect(BuildFrontLoginRedirect("microsoft_error", $"Autenticação Microsoft recusada: {error_description ?? error}"));
+                return Redirect(BuildSsoRedirect(oauthClient, "microsoft_error", $"Autenticacao Microsoft recusada: {error_description ?? error}"));
 
             if (string.IsNullOrWhiteSpace(code))
-                return Redirect(BuildFrontLoginRedirect("microsoft_error", "Código de autenticação Microsoft ausente."));
+                return Redirect(BuildSsoRedirect(oauthClient, "microsoft_error", "Codigo de autenticacao Microsoft ausente."));
 
             ValidateOAuthState("oauth_microsoft_state", state);
 
@@ -565,21 +568,28 @@ Se você não solicitou essa alteração, ignore este email.";
             var tenantId = Environment.GetEnvironmentVariable("MICROSOFT_TENANT_ID") ?? "common";
 
             if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
-                return Redirect(BuildFrontLoginRedirect("microsoft_error", "Configuração do Microsoft SSO incompleta no servidor."));
+                return Redirect(BuildSsoRedirect(oauthClient, "microsoft_error", "Configuracao do Microsoft SSO incompleta no servidor."));
 
             var redirectUri = GetMicrosoftRedirectUri();
             var userInfo = await GetMicrosoftUserInfo(code, clientId, clientSecret, tenantId, redirectUri);
 
             if (string.IsNullOrWhiteSpace(userInfo.Email))
-                return Redirect(BuildFrontLoginRedirect("microsoft_error", "Não foi possível identificar o email da conta Microsoft."));
+                return Redirect(BuildSsoRedirect(oauthClient, "microsoft_error", "Nao foi possivel identificar o email da conta Microsoft."));
 
             var user = EnsureUserForSocialLogin(userInfo.Email, userInfo.Name, AuthProvider.Microsoft);
+
+            if (IsMobileOAuthClient(oauthClient))
+            {
+                var handoffToken = CreateMobileSsoHandoff(user);
+                return Redirect(BuildMobileLoginRedirect("success", handoffToken: handoffToken));
+            }
+
             var login = SetSession(user);
             return Redirect(BuildFrontLoginRedirect("microsoft_success", null, login));
         }
         catch (Exception ex)
         {
-            return Redirect(BuildFrontLoginRedirect("microsoft_error", ex.Message));
+            return Redirect(BuildSsoRedirect(oauthClient, "microsoft_error", ex.Message));
         }
     }
 

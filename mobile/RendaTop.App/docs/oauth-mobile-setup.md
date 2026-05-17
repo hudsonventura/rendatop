@@ -1,23 +1,26 @@
-# Google login no app mobile
+# SSO mobile com Google e Microsoft
 
-Este documento cobre o fluxo de login com Google que agora existe entre:
+Este documento cobre o login social do app mobile MAUI Android com:
 
-- app mobile MAUI Android
-- backend do RendaTop
-- Google OAuth
+- Google
+- Microsoft Entra ID
+
+O fluxo usa o backend do RendaTop como intermediario para criar a sessao real do app.
 
 ## Como o fluxo funciona
 
-O app **nao fala com o Google diretamente** para criar a sessao do RendaTop.
+O app nao depende do cookie do navegador externo.
 
 O caminho e este:
 
-1. o app abre `GET /auth/google/login?client=mobile`
-2. o backend redireciona para o Google
-3. o Google volta para `GET /auth/google/callback`
-4. o backend identifica que o cliente e `mobile`
-5. o backend cria um **handoff token temporario**
-6. o backend redireciona para o deeplink do app:
+1. o app abre:
+   - `GET /auth/google/login?client=mobile`
+   - ou `GET /auth/microsoft/login?client=mobile`
+2. o backend redireciona para o provedor SSO
+3. o provedor volta para o callback HTTP do backend
+4. o backend detecta `client=mobile`
+5. o backend cria um `handoff_token` curto no Redis
+6. o backend redireciona para o app:
 
 ```text
 br.com.rendatop.app://auth/callback
@@ -30,10 +33,8 @@ br.com.rendatop.app://auth/callback
 POST /auth/mobile/session
 ```
 
-9. o backend cria a sessao real do RendaTop e devolve o cookie `jwt`
-10. o app persiste esse cookie com seguranca e segue autenticado
-
-Esse desenho evita depender do cookie do navegador externo, que nao e compartilhado com o `HttpClient` do app.
+9. o backend cria a sessao do RendaTop e devolve o cookie `jwt`
+10. o app persiste a sessao localmente com seguranca
 
 ## O que ja foi implementado
 
@@ -41,20 +42,23 @@ Esse desenho evita depender do cookie do navegador externo, que nao e compartilh
 
 - `GET /auth/google/login?client=mobile`
 - `GET /auth/google/callback`
+- `GET /auth/microsoft/login?client=mobile`
+- `GET /auth/microsoft/callback`
 - `POST /auth/mobile/session`
 - handoff temporario em Redis
-- redirect para o deeplink do app quando o login vier do mobile
+- redirect para deeplink mobile
 
 ### Mobile Android
 
-- botao Google no login usando `WebAuthenticator`
+- login Google via `WebAuthenticator`
+- login Microsoft via `WebAuthenticator`
 - callback Android para:
 
 ```text
 br.com.rendatop.app://auth/callback
 ```
 
-- troca do `handoff_token` por sessao real no backend
+- troca do `handoff_token` por sessao real
 - persistencia segura do cookie `jwt`
 
 ## Variaveis de ambiente do backend
@@ -65,24 +69,31 @@ Configure no backend:
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI=https://SEU_BACKEND/auth/google/callback
-GOOGLE_MOBILE_REDIRECT_URI=br.com.rendatop.app://auth/callback
-SSO_FRONTEND_LOGIN_URL=https://SEU_FRONTEND/login
+GOOGLE_FRONTEND_LOGIN_URL=https://SEU_FRONTEND/login
+
+MICROSOFT_CLIENT_ID=
+MICROSOFT_CLIENT_SECRET=
+MICROSOFT_TENANT_ID=common
+MICROSOFT_REDIRECT_URI=https://SEU_BACKEND/auth/microsoft/callback
+MICROSOFT_FRONTEND_LOGIN_URL=https://SEU_FRONTEND/login
+
+SSO_MOBILE_REDIRECT_URI=br.com.rendatop.app://auth/callback
 COOKIE_SECURE=true
 ```
 
 ### Observacoes
 
-- `GOOGLE_REDIRECT_URI` precisa apontar para o **callback HTTP/HTTPS do backend**
-- `GOOGLE_MOBILE_REDIRECT_URI` e o deeplink que o backend usa para voltar ao app
+- `GOOGLE_REDIRECT_URI` e `MICROSOFT_REDIRECT_URI` precisam apontar para o backend
+- `SSO_MOBILE_REDIRECT_URI` e o deeplink que devolve o controle ao app
 - `COOKIE_SECURE=true` deve ser usado em producao com HTTPS
 
-## O que configurar no Google Cloud
+## Google Cloud
 
-### 1. Abrir o projeto correto
+### 1. Selecionar o projeto
 
 No `Google Cloud Console`, selecione o projeto do RendaTop.
 
-### 2. Consent Screen
+### 2. OAuth consent screen
 
 Em `APIs & Services > OAuth consent screen`:
 
@@ -93,7 +104,7 @@ Em `APIs & Services > OAuth consent screen`:
    - `email`
    - `profile`
 
-### 3. Credenciais OAuth
+### 3. OAuth Client
 
 Em `APIs & Services > Credentials`:
 
@@ -104,7 +115,7 @@ Em `APIs & Services > Credentials`:
 Web application
 ```
 
-3. em `Authorized redirect URIs`, adicione:
+3. adicione em `Authorized redirect URIs`:
 
 ```text
 https://SEU_BACKEND/auth/google/callback
@@ -114,64 +125,137 @@ https://SEU_BACKEND/auth/google/callback
    - `Client ID`
    - `Client Secret`
 
-5. salve esses valores em:
+5. salve em:
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
 
-## Importante: voce nao precisa de OAuth Client do tipo Android neste fluxo
+## Microsoft Entra ID
 
-Como o app usa o backend como intermediario, o Google redireciona para o **backend web**, nao direto para o app.
+### 1. Abrir o app registration
 
-Entao, para este fluxo especifico, o essencial e:
+No `Microsoft Entra admin center`:
 
-- backend callback HTTP/HTTPS cadastrado no Google
+1. acesse `Identity > Applications > App registrations`
+2. crie ou abra o app do RendaTop
+
+### 2. Authentication
+
+Em `Authentication`:
+
+1. adicione uma plataforma `Web`
+2. em `Redirect URIs`, cadastre:
+
+```text
+https://SEU_BACKEND/auth/microsoft/callback
+```
+
+3. confirme que `ID tokens` pode ser usado no fluxo, se o portal pedir essa opcao para OpenID Connect
+
+### 3. Certificates & secrets
+
+Em `Certificates & secrets`:
+
+1. crie um `Client secret`
+2. copie o valor gerado
+3. salve em:
+
+```bash
+MICROSOFT_CLIENT_SECRET=
+```
+
+### 4. Overview
+
+Copie tambem:
+
+- `Application (client) ID` -> `MICROSOFT_CLIENT_ID`
+- `Directory (tenant) ID` -> `MICROSOFT_TENANT_ID`
+
+Se quiser aceitar contas de varios tenants, use:
+
+```bash
+MICROSOFT_TENANT_ID=common
+```
+
+### 5. API permissions
+
+Em `API permissions`, confirme permissoes delegadas para:
+
+- `openid`
+- `profile`
+- `email`
+- `User.Read`
+
+Na maior parte dos casos, isso aparece dentro de `Microsoft Graph`.
+
+### 6. Salvar no backend
+
+No backend, configure:
+
+```bash
+MICROSOFT_CLIENT_ID=
+MICROSOFT_CLIENT_SECRET=
+MICROSOFT_TENANT_ID=
+MICROSOFT_REDIRECT_URI=https://SEU_BACKEND/auth/microsoft/callback
+```
+
+## Importante: nao precisa de client OAuth Android nem app registration mobile nativo
+
+Neste desenho, Google e Microsoft redirecionam para o **backend web**, nao direto para o app.
+
+Entao o essencial e:
+
+- callback HTTP/HTTPS do backend cadastrado no provedor
 - deeplink mobile configurado no app
 
-Um client OAuth do tipo Android so seria obrigatorio se o app passasse a autenticar **diretamente com o Google**, sem handoff pelo backend.
+Um client Android nativo ou fluxo mobile puro so seria necessario se o app deixasse de usar o handoff pelo backend.
 
 ## O que conferir no app Android
 
-O app ja esta preparado para o callback:
+O app escuta:
 
 ```text
 br.com.rendatop.app://auth/callback
 ```
 
-Se no futuro voce mudar esse esquema/host/path, precisa alinhar 3 lugares:
+Se isso mudar, alinhe 3 lugares:
 
 1. `mobile/RendaTop.App/Services/AppConfig.cs`
 2. `mobile/RendaTop.App/Platforms/Android/WebAuthenticationCallbackActivity.cs`
-3. `GOOGLE_MOBILE_REDIRECT_URI` no backend
+3. `SSO_MOBILE_REDIRECT_URI` no backend
 
 ## Teste manual recomendado
 
-1. suba o backend com as variaveis configuradas
-2. abra o app Android
+### Google
+
+1. suba o backend com variaveis corretas
+2. abra o app
 3. toque em `Login com Google / GMail`
-4. conclua o login no navegador/custom tab
-5. confirme que o app voltou sozinho
-6. confirme que a tela navegou para o dashboard
-7. feche e reabra o app para garantir que a sessao ficou persistida
+4. conclua o login
+5. confirme retorno ao app
+6. confirme navegacao para o dashboard
+
+### Microsoft
+
+1. suba o backend com variaveis corretas
+2. abra o app
+3. toque em `Entrar com a Microsoft / Outlook`
+4. conclua o login
+5. confirme retorno ao app
+6. confirme navegacao para o dashboard
 
 ## Ressalvas importantes
 
-### 1. Google login no mobile depende do backend
+### 1. O mobile depende do backend
 
-Se o backend estiver sem:
+Se o backend estiver sem client id, secret ou redirect corretos, o login social nao vai fechar.
 
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_REDIRECT_URI`
+### 2. O deeplink precisa bater exatamente
 
-o login social nao vai fechar.
+Se o backend redirecionar para outro URI, o app nao recebe o callback.
 
-### 2. Deeplink mobile precisa bater exatamente
+### 3. O cookie do navegador nao serve como sessao do app
 
-Se o backend redirecionar para um URI diferente do que o app escuta, o login vai concluir no Google, mas o app nao vai receber o callback.
-
-### 3. Cookie do navegador nao e a sessao do app
-
-Mesmo que o Google login abra no navegador, o app precisa sempre trocar o `handoff_token` por sessao propria em:
+Mesmo com login no navegador externo, o app precisa sempre trocar o `handoff_token` em:
 
 ```text
 POST /auth/mobile/session
@@ -179,11 +263,7 @@ POST /auth/mobile/session
 
 ### 4. iOS ainda nao foi ligado
 
-O backend ja ficou pronto para o mesmo conceito de handoff, mas o app iOS ainda vai precisar:
-
-- registrar o mesmo deeplink no target iOS
-- plugar o callback da plataforma
-- validar o retorno no fluxo MAUI para iPhone/iPad
+O backend ja esta pronto para o mesmo conceito de handoff, mas a versao iOS ainda vai precisar registrar o callback no target Apple.
 
 ## Arquivos principais alterados
 

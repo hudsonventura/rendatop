@@ -48,8 +48,9 @@
                 </VerticalStackLayout>
             </VerticalStackLayout>
 
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto" RowSpacing="12">
+            <VerticalStackLayout Grid.Row="1" Spacing="12">
                 <Button
+                    x:Name="LoginButton"
                     Text="Fazer login"
                     BackgroundColor="White"
                     TextColor="#111827"
@@ -58,7 +59,7 @@
                     Clicked="OnLoginClicked" />
 
                 <Button
-                    Grid.Row="1"
+                    x:Name="SignupButton"
                     Text="Criar conta"
                     BackgroundColor="#111827"
                     TextColor="White"
@@ -67,7 +68,45 @@
                     HeightRequest="52"
                     FontAttributes="Bold"
                     Clicked="OnSignupClicked" />
-            </Grid>
+
+                <Button
+                    x:Name="GoogleLoginButton"
+                    Text="Login com Google / GMail"
+                    ImageSource="icon_google.svg"
+                    ContentLayout="Left,12"
+                    BackgroundColor="White"
+                    BorderColor="#CBD5E1"
+                    BorderWidth="1"
+                    TextColor="#111827"
+                    HeightRequest="46"
+                    Clicked="OnGoogleClicked" />
+
+                <Button
+                    x:Name="MicrosoftLoginButton"
+                    Text="Entrar com a Microsoft / Outlook"
+                    ImageSource="icon_microsoft.svg"
+                    ContentLayout="Left,12"
+                    BackgroundColor="White"
+                    BorderColor="#CBD5E1"
+                    BorderWidth="1"
+                    TextColor="#111827"
+                    HeightRequest="46"
+                    Clicked="OnMicrosoftClicked" />
+
+                <Border
+                    x:Name="ErrorBorder"
+                    BackgroundColor="#FEF2F2"
+                    Stroke="#FCA5A5"
+                    Padding="12"
+                    IsVisible="False">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="12" />
+                    </Border.StrokeShape>
+                    <Label
+                        x:Name="ErrorLabel"
+                        TextColor="#991B1B" />
+                </Border>
+            </VerticalStackLayout>
         </Grid>
     </Grid>
 </ContentPage>

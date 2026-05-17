@@ -67,6 +67,49 @@ public sealed class AuthService
         await _session.SaveLoginAsync(response);
     }
 
+    public async Task LoginWithMicrosoftAsync()
+    {
+        var startUri = _apiClient.BuildUri("/auth/microsoft/login?client=mobile");
+        var callbackUri = _config.MobileAuthCallbackUri;
+
+        WebAuthenticatorResult authResult;
+        try
+        {
+            authResult = await WebAuthenticator.Default.AuthenticateAsync(startUri, callbackUri);
+        }
+        catch (TaskCanceledException)
+        {
+            throw new ApiException("Login com Microsoft cancelado.", 400);
+        }
+
+        if (!authResult.Properties.TryGetValue("status", out var status) || string.IsNullOrWhiteSpace(status))
+            throw new ApiException("Nao foi possivel concluir o login com Microsoft.", 400);
+
+        if (!string.Equals(status, "success", StringComparison.OrdinalIgnoreCase))
+        {
+            var errorMessage = authResult.Properties.TryGetValue("message", out var message) && !string.IsNullOrWhiteSpace(message)
+                ? message
+                : "Nao foi possivel concluir o login com Microsoft.";
+
+            throw new ApiException(errorMessage, 400);
+        }
+
+        if (!authResult.Properties.TryGetValue("handoff_token", out var handoffToken) || string.IsNullOrWhiteSpace(handoffToken))
+            throw new ApiException("Token de login social ausente. Tente novamente.", 400);
+
+        var response = await _apiClient.PostAsync<MobileSessionExchangeRequest, LoginResponse>(
+            "/auth/mobile/session",
+            new MobileSessionExchangeRequest(handoffToken));
+
+        if (response is null)
+            throw new ApiException("Resposta de login social invalida.", 500);
+
+        await _investmentCache.ClearAsync();
+        await _snapshots.ClearAsync();
+        _notifications.Clear();
+        await _session.SaveLoginAsync(response);
+    }
+
     public async Task<LoginStartResponse> LoginAsync(string email, string password)
     {
         var response = await _apiClient.PostAsync<LoginRequest, LoginStartResponse>(
