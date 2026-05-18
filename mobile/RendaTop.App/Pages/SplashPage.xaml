@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.SplashPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#111827">
+    <Grid Padding="32">
+        <VerticalStackLayout Spacing="18" HorizontalOptions="Center" VerticalOptions="Center">
+            <Image Source="brand_icon.svg" HeightRequest="112" WidthRequest="112" />
+            <Label
+                Text="RendaTop"
+                FontAttributes="Bold"
+                FontSize="34"
+                HorizontalTextAlignment="Center"
+                TextColor="White" />
+            <Label
+                Text="Gestao de investimentos"
+                FontSize="15"
+                HorizontalTextAlignment="Center"
+                TextColor="#9CA3AF" />
+            <ActivityIndicator
+                Margin="0,18,0,0"
+                Color="#22C55E"
+                IsRunning="True" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.WelcomePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#111827">
+    <Grid>
+        <Image
+            Source="welcome_wallpaper.jpg"
+            Aspect="AspectFill" />
+
+        <Grid BackgroundColor="#33000000" />
+
+        <Grid Padding="20,24,20,28" RowDefinitions="*,Auto">
+            <VerticalStackLayout
+                HorizontalOptions="Center"
+                VerticalOptions="Center"
+                Spacing="14">
+                <Border
+                    BackgroundColor="#111827"
+                    StrokeThickness="0"
+                    WidthRequest="92"
+                    HeightRequest="92"
+                    StrokeShape="RoundRectangle 22">
+                    <Image
+                        Source="brand_icon.svg"
+                        WidthRequest="92"
+                        HeightRequest="92"
+                        Aspect="AspectFit" />
+                </Border>
+
+                <VerticalStackLayout Spacing="4">
+                    <Label
+                        Text="RendaTop"
+                        HorizontalTextAlignment="Center"
+                        HorizontalOptions="Center"
+                        TextColor="White"
+                        FontSize="30"
+                        FontAttributes="Bold" />
+
+                    <Label
+                        Text="Gestao de investimentos"
+                        HorizontalTextAlignment="Center"
+                        HorizontalOptions="Center"
+                        TextColor="#D1D5DB"
+                        FontSize="15" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Grid.Row="1" Spacing="12">
+                <Button
+                    x:Name="LoginButton"
+                    Text="Fazer login"
+                    BackgroundColor="White"
+                    TextColor="#111827"
+                    HeightRequest="52"
+                    FontAttributes="Bold"
+                    Clicked="OnLoginClicked" />
+
+                <Button
+                    x:Name="SignupButton"
+                    Text="Criar conta"
+                    BackgroundColor="#111827"
+                    TextColor="White"
+                    BorderColor="#FFFFFF"
+                    BorderWidth="1"
+                    HeightRequest="52"
+                    FontAttributes="Bold"
+                    Clicked="OnSignupClicked" />
+
+                <Button
+                    x:Name="GoogleLoginButton"
+                    Text="Login com Google / GMail"
+                    ImageSource="icon_google.svg"
+                    ContentLayout="Left,12"
+                    BackgroundColor="White"
+                    BorderColor="#CBD5E1"
+                    BorderWidth="1"
+                    TextColor="#111827"
+                    HeightRequest="46"
+                    Clicked="OnGoogleClicked" />
+
+                <Button
+                    x:Name="MicrosoftLoginButton"
+                    Text="Entrar com a Microsoft / Outlook"
+                    ImageSource="icon_microsoft.svg"
+                    ContentLayout="Left,12"
+                    BackgroundColor="White"
+                    BorderColor="#CBD5E1"
+                    BorderWidth="1"
+                    TextColor="#111827"
+                    HeightRequest="46"
+                    Clicked="OnMicrosoftClicked" />
+
+                <Border
+                    x:Name="ErrorBorder"
+                    BackgroundColor="#FEF2F2"
+                    Stroke="#FCA5A5"
+                    Padding="12"
+                    IsVisible="False">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="12" />
+                    </Border.StrokeShape>
+                    <Label
+                        x:Name="ErrorLabel"
+                        TextColor="#991B1B" />
+                </Border>
+            </VerticalStackLayout>
+        </Grid>
+    </Grid>
+</ContentPage>

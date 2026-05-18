@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.MoneyBoxesPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Cofrinhos"
+    BackgroundColor="#F8FAFC">
+    <Grid>
+        <RefreshView x:Name="Refresh" Refreshing="OnRefresh">
+            <CollectionView
+                x:Name="ItemsCollection"
+                SelectionMode="None"
+                ItemSizingStrategy="MeasureFirstItem"
+                Margin="0,0,0,94">
+                <CollectionView.Header>
+                    <VerticalStackLayout Padding="18,16,18,16" Spacing="16">
+                        <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="18" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="8">
+                                <Label Text="O que e um cofrinho?" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                                <Label Text="Cofrinhos sao categorias livres para agrupar investimentos por objetivo, como viagem, reserva de emergencia, aquisicao de bens ou casa propria." TextColor="#475569" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Border x:Name="RestrictionBorder" BackgroundColor="#FFFBEB" Stroke="#FCD34D" Padding="14" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Regras do plano" FontAttributes="Bold" TextColor="#92400E" />
+                                <Label x:Name="RestrictionLabel" TextColor="#92400E" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Border x:Name="OfflineBorder" BackgroundColor="#FFF7ED" Stroke="#FDBA74" Padding="14" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <Label Text="Modo offline ativo. Os cofrinhos ficam disponiveis apenas para leitura." TextColor="#9A3412" />
+                        </Border>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Seus cofrinhos" FontSize="22" FontAttributes="Bold" TextColor="#111827" />
+                                <Label x:Name="CountLabel" TextColor="#64748B" />
+                            </VerticalStackLayout>
+                            <Button x:Name="CreateButton" Grid.Column="1" Text="Novo cofrinho" BackgroundColor="#111827" TextColor="White" Padding="14,10" VerticalOptions="Center" Clicked="OnCreateClicked" />
+                        </Grid>
+
+                        <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+                        <Label x:Name="EmptyLabel" Text="Nenhum cofrinho criado ainda. Crie o primeiro para organizar sua carteira por objetivos." TextColor="#64748B" IsVisible="False" />
+                    </VerticalStackLayout>
+                </CollectionView.Header>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14" Margin="18,0,18,10">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <VerticalStackLayout Spacing="12">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="17" TextColor="#111827" />
+                                    <Label Text="{Binding CreatedAtLabel}" TextColor="#64748B" FontSize="12" />
+                                </VerticalStackLayout>
+
+                                <Border BackgroundColor="#F8FAFC" Stroke="#E2E8F0" Padding="12">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="14" />
+                                    </Border.StrokeShape>
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="Valor liquido total" FontSize="12" TextColor="#64748B" />
+                                        <Label Text="{Binding TotalLiquidValueLabel}" FontSize="22" FontAttributes="Bold" TextColor="#111827" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <Button Text="Editar" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" IsEnabled="{Binding CanWrite}" Clicked="OnEditClicked" />
+                                    <Button Grid.Column="1" Text="Excluir" BackgroundColor="White" BorderColor="#FCA5A5" BorderWidth="1" TextColor="#991B1B" IsEnabled="{Binding CanWrite}" Clicked="OnDeleteClicked" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.Footer>
+                    <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" Margin="18,0,18,20" IsVisible="False">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                            <Button Text="Tentar novamente" BackgroundColor="#991B1B" TextColor="White" Clicked="OnRetryClicked" />
+                        </VerticalStackLayout>
+                    </Border>
+                </CollectionView.Footer>
+            </CollectionView>
+        </RefreshView>
+
+    </Grid>
+</ContentPage>

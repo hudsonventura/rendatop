@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="dbclone/dbclone.csproj" />
   <Project Path="migrator/migrator.csproj" />
+  <Project Path="mobile/RendaTop.App/RendaTop.App.csproj" />
   <Project Path="server/server.csproj" />
   <Project Path="tests/tests.csproj" />
 </Solution>

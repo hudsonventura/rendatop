@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.SubscriptionCheckoutPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Pagamento"
+    BackgroundColor="#F8FAFC">
+    <ScrollView>
+        <VerticalStackLayout Padding="18,16,18,24" Spacing="16">
+            <Button
+                Text="Voltar"
+                ImageSource="icon_back_dark.svg"
+                ContentLayout="Left,10"
+                BackgroundColor="White"
+                BorderColor="#CBD5E1"
+                BorderWidth="1"
+                TextColor="#111827"
+                HorizontalOptions="Start"
+                Padding="14,10"
+                Clicked="OnBackClicked" />
+
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="HeadingLabel" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                <Label x:Name="DescriptionLabel" TextColor="#64748B" />
+            </VerticalStackLayout>
+
+            <Border BackgroundColor="#FFFBEB" Stroke="#F59E0B" Padding="12">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Label x:Name="BillingNoticeLabel" TextColor="#92400E" />
+            </Border>
+
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                <Button x:Name="CardTabButton" Text="Cartao" BackgroundColor="#111827" TextColor="White" Clicked="OnCardTabClicked" />
+                <Button x:Name="PixTabButton" Grid.Column="1" Text="PIX" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnPixTabClicked" />
+                <Button x:Name="BoletoTabButton" Grid.Column="2" Text="Boleto" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnBoletoTabClicked" />
+            </Grid>
+
+            <Border x:Name="NoticeBorder" BackgroundColor="#EFF6FF" Stroke="#93C5FD" Padding="12" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Label x:Name="NoticeLabel" TextColor="#1D4ED8" />
+            </Border>
+
+            <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+            </Border>
+
+            <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+
+            <VerticalStackLayout x:Name="CardSection" Spacing="12">
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Cartao" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                        <Label x:Name="CardConfigLabel" TextColor="#64748B" />
+                        <WebView x:Name="CardWebView" HeightRequest="620" Navigating="OnCardWebViewNavigating" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout x:Name="PixSection" Spacing="12" IsVisible="False">
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Pagamento via PIX" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                        <Entry x:Name="PixCpfEntry" Keyboard="Numeric" Placeholder="CPF" TextChanged="OnCpfChanged" />
+                        <Button x:Name="GeneratePixButton" Text="Gerar QR Code PIX" BackgroundColor="#111827" TextColor="White" Clicked="OnGeneratePixClicked" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border x:Name="PixResultBorder" BackgroundColor="White" Stroke="#E2E8F0" Padding="16" IsVisible="False">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <Image x:Name="PixQrImage" HeightRequest="220" Aspect="AspectFit" IsVisible="False" />
+                        <Editor x:Name="PixCodeEditor" IsReadOnly="True" AutoSize="TextChanges" BackgroundColor="#F8FAFC" TextColor="#111827" />
+                        <Button Text="Copiar Chave PIX" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnCopyPixClicked" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout x:Name="BoletoSection" Spacing="12" IsVisible="False">
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Pagamento via boleto" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                        <Entry x:Name="BoletoCpfEntry" Keyboard="Numeric" Placeholder="CPF" TextChanged="OnCpfChanged" />
+                        <Button x:Name="GenerateBoletoButton" Text="Gerar boleto" BackgroundColor="#111827" TextColor="White" Clicked="OnGenerateBoletoClicked" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border x:Name="BoletoResultBorder" BackgroundColor="White" Stroke="#E2E8F0" Padding="16" IsVisible="False">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <Image x:Name="BoletoImage" HeightRequest="140" Aspect="AspectFit" IsVisible="False" />
+                        <Editor x:Name="BoletoLineEditor" IsReadOnly="True" AutoSize="TextChanges" BackgroundColor="#F8FAFC" TextColor="#111827" />
+                        <Button Text="Copiar linha digitavel" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnCopyBoletoLineClicked" />
+                        <Button x:Name="OpenBoletoButton" Text="Abrir boleto" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" IsVisible="False" Clicked="OnOpenBoletoClicked" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

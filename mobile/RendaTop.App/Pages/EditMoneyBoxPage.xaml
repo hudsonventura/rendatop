@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.EditMoneyBoxPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Cofrinho"
+    BackgroundColor="#F8FAFC">
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="18,16,18,112" Spacing="14">
+                <Button
+                    Text="Voltar"
+                    ImageSource="icon_back_dark.svg"
+                    ContentLayout="Left,10"
+                    BackgroundColor="White"
+                    BorderColor="#CBD5E1"
+                    BorderWidth="1"
+                    TextColor="#111827"
+                    HorizontalOptions="Start"
+                    Padding="14,10"
+                    Clicked="OnBackClicked" />
+
+                <Label x:Name="HeadingLabel" Text="Novo cofrinho" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                <Label Text="Escolha um nome simples para representar esse objetivo na sua carteira." TextColor="#64748B" />
+
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="14">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Nome" FontAttributes="Bold" TextColor="#334155" />
+                            <Entry x:Name="NameEntry" Placeholder="Ex.: Reserva de emergencia" TextColor="#111827" PlaceholderColor="#64748B" />
+                        </VerticalStackLayout>
+
+                        <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+
+                        <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                            <Label x:Name="ErrorLabel" TextColor="#991B1B" />
+                        </Border>
+
+                        <Button
+                            x:Name="SaveButton"
+                            Text="Criar cofrinho"
+                            BackgroundColor="#111827"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            HeightRequest="50"
+                            Clicked="OnSaveClicked" />
+
+                        <Button
+                            Text="Cancelar"
+                            BackgroundColor="White"
+                            BorderColor="#CBD5E1"
+                            BorderWidth="1"
+                            TextColor="#111827"
+                            HeightRequest="48"
+                            Clicked="OnCancelClicked" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+
+    </Grid>
+</ContentPage>
