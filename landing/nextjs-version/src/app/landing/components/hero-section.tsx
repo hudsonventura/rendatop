@@ -48,16 +48,9 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="mx-auto mt-20 max-w-6xl">
-          <div className="relative group">
-            <div className="absolute top-2 lg:-top-8 left-1/2 transform -translate-x-1/2 w-[90%] mx-auto h-24 lg:h-80 bg-primary/50 rounded-full blur-3xl"></div>
-            <ScreenshotPlaceholder
-              title="Dashboard principal"
-              subtitle="Espaco reservado para a captura da tela inicial"
-              caption="Aqui voce pode inserir um screenshot do dashboard com vencimentos proximos, distribuicao por banco e evolucao da carteira."
-              badges={['Vencimentos dos proximos 30 dias', 'Distribuicao por banco', 'Evolucao da carteira']}
-            />
-          </div>
+        <div className="">
+            <img className='rounded-lg' src="landing.png"/>
+            <img className='mx-auto max-w-6xl rounded-lg' src="main.png"/>
         </div>
       </div>
     </section>

@@ -10,7 +10,7 @@ const plans = [
     description: 'Para comecar a organizar a carteira e acompanhar vencimentos.',
     monthlyPrice: 0,
     features: [
-      '2 leituras de comprovantes por IA por mes',
+      '2 leituras de comprovantes por mes',
       'Controle completo de investimentos',
       'Calendario de vencimentos na plataforma',
       'Notificacoes por Telegram e e-mail',
@@ -24,7 +24,7 @@ const plans = [
     description: 'Para quem quer ampliar notificacoes e integrar o calendario ao dia-a-dia.',
     monthlyPrice: 6.9,
     features: [
-      '10 leituras de comprovantes por IA por mes',
+      '10 leituras de comprovantes por mes',
       'Calendario de vencimentos no Outlook ou app de calendario',
       'Notificacoes por Telegram, e-mail e WhatsApp',
       'Importacao e exportacao de dados em breve',
@@ -39,7 +39,7 @@ const plans = [
     description: 'Para uso mais frequente, com limites maiores e mais margem para evolucao.',
     monthlyPrice: 14.9,
     features: [
-      '30 leituras de comprovantes por IA por mes',
+      '30 leituras de comprovantes por mes',
       'Calendario ICS e notificacoes completas',
       'Maior capacidade prevista para acoes brasileiras e cripto',
       'Importacao e exportacao de dados em breve',

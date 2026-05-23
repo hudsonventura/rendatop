@@ -18,22 +18,7 @@ const mainFeatures = [
     icon: BarChart3,
     title: 'Dashboard com contexto',
     description: 'Veja vencimentos proximos, distribuicao por banco e evolucao da carteira.',
-  },
-  {
-    icon: Zap,
-    title: 'Simulacao no cadastro',
-    description: 'Visualize estimativas de rendimento e comparativos durante o registro do investimento.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Configuracoes centralizadas',
-    description: 'Ajuste canais de alerta, calendario publico, seguranca e dados de contato.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Leitura por IA',
-    description: 'Importe comprovantes para preencher campos do investimento com apoio de IA.',
-  },
+  }
 ]
 
 const secondaryFeatures = [
@@ -43,19 +28,9 @@ const secondaryFeatures = [
     description: 'Acompanhe aplicacoes e vencimentos em uma visao mensal clara.',
   },
   {
-    icon: Bell,
-    title: 'Notificacoes e historico',
-    description: 'Receba alertas e acompanhe o que ainda esta pendente de leitura.',
-  },
-  {
     icon: Zap,
     title: 'Separacao por disponibilidade',
     description: 'Diferencie rapidamente o que ja pode ser resgatado do que segue bloqueado ate o vencimento.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Planos que acompanham o uso',
-    description: 'Amplie limites de IA, calendario ICS e notificacoes conforme sua necessidade.',
   },
 ]
 
@@ -64,12 +39,14 @@ export function FeaturesSection() {
     <section id="features" className="py-24 sm:py-32 bg-muted/30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center mb-16">
-          <Badge variant="outline" className="mb-4">Recursos principais</Badge>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            Tudo o que voce precisa para acompanhar seus investimentos no dia-a-dia
+          <Badge variant="outline" className="mb-4">Principais Recursos</Badge>
+          <h2 className="text-3xl font-bold tracking-tight sm:text-5xl mb-4">
+            Tudo o que você precisa para acompanhar seus investimentos no dia-a-dia
           </h2>
           <p className="text-lg text-muted-foreground">
-            A landing foi ajustada para refletir o produto real: dashboard, carteira, calendario, notificacoes, configuracoes e assinatura.
+            O app RentaTop foi estruturado para concentrar o acompanhamento da carteira em poucas telas bem definidas,
+            com linguagem direta e foco no que precisa ser acompanhado ao longo do mês.<br />
+            Muitos investimentos espalhados entre vários banco? Aqui você pode acompanhar tudo em um so lugar.
           </p>
         </div>
 
@@ -87,7 +64,7 @@ export function FeaturesSection() {
               </h3>
               <p className="text-muted-foreground text-base text-pretty">
                 O dashboard concentra o que costuma gerar mais consulta ao longo da semana:
-                vencimentos proximos, distribuicao da carteira e visao consolidada do patrimonio investido.
+                vencimentos próximos, distribuição da carteira e visão consolidada do patrimonio investido.
               </p>
             </div>
 
@@ -105,19 +82,7 @@ export function FeaturesSection() {
               ))}
             </ul>
 
-            <div className="flex flex-col sm:flex-row gap-4 pe-4 pt-2">
-              <Button size="lg" className="cursor-pointer" asChild>
-                <a href="/app/signup" className='flex items-center'>
-                  Criar conta
-                  <ArrowRight className="ms-2 size-4" aria-hidden="true" />
-                </a>
-              </Button>
-              <Button size="lg" variant="outline" className="cursor-pointer" asChild>
-                <a href="#screenshots">
-                  Ver capturas
-                </a>
-              </Button>
-            </div>
+          
           </div>
         </div>
 
@@ -125,11 +90,11 @@ export function FeaturesSection() {
           <div className="space-y-6 order-2 lg:order-1">
             <div className="space-y-4">
               <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-                Operacao da carteira com mais previsibilidade
+                Operação da carteira com mais previsibilidade
               </h3>
               <p className="text-muted-foreground text-base text-pretty">
-                A carteira foi dividida para facilitar a leitura do que esta disponivel para resgate,
-                do que ainda aguarda vencimento e do que precisa de atencao por notificacao ou calendario.
+                A carteira foi dividida para facilitar a leitura do que esta disponível para resgate,
+                do que ainda aguarda vencimento e do que precisa de atenção por notificação ou calendário.
               </p>
             </div>
 
@@ -147,19 +112,7 @@ export function FeaturesSection() {
               ))}
             </ul>
 
-            <div className="flex flex-col sm:flex-row gap-4 pe-4 pt-2">
-              <Button size="lg" className="cursor-pointer" asChild>
-                <a href="#pricing" className='flex items-center'>
-                  Ver planos
-                  <ArrowRight className="ms-2 size-4" aria-hidden="true" />
-                </a>
-              </Button>
-              <Button size="lg" variant="outline" className="cursor-pointer" asChild>
-                <a href="#contact">
-                  Entrar em contato
-                </a>
-              </Button>
-            </div>
+           
           </div>
 
           <ScreenshotPlaceholder

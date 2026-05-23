@@ -85,16 +85,7 @@ const FaqSection = () => {
             </div>
           </div>
 
-          <div className="text-center mt-12">
-            <p className="text-muted-foreground mb-4">
-              Se ainda restou alguma duvida, podemos conversar.
-            </p>
-            <Button className='cursor-pointer' asChild>
-              <a href="#contact">
-                Entrar em contato
-              </a>
-            </Button>
-          </div>
+          
         </div>
       </div>
     </section>

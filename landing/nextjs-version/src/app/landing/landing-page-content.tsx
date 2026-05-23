@@ -65,8 +65,8 @@ export function LandingPageContent({ backendBaseUrl }: LandingPageContentProps) 
         <FeaturesSection />
         <BlogSection backendBaseUrl={backendBaseUrl} />
         <PricingSection />
-        <FaqSection />
         <CTASection />
+        <FaqSection />
         <ContactSection />
       </main>
 

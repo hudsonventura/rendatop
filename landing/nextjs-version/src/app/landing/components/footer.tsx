@@ -72,33 +72,7 @@ export function LandingFooter() {
     <footer className="border-t bg-background">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="mb-16">
-          <div className="mx-auto max-w-2xl text-center">
-            <h3 className="text-2xl font-bold mb-4">Acompanhe a evolucao do produto</h3>
-            <p className="text-muted-foreground mb-6">
-              Deixe seu e-mail para receber novidades sobre o app, planos e proximas entregas.
-            </p>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-2 max-w-md mx-auto sm:flex-row">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="voce@empresa.com"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="cursor-pointer">Receber novidades</Button>
-              </form>
-            </Form>
-          </div>
+          
         </div>
 
         <div className="grid gap-8 grid-cols-4 lg:grid-cols-6">
