@@ -38,7 +38,7 @@ const faqItems: FaqItem[] = [
   },
   {
     value: 'item-5',
-    question: 'O app tem leitura de comprovantes por IA?',
+    question: 'O app tem leitura inteligente de comprovantes?',
     answer:
       'Sim. O cadastro de investimentos pode importar comprovantes com apoio de IA, respeitando os limites mensais definidos em cada plano.',
   },

@@ -13,7 +13,7 @@ public class Plan
     public decimal price { get; set; }
 
     /// <summary>
-    /// Limite de leituras de comprovantes por IA por mês
+    /// Limite de leituras de comprovantes por mês
     /// </summary>
     public int ai_monthly_limit { get; set; } = 2;
 
@@ -71,7 +71,7 @@ public static class Plans
             money_boxes_limit = 3,
             features = new Dictionary<string, string>
             {
-                { "ai_usage", "2 leituras de comprovantes por IA por mês" },
+                { "ai_usage", "2 leituras de comprovantes por mês" },
                 { "investments", "Controle completo de investimentos" },
                 { "money_boxes", "Até 3 cofrinhos para organizar sua carteira" },
                 { "calendar_ics", "Calendário de vencimentos" },
@@ -93,7 +93,7 @@ public static class Plans
             money_boxes_limit = int.MaxValue,
             features = new Dictionary<string, string>
             {
-                { "ai_usage", "10 leituras de comprovantes por IA por mês" },
+                { "ai_usage", "10 leituras de comprovantes por mês" },
                 { "investments", "Controle completo de investimentos" },
                 { "money_boxes", "Cofrinhos ilimitados" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
@@ -117,7 +117,7 @@ public static class Plans
             money_boxes_limit = int.MaxValue,
             features = new Dictionary<string, string>
             {
-                { "ai_usage", "30 leituras de comprovantes por IA por mês" },
+                { "ai_usage", "30 leituras de comprovantes por mês" },
                 { "investments", "Controle completo de investimentos" },
                 { "money_boxes", "Cofrinhos ilimitados" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },

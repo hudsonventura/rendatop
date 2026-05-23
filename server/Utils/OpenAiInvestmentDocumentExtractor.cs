@@ -48,7 +48,7 @@ public class OpenAiInvestmentDocumentExtractor : IInvestmentDocumentExtractor
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("OpenAI extraction failed: {StatusCode} {Payload}", response.StatusCode, payload);
-            throw new ExpectedException("Falha ao processar o arquivo com a IA.", System.Net.HttpStatusCode.BadGateway);
+            throw new ExpectedException("Falha ao processar o arquivo com a leitura automática de comprovantes.", System.Net.HttpStatusCode.BadGateway);
         }
 
         return ParseExtractionResult(payload);
@@ -309,7 +309,7 @@ Considere que recibos brasileiros costumam usar vírgula como separador decimal 
 
         var result = JsonSerializer.Deserialize<InvestmentDocumentExtractionResult>(outputText, options);
         if (result is null)
-            throw new ExpectedException("Não foi possível interpretar a resposta da IA.", System.Net.HttpStatusCode.BadGateway);
+            throw new ExpectedException("Não foi possível interpretar a resposta da leitura automática de comprovantes.", System.Net.HttpStatusCode.BadGateway);
 
         return result;
     }

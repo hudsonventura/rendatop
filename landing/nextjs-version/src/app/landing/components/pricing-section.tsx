@@ -61,7 +61,7 @@ export function PricingSection() {
             Escolha o plano que faz sentido para a sua rotina
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Os valores e beneficios abaixo refletem a estrutura atual do produto, com foco em notificacoes, IA e calendario.
+            Os valores e beneficios abaixo refletem a estrutura atual do produto, com foco em notificacoes, calendario e leitura automática de comprovantes.
           </p>
         </div>
 

@@ -246,7 +246,7 @@ public class InvestmentsController : AuthenticatedController
 
             if (aiUsageCount >= plan.ai_monthly_limit)
                 throw new ExpectedException(
-                    $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por IA por mês. Faça upgrade para continuar usando este recurso.",
+                    $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por mês. Faça upgrade para continuar usando este recurso.",
                     System.Net.HttpStatusCode.Forbidden);
         }
 
@@ -301,7 +301,7 @@ public class InvestmentsController : AuthenticatedController
 
         if (aiUsageCount >= plan.ai_monthly_limit)
             throw new ExpectedException(
-                $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por IA por mês. Faça upgrade para continuar usando este recurso.",
+                $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por mês. Faça upgrade para continuar usando este recurso.",
                 System.Net.HttpStatusCode.Forbidden);
 
         var banks = _context.banks

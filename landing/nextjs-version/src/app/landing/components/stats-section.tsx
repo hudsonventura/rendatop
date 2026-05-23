@@ -32,7 +32,7 @@ const stats = [
     icon: Layers3,
     value: 'Escalável',
     label: 'Planos',
-    description: 'Free, Plus e Pro para adaptar notificacoes, IA e calendário ao seu uso.',
+    description: 'Free, Plus e Pro para adaptar notificacoes, calendário e leitura automática de comprovantes.',
   },
 ]
 

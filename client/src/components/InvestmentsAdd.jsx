@@ -770,7 +770,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 						<div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4">
 							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 								<div className="space-y-1">
-									<p className="text-sm font-medium">Importar comprovante com IA</p>
+									<p className="text-sm font-medium">Importar comprovante</p>
 									<p className="text-xs">
 										Envie `txt`, `html`, imagem ou `pdf` para tentar preencher os campos automaticamente.
 									</p>
@@ -779,8 +779,8 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 									</p>
 									<p className="text-xs text-muted-foreground">
 										{aiDocumentExtractionAccess.monthly_limit > 0
-											? `${aiDocumentExtractionAccess.current_usage}/${aiDocumentExtractionAccess.monthly_limit} leituras por IA usadas neste mês.`
-											: "Seu plano define um limite mensal de leituras por IA."}
+											? `${aiDocumentExtractionAccess.current_usage}/${aiDocumentExtractionAccess.monthly_limit} leituras de comprovantes usadas neste mês.`
+											: "Seu plano define um limite mensal de leituras de comprovantes."}
 									</p>
 									{aiDocumentExtractionAccess.restriction_message && (
 										<p className="text-xs text-destructive">
@@ -803,7 +803,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 										disabled={isExtracting || !aiDocumentExtractionAccess.enabled}
 									>
 										{isExtracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-										{isExtracting ? "Lendo arquivo..." : "Processar com IA"}
+										{isExtracting ? "Lendo arquivo..." : "Processar"}
 									</Button>
 								</div>
 							</div>
