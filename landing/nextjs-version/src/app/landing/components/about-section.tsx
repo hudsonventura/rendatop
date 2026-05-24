@@ -38,7 +38,7 @@ export function AboutSection() {
             Por que o RendaTop?
           </Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-            Uma visao mais organizada para a sua rotina de investimentos
+            Uma visão mais organizada para a sua rotina de investimentos
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
             O app foi estruturado para concentrar o acompanhamento da carteira em poucas telas bem definidas,

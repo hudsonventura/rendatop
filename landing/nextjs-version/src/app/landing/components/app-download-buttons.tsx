@@ -4,33 +4,33 @@ import React from 'react';
 
 export default function AppDownloadButtons() {
   const googlePlayUrl = process.env.NEXT_PUBLIC_APPS_GOOGLE_PLAY_URL || 'https://play.google.com/store'
+  const googlePlayActive = !!process.env.NEXT_PUBLIC_APPS_GOOGLE_PLAY_URL
   const appStoreUrl = process.env.NEXT_PUBLIC_APPS_APP_STORE_URL || 'https://www.apple.com/app-store'
+const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL 
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-center justify-center p-6 bg-background">
         <section id="about" className="py-24 sm:py-32">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center mb-16">
-         
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-            Uma visao mais organizada para a sua rotina de investimentos
+            Mobilidade
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            O app foi estruturado para concentrar o acompanhamento da carteira em poucas telas bem definidas,
-            com linguagem direta e foco no que precisa ser acompanhado ao longo do mes.<br />
-            Muitos investimentos espalhados entre vários banco? Aqui você pode acompanhar tudo em um so lugar.
+            Veja na web ou no celular, como preferir, o Rendatop é acessível onde você estiver. Baixe nosso aplicativo para uma experiência otimizada ou acesse diretamente pelo navegador. Estamos aqui para facilitar sua vida financeira, seja qual for a plataforma que você escolher.
           </p>
         </div>
 
         <div className="flex justify-center items-center flex-col sm:flex-row gap-4">
-            {/* Google Play Button */}
-            <a
-                href={googlePlayUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 bg-black text-white px-5 py-2.5 rounded-xl border border-neutral-800 hover:bg-neutral-900 transition-colors duration-200 min-w-[200px] select-none shadow-sm"
-            >
-                {/* Google Play SVG Icon */}
+            
+            
+                <a
+                    href={googlePlayUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-3 bg-black text-white px-5 py-2.5 rounded-xl border border-neutral-800 hover:bg-neutral-900 transition-colors duration-200 min-w-[200px] select-none shadow-sm"
+                >
+                    {/* Google Play SVG Icon */}
                 <svg
                 aria-hidden="true"
                 viewBox="0 0 512 512"
@@ -91,11 +91,12 @@ export default function AppDownloadButtons() {
                     Get it on
                 </span>
                 <span className="text-[19px] font-semibold text-white mt-1 font-sans tracking-tight">
-                    Google Play
+                    {!googlePlayActive && ("Em breve na ")} Google Play
                 </span>
                 </div>
             </a>
-
+           
+            
             {/* Apple App Store Button */}
             <a
                 href={appStoreUrl}
@@ -120,12 +121,12 @@ export default function AppDownloadButtons() {
                     Download on the
                 </span>
                 <span className="text-[19px] font-semibold text-white mt-0.5 font-sans tracking-tight">
-                    Em breve na App Store
+                    {!appStoreActive && ("Em breve na ")} App Store
                 </span>
                 </div>
             </a>
-            
         </div>
+            
 
         
       </div>
