@@ -10,7 +10,7 @@ const productHighlights = [
     'Notificações',
     'Leitura de comprovantes',
     'Seguranca com TOTP',
-    'Investimentos recorrentes automáticos',
+    'Investimentos recorrentes',
     'Cofrinhos'
 ] as const
 
