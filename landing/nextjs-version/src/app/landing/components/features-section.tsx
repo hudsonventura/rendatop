@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScreenshotPlaceholder } from '@/components/screenshot-placeholder'
 
-const mainFeatures = [
+export const mainFeatures = [
   {
     icon: BarChart3,
     title: 'Dashboard com contexto',
@@ -22,7 +22,7 @@ const mainFeatures = [
   }
 ]
 
-const secondaryFeatures = [
+export const secondaryFeatures = [
   {
     icon: CalendarDays,
     title: 'Calendario financeiro',
@@ -35,7 +35,7 @@ const secondaryFeatures = [
   },
 ]
 
-const thirdFeatures = [
+export const thirdFeatures = [
   {
     icon: GitCompareArrows,
     title: 'Controle',
@@ -48,7 +48,7 @@ const thirdFeatures = [
   },
 ]
 
-const fourthFeatures = [
+export const fourthFeatures = [
   {
     icon: FlaskConical,
     title: 'Simulação',

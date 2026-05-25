@@ -9,7 +9,7 @@ export default function AppDownloadButtons() {
 const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL 
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 items-center justify-center p-6 bg-background">
+    <div id="downloads" className="flex flex-col sm:flex-row gap-4 items-center justify-center p-6 bg-background">
         <section id="about" className="py-24 sm:py-32">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center mb-16">

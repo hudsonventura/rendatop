@@ -16,7 +16,7 @@ const faqItems: FaqItem[] = [
     value: 'item-1',
     question: 'Para quem o RendaTop faz mais sentido?',
     answer:
-      'Para pessoas que querem acompanhar investimentos com mais organização, especialmente em renda fixa, sem depender apenas de planilhas e lembretes soltos.',
+      'Você tem muitos investimentos e já perdeu o controle dos valores e vencimentos? O RendaTop foi criado para pessoas que querem acompanhar investimentos com mais organização, especialmente em renda fixa, sem depender de planilhas, lembretes soltos e anotações. O app te avisa quando há um investimento próximo do vencimento para você antecipar a tomada de decisão.',
   },
   {
     value: 'item-2',

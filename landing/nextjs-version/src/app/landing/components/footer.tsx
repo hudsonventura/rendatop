@@ -25,7 +25,6 @@ const newsletterSchema = z.object({
 const footerLinks = {
   product: [
     { name: 'Recursos', href: '#features' },
-    { name: 'Capturas', href: '#screenshots' },
     { name: 'Planos', href: '#pricing' },
     { name: 'Criar conta', href: '/app/signup' },
   ],
@@ -81,10 +80,11 @@ export function LandingFooter() {
               <a href="https://RendaTop.com.br" target='_blank' className="flex items-center space-x-2 cursor-pointer" rel="noopener noreferrer">
                 <Logo size={32} />
                 <span className="font-bold text-xl">RendaTop</span>
+                <p>Gestão de Investimentos</p>
               </a>
             </div>
             <p className="text-muted-foreground mb-6 max-lg:text-center max-lg:flex max-lg:justify-center">
-              Consolide e acompanhe seus investimentos em um unico lugar.
+              Acompanhe e consolide seus investimentos em um unico lugar.
             </p>
             <div className="flex space-x-4 max-lg:justify-center">
               {socialLinks.map((social) => (
@@ -178,9 +178,10 @@ export function LandingFooter() {
               <a href="https://RendaTop.com.br" target='_blank' className="font-semibold text-foreground hover:text-primary transition-colors cursor-pointer" rel="noopener noreferrer">
                 RendaTop
               </a>
+              <p>{new Date().getFullYear()}</p>
             </div>
             <span className="hidden sm:inline">•</span>
-            <span>© {new Date().getFullYear()} para quem quer acompanhar melhor a carteira</span>
+            <span>®  Todos os direitos reservados</span>
           </div>
           <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-4 md:mt-0">
             <a href="#privacy" className="hover:text-foreground transition-colors">
