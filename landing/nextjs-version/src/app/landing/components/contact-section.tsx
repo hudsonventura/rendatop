@@ -53,10 +53,7 @@ export function ContactSection() {
     form.reset()
   }
 
-  return(
-      <>
-      </>
-  )
+
 
   return (
     <section id="contact" className="py-24 sm:py-32">
@@ -64,166 +61,30 @@ export function ContactSection() {
         <div className="mx-auto max-w-2xl text-center mb-16">
           <Badge variant="outline" className="mb-4">Contato</Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            Quer conversar sobre o produto?
+            Quer conversar?
           </h2>
           <p className="text-lg text-muted-foreground">
-            Escolha o caminho mais conveniente para seguir com o app, conhecer os planos ou enviar uma mensagem.
+            Dúvida, reclamaao, sugestão ou feedback?
+            Entre em contato com a gente! Envie um email ou uma mensagem pelo WhatApp . Estamos sempre abertos a ouvir nossos usuários e melhorar o Rendatop.
           </p>
-        </div>
+          <div className="flex justify-center items-center gap-6 mt-6">
+            <a href="mailto:contato@rendatop.com.br" target='_blank' className="flex items-center space-x-2 cursor-pointer" rel="noopener noreferrer">
+              <Mail className="h-6 w-6" />
+              <span className="text-sm font-medium">contato@rendatop.com.br</span>
+            </a>
+            <a href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_PHONE}`} target='_blank' className="flex items-center space-x-2 cursor-pointer" rel="noopener noreferrer">
+              <MessageCircle className="h-6 w-6" />
+              <span className="text-sm font-medium">WhatsApp</span>
+            </a>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="space-y-6 order-2 lg:order-1">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5 text-primary" />
-                  Conhecer o fluxo
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-3">
-                  Passe pelas capturas do app e veja como a landing foi preparada para apresentar as telas reais.
-                </p>
-                <Button variant="outline" size="sm" className="cursor-pointer" asChild>
-                  <a href="#screenshots">
-                    Ver capturas
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Github className="h-5 w-5 text-primary" />
-                  Criar conta
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-3">
-                  Se quiser testar o produto, voce ja pode seguir direto para o fluxo de cadastro.
-                </p>
-                <Button variant="outline" size="sm" className="cursor-pointer" asChild>
-                  <a href="/app/signup">
-                    Ir para cadastro
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-primary" />
-                  Ver planos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-3">
-                  Compare rapidamente o que muda entre Free, Plus e Pro antes de decidir.
-                </p>
-                <Button variant="outline" size="sm" className="cursor-pointer" asChild>
-                  <a href="#pricing">
-                    Abrir planos
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="lg:col-span-2 order-1 lg:order-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5" />
-                  Enviar mensagem
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Joao" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sobrenome</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Silva" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="voce@empresa.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="subject"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Assunto</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Duvida sobre planos, produto ou implantacao..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="message"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mensagem</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Escreva aqui o contexto da sua mensagem."
-                              rows={10}
-                              className="min-h-50"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full cursor-pointer">
-                      Enviar mensagem
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
           </div>
         </div>
-      </div>
-    </section>
+
+
+
+        
+        </div>
+  
+    </section>  
   )
 }
