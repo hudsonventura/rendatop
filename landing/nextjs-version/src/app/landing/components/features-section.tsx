@@ -51,12 +51,7 @@ export function FeaturesSection() {
         </div>
 
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16 mb-24">
-          <ScreenshotPlaceholder
-            title="Screenshot do dashboard"
-            subtitle="Espaco para a visao principal do app"
-            caption="Use esta area para inserir a captura do painel com vencimentos, grafico por banco e evolucao da carteira."
-            badges={['Dashboard', 'Vencimentos', 'Graficos']}
-          />
+          <img className="w-full h-auto max-w-2xl rounded-xl shadow-xl border border-neutral-800" src="dash1.png" alt="App screenshot" />
           <div className="space-y-6">
             <div className="space-y-4">
               <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
@@ -114,14 +109,8 @@ export function FeaturesSection() {
 
            
           </div>
+          <img className="w-full h-auto max-w-2xl rounded-xl shadow-xl border border-neutral-800 order-1 lg:order-2" src="calendar1.png" alt="App screenshot" />
 
-          <ScreenshotPlaceholder
-            title="Screenshot da carteira e agenda"
-            subtitle="Espaco para tela de operacao"
-            caption="Aqui cabem capturas de Meus Investimentos, Calendario ou Notificacoes, mantendo a landing pronta para apresentar o fluxo real do app."
-            badges={['Carteira', 'Calendario', 'Notificacoes']}
-            className="order-1 lg:order-2"
-          />
         </div>
       </div>
     </section>

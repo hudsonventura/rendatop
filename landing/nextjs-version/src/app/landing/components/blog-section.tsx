@@ -66,10 +66,10 @@ export function BlogSection({ backendBaseUrl }: BlogSectionProps) {
           <div className="max-w-2xl">
             <Badge variant="outline" className="mb-4">Blog</Badge>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Conteúdo prático para organizar investimentos com mais clareza
+              Dicas e informações sobre investimentos
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Leituras em estilo blog clássico, com textos completos, imagens e contexto útil para quem acompanha a carteira de perto.
+              Tenha conteúdo relevante para te ajudar a aproveitar melhor as funcionalidades do app e acompanhar as principais novidades do mercado financeiro. Novos artigos serão publicados regularmente para te manter informado e inspirado na sua jornada de investimentos.
             </p>
           </div>
 
