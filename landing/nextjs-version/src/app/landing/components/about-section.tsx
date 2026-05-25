@@ -42,7 +42,7 @@ export function AboutSection() {
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
             O app foi estruturado para concentrar o acompanhamento da carteira em poucas telas bem definidas,
-            com linguagem direta e foco no que precisa ser acompanhado ao longo do mes.<br />
+            com linguagem direta e foco no que precisa ser acompanhado ao longo do mês.<br />
             Muitos investimentos espalhados entre vários banco? Aqui você pode acompanhar tudo em um so lugar.
           </p>
         </div>

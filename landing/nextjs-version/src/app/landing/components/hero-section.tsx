@@ -29,23 +29,9 @@ export function HeroSection() {
           </h1>
 
           <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-            O RendaTop centraliza dashboard, carteira, calendario, notificacoes e configuracoes para voce acompanhar seus investimentos com mais organizacao.
+            No RendaTop você tem dashboard, carteira, calendário com notificações de vencimentos e leitura de comprovantes automáticas para você gerenciar e acompanhar seus investimentos com mais organizaçao.
           </p>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <Button size="lg" className="text-base cursor-pointer" asChild>
-              <Link href="/app/signup">
-                Criar conta
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button variant="outline" size="lg" className="text-base cursor-pointer" asChild>
-              <a href="#screenshots">
-                <Play className="mr-2 h-4 w-4" />
-                Ver telas do app
-              </a>
-            </Button>
-          </div>
         </div>
 
         <div className="">
