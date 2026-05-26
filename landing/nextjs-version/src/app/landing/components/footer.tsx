@@ -16,6 +16,8 @@ import {
 import { Logo } from '@/components/logo'
 import { Globe, Heart, LogIn, Wallet } from 'lucide-react'
 
+
+
 const newsletterSchema = z.object({
   email: z.string().email({
     message: "Informe um e-mail valido.",
@@ -26,7 +28,6 @@ const footerLinks = {
   product: [
     { name: 'Recursos', href: '#features' },
     { name: 'Planos', href: '#pricing' },
-    { name: 'Criar conta', href: '/app/signup' },
   ],
   company: [
     { name: 'Sobre', href: '#about' },
@@ -36,9 +37,9 @@ const footerLinks = {
   ],
   resources: [
     { name: 'Dashboard', href: '#features' },
-    { name: 'Calendario', href: '#features' },
-    { name: 'Notificacoes', href: '#features' },
-    { name: 'Assinatura', href: '#pricing' },
+    { name: 'Calendario', href: '#calendario' },
+    { name: 'Controle de investimentos', href: '#controle' },
+    { name: 'Simulacao e comparacao', href: '#simulacao' },
   ],
   legal: [
     { name: 'Privacidade', href: '#privacy' },

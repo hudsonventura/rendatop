@@ -125,6 +125,40 @@ const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL
                 </span>
                 </div>
             </a>
+
+            {/* Web Interface Button */}
+            <a
+                href="/app/login"
+                className="inline-flex items-center gap-3 bg-black text-white px-5 py-2.5 rounded-xl border border-neutral-800 hover:bg-neutral-900 transition-colors duration-200 min-w-[200px] select-none shadow-sm"
+            >
+                {/* Browser SVG Icon */}
+                <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="w-7 h-7"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                xmlns="http://www.w3.org/2000/svg"
+                >
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                <path d="M2 17h20" />
+                <path d="M6 17v2" />
+                <path d="M18 17v2" />
+                </svg>
+
+                {/* Text Container */}
+                <div className="flex flex-col items-start leading-none">
+                <span className="text-[10px] font-medium tracking-wider text-neutral-400 uppercase">
+                    Access in
+                </span>
+                <span className="text-[19px] font-semibold text-white mt-1 font-sans tracking-tight">
+                    Web
+                </span>
+                </div>
+            </a>
         </div>
             
 
