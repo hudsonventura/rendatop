@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Menu, ChevronDown, X, Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAnchorNavigation } from '@/hooks/useAnchorNavigation'
 import {
     NavigationMenu,
     NavigationMenuContent,
@@ -53,23 +54,11 @@ const solutionsItems = [
 
 const clientBaseUrl = process.env.BASE_URL_CLIENT || '/app'
 
-// Smooth scroll function
-const smoothScrollTo = (targetId: string) => {
-    if (targetId.startsWith('#')) {
-        const element = document.querySelector(targetId)
-        if (element) {
-            element.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start',
-            })
-        }
-    }
-}
-
 export function LandingNavbar() {
     const [isOpen, setIsOpen] = useState(false)
     const [solutionsOpen, setSolutionsOpen] = useState(false)
     const { setTheme, theme } = useTheme()
+    const { navigateToSection } = useAnchorNavigation()
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
@@ -104,7 +93,7 @@ export function LandingNavbar() {
                                         onClick={(e: React.MouseEvent) => {
                                             e.preventDefault()
                                             if (item.href.startsWith('#')) {
-                                                smoothScrollTo(item.href)
+                                                navigateToSection(item.href.slice(1))
                                             } else {
                                                 window.location.href = item.href
                                             }
@@ -204,7 +193,7 @@ export function LandingNavbar() {
                                                                         setIsOpen(false)
                                                                         if (solution.href?.startsWith('#')) {
                                                                             e.preventDefault()
-                                                                            setTimeout(() => smoothScrollTo(solution.href), 100)
+                                                                            navigateToSection(solution.href.slice(1))
                                                                         }
                                                                     }}
                                                                 >
@@ -222,7 +211,7 @@ export function LandingNavbar() {
                                                         setIsOpen(false)
                                                         if (item.href.startsWith('#')) {
                                                             e.preventDefault()
-                                                            setTimeout(() => smoothScrollTo(item.href), 100)
+                                                            navigateToSection(item.href.slice(1))
                                                         }
                                                     }}
                                                 >
