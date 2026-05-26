@@ -6,6 +6,7 @@ import { ArrowRight, CalendarDays, PenSquare } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import type { PublicBlogPostListItem } from '@/lib/blog-api'
+import { API_CONFIG } from '@/config/api'
 
 type BlogSectionProps = {
   backendBaseUrl: string
@@ -25,14 +26,14 @@ export function BlogSection({ backendBaseUrl }: BlogSectionProps) {
 
   useEffect(() => {
     let cancelled = false
-    const apiBaseUrl = (backendBaseUrl || '').trim().replace(/\/+$/, '')
+    const baseUrl = API_CONFIG.BASE_URL;
 
-    if (!apiBaseUrl) {
+    if (!baseUrl) {
       setLoading(false)
       return
     }
 
-    fetch(`${apiBaseUrl}/public/blog/posts?limit=3`)
+    fetch(`${baseUrl}/public/blog/posts?limit=3`)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Falha ao carregar posts')

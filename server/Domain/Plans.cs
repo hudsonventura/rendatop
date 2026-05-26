@@ -6,10 +6,11 @@ namespace server.Domain;
 /// </summary>
 public class Plan
 {
-    
+    internal string description { get; set; } = string.Empty;
 
     public string id { get; set; } = string.Empty;
     public string name { get; set; } = string.Empty;
+    
     public decimal price { get; set; }
 
     /// <summary>
@@ -62,6 +63,7 @@ public static class Plans
         {
             id = "free",
             name = "Free",
+            description = "Plano gratuito para controle financeiro básico",
             price = 0m,
             ai_monthly_limit = 2,
             calendar_ics = false,
@@ -84,6 +86,7 @@ public static class Plans
         {
             id = "plus",
             name = "Plus",
+            description = "Plano intermediário para usuários que desejam mais recursos",
             price = 6.9m,
             ai_monthly_limit = 10,
             calendar_ics = true,
@@ -108,6 +111,7 @@ public static class Plans
         {
             id = "pro",
             name = "Pro",
+            description = "Plano profissional para usuários que desejam mais limites",
             price = 14.9m,
             ai_monthly_limit = 30,
             calendar_ics = true,

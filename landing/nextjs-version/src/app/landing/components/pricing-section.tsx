@@ -1,57 +1,68 @@
 "use client"
 
+import { useEffect, useState } from 'react'
 import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { API_CONFIG } from '@/config/api'
 
-const plans = [
-  {
-    name: 'Free',
+interface Plan {
+  id: string
+  name: string
+  description: string
+  price: number
+  ai_monthly_limit: number
+  calendar_ics: boolean
+  stoks: number
+  whatsapp_notifications: boolean
+  recurring_investments: boolean
+  money_boxes_limit: number
+  features: Record<string, string>
+}
+
+const planDescriptions: Record<string, { description: string; cta: string; popular?: boolean; includesPrevious?: string }> = {
+  free: {
     description: 'Para comecar a organizar a carteira e acompanhar vencimentos.',
-    monthlyPrice: 0,
-    features: [
-      '2 leituras de comprovantes por mes',
-      'Controle completo de investimentos',
-      'Calendario de vencimentos na plataforma',
-      'Notificacoes por Telegram e e-mail',
-      'Suporte padrao',
-    ],
     cta: 'Comecar',
     popular: false,
   },
-  {
-    name: 'Plus',
+  plus: {
     description: 'Para quem quer ampliar notificacoes e integrar o calendario ao dia-a-dia.',
-    monthlyPrice: 6.9,
-    features: [
-      '10 leituras de comprovantes por mes',
-      'Calendario de vencimentos no Outlook ou app de calendario',
-      'Notificacoes por Telegram, e-mail e WhatsApp',
-      'Importacao e exportacao de dados em breve',
-      'Suporte prioritario',
-    ],
     cta: 'Escolher Plus',
     popular: true,
     includesPrevious: 'Tudo do Free, mais',
   },
-  {
-    name: 'Pro',
+  pro: {
     description: 'Para uso mais frequente, com limites maiores e mais margem para evolucao.',
-    monthlyPrice: 14.9,
-    features: [
-      '30 leituras de comprovantes por mes',
-      'Calendario ICS e notificacoes completas',
-      'Maior capacidade prevista para acoes brasileiras e cripto',
-      'Importacao e exportacao de dados em breve',
-      'Suporte prioritario',
-    ],
     cta: 'Escolher Pro',
     popular: false,
     includesPrevious: 'Tudo do Plus, mais',
   },
-]
+}
 
 export function PricingSection() {
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const baseUrl = API_CONFIG.BASE_URL;
+
+    const fetchPlans = async () => {
+      try {
+        const response = await fetch(`${baseUrl}/api/public/subscription/plans`)
+        if (!response.ok) throw new Error('Falha ao carregar planos')
+        const data = await response.json()
+        setPlans(data)
+      } catch (error) {
+        console.error('Erro ao buscar planos:', error)
+        // Mantém array vazio em caso de erro
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPlans()
+  }, [])
   return (
     <section id="pricing" className="py-24 sm:py-32 bg-muted/40">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -65,68 +76,83 @@ export function PricingSection() {
           </p>
         </div>
 
-        <div className="mx-auto max-w-6xl">
-          <div className="rounded-xl border">
-            <div className="grid lg:grid-cols-3">
-              {plans.map((plan, index) => (
-                <div
-                  key={index}
-                  className={`p-8 grid grid-rows-subgrid row-span-4 gap-6 ${
-                    plan.popular
-                      ? 'my-2 mx-4 rounded-xl bg-card border-transparent shadow-xl ring-1 ring-foreground/10 backdrop-blur'
-                      : ''
-                  }`}
-                >
-                  <div>
-                    <div className="text-lg font-medium tracking-tight mb-2">{plan.name}</div>
-                    <div className="text-muted-foreground text-balance text-sm">{plan.description}</div>
-                  </div>
+        {loading ? (
+          <div className="mx-auto max-w-6xl text-center py-12">
+            <p className="text-muted-foreground">Carregando planos...</p>
+          </div>
+        ) : plans.length === 0 ? (
+          <div className="mx-auto max-w-6xl text-center py-12">
+            <p className="text-muted-foreground">Planos não disponíveis no momento</p>
+          </div>
+        ) : (
+          <div className="mx-auto max-w-6xl">
+            <div className="rounded-xl border">
+              <div className="grid lg:grid-cols-3">
+                {plans.map((plan, index) => {
+                  const metadata = planDescriptions[plan.id.toLowerCase()] || { description: '', cta: 'Escolher' }
+                  const isPopular = metadata.popular || false
 
-                  <div>
-                    <div className="text-4xl font-bold mb-1">
-                      {plan.name === 'Free'
-                        ? 'R$ 0'
-                        : `R$ ${plan.monthlyPrice.toFixed(2).replace('.', ',')}`}
-                    </div>
-                    <div className="text-muted-foreground text-sm">
-                      Por mes
-                    </div>
-                  </div>
-
-                  <div>
-                    <Button
-                      className={`w-full cursor-pointer my-2 ${
-                        plan.popular
-                          ? 'shadow-md border-[0.5px] border-white/25 shadow-black/20 bg-primary ring-1 ring-primary/15 text-primary-foreground hover:bg-primary/90'
-                          : 'shadow-sm shadow-black/15 border border-transparent bg-background ring-1 ring-foreground/10 hover:bg-muted/50'
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`p-8 grid grid-rows-subgrid row-span-4 gap-6 ${
+                        isPopular
+                          ? 'my-2 mx-4 rounded-xl bg-card border-transparent shadow-xl ring-1 ring-foreground/10 backdrop-blur'
+                          : ''
                       }`}
-                      variant={plan.popular ? 'default' : 'secondary'}
-                      asChild
                     >
-                      <a href="/app/signup">{plan.cta}</a>
-                    </Button>
-                  </div>
+                      <div>
+                        <div className="text-lg font-medium tracking-tight mb-2">{plan.name}</div>
+                        <div className="text-muted-foreground text-balance text-sm">{metadata.description}</div>
+                      </div>
 
-                  <div>
-                    <ul role="list" className="space-y-3 text-sm">
-                      {plan.includesPrevious && (
-                        <li className="flex items-center gap-3 font-medium">
-                          {plan.includesPrevious}:
-                        </li>
-                      )}
-                      {plan.features.map((feature, featureIndex) => (
-                        <li key={featureIndex} className="flex items-center gap-3">
-                          <Check className="text-muted-foreground size-4 flex-shrink-0" strokeWidth={2.5} />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ))}
+                      <div>
+                        <div className="text-4xl font-bold mb-1">
+                          {plan.price === 0
+                            ? 'R$ 0'
+                            : `R$ ${plan.price.toFixed(2).replace('.', ',')}`}
+                        </div>
+                        <div className="text-muted-foreground text-sm">
+                          Por mes
+                        </div>
+                      </div>
+
+                      <div>
+                        <Button
+                          className={`w-full cursor-pointer my-2 ${
+                            isPopular
+                              ? 'shadow-md border-[0.5px] border-white/25 shadow-black/20 bg-primary ring-1 ring-primary/15 text-primary-foreground hover:bg-primary/90'
+                              : 'shadow-sm shadow-black/15 border border-transparent bg-background ring-1 ring-foreground/10 hover:bg-muted/50'
+                          }`}
+                          variant={isPopular ? 'default' : 'secondary'}
+                          asChild
+                        >
+                          <a href="/app/signup">{metadata.cta}</a>
+                        </Button>
+                      </div>
+
+                      <div>
+                        <ul role="list" className="space-y-3 text-sm">
+                          {metadata.includesPrevious && (
+                            <li className="flex items-center gap-3 font-medium">
+                              {metadata.includesPrevious}:
+                            </li>
+                          )}
+                          {Object.entries(plan.features).map(([key, value]) => (
+                            <li key={key} className="flex items-center gap-3">
+                              <Check className="text-muted-foreground size-4 flex-shrink-0" strokeWidth={2.5} />
+                              <span>{value}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="mt-16 text-center">
           <p className="text-muted-foreground">

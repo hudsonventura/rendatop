@@ -30,7 +30,7 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { useTheme } from '@/hooks/use-theme'
 
 const navigationItems = [
-    { name: 'Inicio', href: '#hero' },
+    { name: 'Inicio', href: '/' },
     { name: 'Download', href: '#downloads' },
     { name: 'Recursos', href: '#features', hasMegaMenu: true },
     { name: 'Planos', href: '#pricing' },
