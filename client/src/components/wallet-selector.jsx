@@ -8,6 +8,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { UpgradePlanModal } from "@/components/upgrade-plan-modal"
+
+const upgradeMessage = "Apenas usuarios de planos pagos podem criar mais carteiras e acessar limites extendidos."
 
 export function WalletSelector() {
     const {
@@ -22,6 +25,7 @@ export function WalletSelector() {
     const [open, setOpen] = React.useState(false)
     const [name, setName] = React.useState("")
     const [error, setError] = React.useState("")
+    const [upgradeOpen, setUpgradeOpen] = React.useState(false)
     const [saving, setSaving] = React.useState(false)
 
     const enabledWallets = wallets.filter((wallet) => wallet.enabled)
@@ -42,7 +46,12 @@ export function WalletSelector() {
                 })
             })
             .catch((err) => {
-                setError(err?.response?.data?.message || err?.response?.data || "Não foi possível criar a carteira.")
+                const message = err?.response?.data?.message || err?.response?.data || "Não foi possível criar a carteira."
+                setError(message)
+                if (String(message).toLowerCase().includes("plano") || String(message).toLowerCase().includes("limite")) {
+                    setOpen(false)
+                    setUpgradeOpen(true)
+                }
             })
             .finally(() => setSaving(false))
     }
@@ -75,9 +84,13 @@ export function WalletSelector() {
                         className="h-9 w-9"
                         onClick={() => {
                             setError("")
+                            if (!canCreate) {
+                                setUpgradeOpen(true)
+                                return
+                            }
                             setOpen(true)
                         }}
-                        disabled={!canCreate}
+                        disabled={loading}
                     >
                         <Plus className="h-4 w-4" />
                         <span className="sr-only">Nova carteira</span>
@@ -112,6 +125,12 @@ export function WalletSelector() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <UpgradePlanModal
+                open={upgradeOpen}
+                onOpenChange={setUpgradeOpen}
+                message={restrictionMessage || upgradeMessage}
+            />
         </div>
     )
 }

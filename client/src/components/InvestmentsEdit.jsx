@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import Calendario from "@/components/Calendario"
 import BankCombobox from "@/components/BankCombobox"
+import { UpgradePlanModal } from "@/components/upgrade-plan-modal"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -120,6 +121,7 @@ function formatDecimalDisplay(num) {
 
 const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose }) => {
     const [internalOpen, setInternalOpen] = useState(false)
+    const [upgradePrompt, setUpgradePrompt] = useState({ open: false, message: "" })
     const isOpen = externalOpen !== undefined ? externalOpen : internalOpen
     const autoDetectedInvestmentTypeRef = useRef(detectInvestmentTypeFromTitle(investment.title ?? "") ?? INVESTMENT_TYPE_NONE)
     const setIsOpen = (val) => {
@@ -128,6 +130,12 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
         } else {
             setInternalOpen(val)
         }
+    }
+    const openUpgradePrompt = (message) => {
+        setUpgradePrompt({
+            open: true,
+            message: message || "Apenas usuarios de planos pagos podem usar esta funcionalidade e acessar limites extendidos.",
+        })
     }
     const [bankList, setBankList] = useState([])
     const { activeWalletId } = useWallet()
@@ -242,6 +250,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
 
 
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             {externalOpen === undefined && (
                 <DialogTrigger asChild>
@@ -418,7 +427,14 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                 control={form.control}
                                 name="money_box_id"
                                 render={({ field }) => (
-                                    <FormItem className="w-48">
+                                    <FormItem
+                                        className="w-48"
+                                        onPointerDownCapture={() => {
+                                            if (!moneyBoxesOverview.selection_enabled) {
+                                                openUpgradePrompt(moneyBoxesOverview.restriction_message || "Apenas usuarios de planos pagos podem vincular investimentos a cofrinhos e acessar limites extendidos.")
+                                            }
+                                        }}
+                                    >
                                         <FormLabel>Cofrinho</FormLabel>
                                         <Select
                                             onValueChange={field.onChange}
@@ -543,6 +559,12 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                 </Form>
             </DialogContent>
         </Dialog>
+        <UpgradePlanModal
+            open={upgradePrompt.open}
+            onOpenChange={(open) => setUpgradePrompt((current) => ({ ...current, open }))}
+            message={upgradePrompt.message}
+        />
+        </>
     )
 }
 
