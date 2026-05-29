@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { UpgradePlanModal } from "@/components/upgrade-plan-modal"
 import { fetchMoneyBoxesOverview } from "@/utils/money-boxes"
 import { useWallet } from "@/contexts/wallet-context"
 import axiosInstance from "@/utils/axiosConfig"
@@ -31,6 +32,7 @@ export default function MoneyBoxesPage() {
     const [error, setError] = useState("")
     const [overview, setOverview] = useState(null)
     const [open, setOpen] = useState(false)
+    const [upgradeOpen, setUpgradeOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
     const [selectedItem, setSelectedItem] = useState(null)
@@ -58,6 +60,10 @@ export default function MoneyBoxesPage() {
     }, [activeWalletId])
 
     const openCreate = () => {
+        if (!overview?.can_create) {
+            setUpgradeOpen(true)
+            return
+        }
         setEditingItem(null)
         setForm(defaultForm)
         setOpen(true)
@@ -94,6 +100,10 @@ export default function MoneyBoxesPage() {
             const message = typeof err?.response?.data === "string"
                 ? err.response.data
                 : "Não foi possível salvar o cofrinho."
+            if (!editingItem && (message.toLowerCase().includes("plano") || message.toLowerCase().includes("limite"))) {
+                setOpen(false)
+                setUpgradeOpen(true)
+            }
             setError(message)
         } finally {
             setSaving(false)
@@ -162,7 +172,7 @@ export default function MoneyBoxesPage() {
                                 </Badge>
                             )}
                         </div>
-                        <Button onClick={openCreate} disabled={loading || !overview?.can_create}>
+                        <Button onClick={openCreate} disabled={loading}>
                             <Plus className="mr-2 h-4 w-4" />
                             Novo cofrinho
                         </Button>
@@ -257,6 +267,12 @@ export default function MoneyBoxesPage() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <UpgradePlanModal
+                open={upgradeOpen}
+                onOpenChange={setUpgradeOpen}
+                message={overview?.restriction_message || "Apenas usuarios de planos pagos podem criar mais cofrinhos e acessar limites extendidos."}
+            />
 
             <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                 <DialogContent className="sm:max-w-sm">

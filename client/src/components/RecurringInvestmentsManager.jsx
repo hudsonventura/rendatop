@@ -4,7 +4,7 @@ import { getCachedBanks, primeBanksCache } from "@/utils/banksCache"
 import BankCombobox from "@/components/BankCombobox"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { UpgradePlanModal } from "@/components/upgrade-plan-modal"
 import { AlertCircle, Plus, Repeat, Trash2, Pencil } from "lucide-react"
 import {
     detectInvestmentTypeFromTitle,
@@ -179,6 +180,7 @@ export default function RecurringInvestmentsManager() {
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState("")
     const [noticeOpen, setNoticeOpen] = useState(false)
+    const [upgradeOpen, setUpgradeOpen] = useState(false)
     const [noticeMessage, setNoticeMessage] = useState("")
     const [items, setItems] = useState([])
     const [enabled, setEnabled] = useState(false)
@@ -232,7 +234,12 @@ export default function RecurringInvestmentsManager() {
         setEditingItem(null)
     }
 
-    const openCreate = () => {
+    const openCreate = (event) => {
+        if (!enabled) {
+            event?.preventDefault()
+            setUpgradeOpen(true)
+            return
+        }
         resetForm()
         setError("")
         setNoticeOpen(false)
@@ -437,12 +444,10 @@ export default function RecurringInvestmentsManager() {
                 </div>
 
                 <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild>
-                        <Button type="button" size="sm" onClick={openCreate} disabled={!enabled}>
-                            <Plus className="mr-1 h-4 w-4" />
-                            Nova recorrência
-                        </Button>
-                    </DialogTrigger>
+                    <Button type="button" size="sm" onClick={openCreate} disabled={loading}>
+                        <Plus className="mr-1 h-4 w-4" />
+                        Nova recorrência
+                    </Button>
                     <DialogContent className="w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>{editingItem ? "Editar recorrência" : "Nova recorrência"}</DialogTitle>
@@ -794,6 +799,12 @@ export default function RecurringInvestmentsManager() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <UpgradePlanModal
+                open={upgradeOpen}
+                onOpenChange={setUpgradeOpen}
+                message="Apenas usuarios de planos pagos podem criar investimentos recorrentes e acessar limites extendidos."
+            />
         </div>
     )
 }

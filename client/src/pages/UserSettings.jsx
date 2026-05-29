@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2, MessageCircleMore, Sparkles } from "lucide-react"
+import { UpgradePlanModal } from "@/components/upgrade-plan-modal"
 import { PasswordRequirements } from "@/components/PasswordRequirements"
 import {
     getBrowserPushServerConfiguration,
@@ -53,6 +54,7 @@ const UserSettings = () => {
     const [resendingPendingEmail, setResendingPendingEmail] = useState(false)
     const [cancelingPendingEmail, setCancelingPendingEmail] = useState(false)
     const [telegramGuideOpen, setTelegramGuideOpen] = useState(false)
+    const [upgradePrompt, setUpgradePrompt] = useState({ open: false, message: "" })
     const [success, setSuccess] = useState("")
     const [error, setError] = useState("")
     const [whatsAppError, setWhatsAppError] = useState("")
@@ -207,7 +209,18 @@ const UserSettings = () => {
     }
 
     const handleToggleWhatsApp = (checked) => {
-        if (!whatsappNotificationsEnabled) return
+        if (!whatsappNotificationsEnabled) {
+            if (checked) {
+                setNotifyWhatsapp(false)
+                setWhatsAppError("")
+                setError("")
+                setUpgradePrompt({
+                    open: true,
+                    message: "Apenas usuarios de planos pagos podem ativar notificações por WhatsApp e acessar limites extendidos.",
+                })
+            }
+            return
+        }
         if (checked && !phone) {
             setChannelAwareError("Informe o telefone antes de habilitar o WhatsApp.")
             setSuccess("")
@@ -725,7 +738,6 @@ const UserSettings = () => {
                                                 <Switch
                                                     checked={notifyWhatsapp}
                                                     onCheckedChange={handleToggleWhatsApp}
-                                                    disabled={!whatsappNotificationsEnabled}
                                                 />
                                             </div>
                                             <Button
@@ -1116,6 +1128,12 @@ const UserSettings = () => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            <UpgradePlanModal
+                open={upgradePrompt.open}
+                onOpenChange={(open) => setUpgradePrompt((current) => ({ ...current, open }))}
+                message={upgradePrompt.message}
+            />
         </>
     )
 }

@@ -39,6 +39,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Calendario from "@/components/Calendario"
 import BankCombobox from "@/components/BankCombobox"
+import { UpgradePlanModal } from "@/components/upgrade-plan-modal"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -472,6 +473,7 @@ function extractErrorMessage(error, fallbackMessage) {
 const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValues }) => {
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [isExtracting, setIsExtracting] = useState(false);
+	const [upgradePrompt, setUpgradePrompt] = useState({ open: false, message: "" });
 	const [hasAiExtraction, setHasAiExtraction] = useState(false);
 	const [aiDocumentExtractionAccess, setAiDocumentExtractionAccess] = useState({
 		enabled: true,
@@ -490,6 +492,13 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 		}
 
 		setInternalOpen(value);
+	};
+
+	const openUpgradePrompt = (message) => {
+		setUpgradePrompt({
+			open: true,
+			message: message || "Apenas usuarios de planos pagos podem usar esta funcionalidade e acessar limites extendidos.",
+		});
 	};
 
 
@@ -749,6 +758,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 
 
 	return (
+		<>
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			{externalOpen === undefined && (
 				<DialogTrigger asChild>
@@ -802,8 +812,14 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 									<Button
 										type="button"
 										variant="outline"
-										onClick={() => fileInputRef.current?.click()}
-										disabled={isExtracting || !aiDocumentExtractionAccess.enabled}
+										onClick={() => {
+											if (!aiDocumentExtractionAccess.enabled) {
+												openUpgradePrompt(aiDocumentExtractionAccess.restriction_message || "Apenas usuarios de planos pagos podem processar comprovantes com IA e acessar limites extendidos.");
+												return;
+											}
+											fileInputRef.current?.click();
+										}}
+										disabled={isExtracting}
 									>
 										{isExtracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
 										{isExtracting ? "Lendo arquivo..." : "Processar"}
@@ -961,7 +977,14 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 								control={form.control}
 								name="money_box_id"
 								render={({ field }) => (
-									<FormItem className="w-48">
+									<FormItem
+										className="w-48"
+										onPointerDownCapture={() => {
+											if (!moneyBoxesOverview.selection_enabled) {
+												openUpgradePrompt(moneyBoxesOverview.restriction_message || "Apenas usuarios de planos pagos podem vincular investimentos a cofrinhos e acessar limites extendidos.");
+											}
+										}}
+									>
 										<FormLabel>Cofrinho</FormLabel>
 										<Select
 											onValueChange={field.onChange}
@@ -1094,6 +1117,12 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 				</Form>
 			</DialogContent>
 		</Dialog>
+		<UpgradePlanModal
+			open={upgradePrompt.open}
+			onOpenChange={(open) => setUpgradePrompt((current) => ({ ...current, open }))}
+			message={upgradePrompt.message}
+		/>
+		</>
 	);
 };
 export default InvestmentsAdd;

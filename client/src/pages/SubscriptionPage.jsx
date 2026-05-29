@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { useSearchParams } from 'react-router-dom';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Check, CreditCard, QrCode, Barcode, Loader2, Crown, Sparkles, Copy, ExternalLink, AlertTriangle } from "lucide-react";
+import { Check, CreditCard, QrCode, Barcode, Loader2, Copy, ExternalLink, AlertTriangle } from "lucide-react";
 import { BaseLayout } from "@/components/layouts/base-layout";
 import Logged from "@/components/Logged";
+import { SubscriptionPlanGrid } from "@/components/subscription-plan-grid";
 import axiosInstance from "@/utils/axiosConfig";
 import { formatCpf, isValidCpf, sanitizeCpf } from "@/utils/cpf";
 
@@ -151,6 +151,7 @@ function getPlanSyncState(overview, planId) {
 }
 
 const SubscriptionPage = () => {
+    const [searchParams] = useSearchParams();
     const [plans, setPlans] = useState([]);
     const [activeSub, setActiveSub] = useState(null);
     const [pendingSub, setPendingSub] = useState(null);
@@ -159,6 +160,7 @@ const SubscriptionPage = () => {
     const [payerCpf, setPayerCpf] = useState("");
     const [loading, setLoading] = useState(true);
     const [selectedPlan, setSelectedPlan] = useState(null);
+    const [handledPlanParam, setHandledPlanParam] = useState('');
     const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
     const [pendingCancelDialogOpen, setPendingCancelDialogOpen] = useState(false);
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -195,6 +197,22 @@ const SubscriptionPage = () => {
     }, []);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    useEffect(() => {
+        if (loading || paymentDialogOpen) return;
+
+        const requestedPlanId = searchParams.get('plan');
+        if (!requestedPlanId || handledPlanParam === requestedPlanId) return;
+
+        const requestedPlan = plans.find((plan) => plan.id === requestedPlanId);
+        if (!requestedPlan || requestedPlan.price <= 0) return;
+        if (activeSub?.plan_id === requestedPlan.id) return;
+        if (pendingSub?.plan_id === requestedPlan.id) return;
+
+        setSelectedPlan(requestedPlan);
+        setHandledPlanParam(requestedPlan.id);
+        setPaymentDialogOpen(true);
+    }, [activeSub?.plan_id, handledPlanParam, loading, paymentDialogOpen, pendingSub?.plan_id, plans, searchParams]);
 
     const handleSelectPlan = (plan) => {
         if (plan.price <= 0) return;
@@ -269,139 +287,22 @@ const SubscriptionPage = () => {
     const isPixSubscription = activeSub?.payment_method === 'pix';
     const supportsImmediateRefund = isCardSubscription || isPixSubscription;
 
-    const planIcons = { free: null, plus: Sparkles, pro: Crown };
-
     return (
         <>
             <Logged />
             <BaseLayout title="Assinatura" description="Escolha o plano ideal para você">
                 <div className="px-4 lg:px-6">
                     <div className="mx-auto w-full max-w-5xl">
-                        {loading ? (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {[1, 2, 3].map(i => (
-                                    <Skeleton key={i} className="h-80 rounded-xl" />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {plans.map((plan) => {
-                                    const isActive = currentPlanId === plan.id;
-                                    const isPending = pendingPlanId === plan.id;
-                                    const PlanIcon = planIcons[plan.id];
-                                    const isPopular = plan.id === 'plus';
-                                    const cardBadge = isPending
-                                        ? (
-                                            <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 bg-background">
-                                                Pagamento pendente
-                                            </Badge>
-                                        )
-                                        : isActive
-                                            ? (
-                                                <Badge variant="outline" className="text-xs border-primary text-primary bg-background">
-                                                    <Check className="h-3 w-3 mr-1" /> Atual
-                                                </Badge>
-                                            )
-                                            : isPopular
-                                                ? <Badge className="text-xs bg-background text-foreground border border-border">Mais popular</Badge>
-                                                : null;
-
-                                    return (
-                                        <Card
-                                            key={plan.id}
-                                            className={`relative flex flex-col transition-all ${
-                                                isActive
-                                                    ? 'border-primary ring-1 ring-primary/20'
-                                                    : isPending
-                                                        ? 'border-amber-500/60 ring-1 ring-amber-500/20'
-                                                    : 'hover:border-primary/40'
-                                            }`}
-                                        >
-                                            {cardBadge && (
-                                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 px-1 bg-background rounded-md">
-                                                    {cardBadge}
-                                                </div>
-                                            )}
-
-                                            <CardHeader className="pb-4 pt-6">
-                                                <div className="flex items-center gap-2">
-                                                    {PlanIcon && (
-                                                        <PlanIcon
-                                                            className={`h-5 w-5 ${plan.id === "pro" ? "text-yellow-400" : "text-primary"}`}
-                                                        />
-                                                    )}
-                                                    <CardTitle className="text-lg">{plan.name}</CardTitle>
-                                                </div>
-                                                <div className="mt-3">
-                                                    {plan.price > 0 ? (
-                                                        <div className="flex items-baseline gap-1">
-                                                            <span className="text-3xl font-bold">
-                                                                R${plan.price.toFixed(2).replace('.', ',')}
-                                                            </span>
-                                                            <span className="text-muted-foreground text-sm">/mês</span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-3xl font-bold">Grátis</span>
-                                                    )}
-                                                </div>
-                                            </CardHeader>
-
-                                            <CardContent className="flex-1">
-                                                <Separator className="mb-4" />
-                                                <ul className="space-y-2.5">
-                                                    {Object.entries(plan.features).map(([key, text]) => (
-                                                        <li key={key} className="flex items-start gap-2 text-sm">
-                                                            <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                                                            <span className="text-muted-foreground">{text}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </CardContent>
-
-                                            <CardFooter className="pt-0">
-                                                {isActive ? (
-                                                    plan.price > 0 ? (
-                                                        <Button
-                                                            variant="outline"
-                                                            className="w-full"
-                                                            disabled={Boolean(activeSub?.cancel_at_period_end)}
-                                                            onClick={handleCancelSubscription}
-                                                        >
-                                                            {activeSub?.cancel_at_period_end ? 'Cancelamento agendado' : 'Cancelar assinatura'}
-                                                        </Button>
-                                                    ) : (
-                                                        <Button variant="outline" className="w-full" disabled>
-                                                            Plano atual
-                                                        </Button>
-                                                    )
-                                                ) : isPending ? (
-                                                    <Button
-                                                        variant="outline"
-                                                        className="w-full"
-                                                        onClick={handleRequestPendingCancel}
-                                                    >
-                                                        Cancelar pendência
-                                                    </Button>
-                                                ) : (
-                                                    plan.price > 0 ? (
-                                                        <Button
-                                                            className="w-full"
-                                                            onClick={() => handleSelectPlan(plan)}
-                                                        >
-                                                            Assinar {plan.name}
-                                                        </Button>
-                                                    ) : (
-                                                        <Button variant="outline" className="w-full" disabled>
-                                                            Plano básico
-                                                        </Button>
-                                                    )
-                                                )}
-                                            </CardFooter>
-                                        </Card>
-                                    );
-                                })}
-                            </div>
-                        )}
+                        <SubscriptionPlanGrid
+                            plans={plans}
+                            loading={loading}
+                            currentPlanId={currentPlanId}
+                            pendingPlanId={pendingPlanId}
+                            activeSub={activeSub}
+                            onSelectPlan={handleSelectPlan}
+                            onCancelSubscription={handleCancelSubscription}
+                            onCancelPending={handleRequestPendingCancel}
+                        />
 
                         {activeSub && activeSub.plan_id !== 'free' && (
                             <Card className="mt-6">
