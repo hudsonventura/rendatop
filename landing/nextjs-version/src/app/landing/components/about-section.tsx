@@ -9,13 +9,13 @@ import { LayoutDashboard, Wallet, BellRing, ShieldCheck } from 'lucide-react'
 const values = [
   {
     icon: LayoutDashboard,
-    title: 'Painel objetivo',
-    description: 'Visualize os próximos vencimentos, distribuićão por banco e evolućão da carteira ao longo do tempo.',
+    title: 'Cofrinhos',
+    description: 'Visualize os próximos vencimentos, distribuição por banco e evolução da carteira ao longo do tempo.',
   },
   {
     icon: Wallet,
     title: 'Carteira organizada',
-    description: 'Cadastre investimentos, acompanhe o que ja pode ser resgatado e mantenha historico com arquivamento.',
+    description: 'Cadastre investimentos, acompanhe o que já pode ser resgatado e mantenha historico com arquivamento.',
   },
   {
     icon: BellRing,
@@ -24,8 +24,8 @@ const values = [
   },
   {
     icon: ShieldCheck,
-    title: 'Graficos',
-    description: 'Veja a distribuićão do seu patrimonio entre os bancos e acompanhe o crescimento da carteira.',
+    title: 'Gráficos',
+    description: 'Veja a distribuição do seu patrimonio entre os bancos e acompanhe o crescimento da carteira.',
   },
 ]
 
@@ -38,11 +38,11 @@ export function AboutSection() {
             Por que o RendaTop?
           </Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-            Uma visao mais organizada para a sua rotina de investimentos
+            Uma visão mais organizada para a sua rotina de investimentos
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
             O app foi estruturado para concentrar o acompanhamento da carteira em poucas telas bem definidas,
-            com linguagem direta e foco no que precisa ser acompanhado ao longo do mes.<br />
+            com linguagem direta e foco no que precisa ser acompanhado ao longo do mês.<br />
             Muitos investimentos espalhados entre vários banco? Aqui você pode acompanhar tudo em um so lugar.
           </p>
         </div>
@@ -63,23 +63,7 @@ export function AboutSection() {
           ))}
         </div>
 
-        <div className="mt-16 text-center">
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <span className="text-muted-foreground">Pensado para quem quer acompanhar melhor o proprio dinheiro.</span>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="cursor-pointer" asChild>
-              <a href="/app/signup">
-                Criar conta
-              </a>
-            </Button>
-            <Button size="lg" variant="outline" className="cursor-pointer" asChild>
-              <a href="#pricing">
-                Ver planos
-              </a>
-            </Button>
-          </div>
-        </div>
+        
       </div>
     </section>
   )

@@ -21,6 +21,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Archive } from "lucide-react";
 import { getReinvestmentInitialValues } from "@/utils/investment-actions";
+import { useWallet, walletParams } from "@/contexts/wallet-context";
 
 function DueSoonTableSkeleton() {
     return (
@@ -56,13 +57,14 @@ const Home = () => {
     const [reinvestInitialValues, setReinvestInitialValues] = useState(null);
     const [archiveOpen, setArchiveOpen] = useState(false);
     const [selectedInvestment, setSelectedInvestment] = useState(null);
+    const { activeWalletId } = useWallet();
 
     useEffect(() => {
         let cancelled = false;
         setLoadingInvestments(true);
 
         axiosInstance
-            .get("/Investments")
+            .get("/Investments", { params: walletParams(activeWalletId) })
             .then((response) => {
                 if (cancelled) return;
                 setInvestments(response.data ?? []);
@@ -80,7 +82,7 @@ const Home = () => {
         return () => {
             cancelled = true;
         };
-    }, [reload]);
+    }, [reload, activeWalletId]);
 
     const handleReinvest = (investment) => {
         setReinvestInitialValues(getReinvestmentInitialValues(investment));

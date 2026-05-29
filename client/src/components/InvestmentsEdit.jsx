@@ -46,6 +46,7 @@ import {
     INVESTMENT_TYPE_OPTIONS,
 } from "@/utils/investment-types"
 import { fetchMoneyBoxesOverview, MONEY_BOX_NONE } from "@/utils/money-boxes"
+import { useWallet } from "@/contexts/wallet-context"
 
 // ── Schema (same as InvestmentsAdd) ─────────────────────────────────────────
 
@@ -129,6 +130,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
         }
     }
     const [bankList, setBankList] = useState([])
+    const { activeWalletId } = useWallet()
     const [liquidez_diaria, setLiquidezDiaria] = useState(!investment.due_date)
     const [moneyBoxesOverview, setMoneyBoxesOverview] = useState({
         items: [],
@@ -148,7 +150,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
     useEffect(() => {
         if (!isOpen) return
 
-        fetchMoneyBoxesOverview()
+        fetchMoneyBoxesOverview(activeWalletId)
             .then((data) => {
                 setMoneyBoxesOverview(data)
             })
@@ -159,7 +161,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                     restriction_message: null,
                 })
             })
-    }, [isOpen])
+    }, [isOpen, activeWalletId])
 
     const form = useForm({
         resolver: zodResolver(formSchema),
@@ -212,6 +214,7 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
             bank_code: values.bank_code,
             value: Number(values.value),
             investment_type: values.investment_type,
+            wallet_id: activeWalletId || investment.wallet_id || null,
             money_box_id: values.money_box_id ?? null,
             index: Number(values.index),
             index_percent: Number(values.index_percent),

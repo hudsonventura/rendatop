@@ -336,6 +336,9 @@ namespace server.Migrations
                     b.Property<decimal>("value")
                         .HasColumnType("numeric");
 
+                    b.Property<Guid?>("wallet_id")
+                        .HasColumnType("uuid");
+
                     b.HasKey("id");
 
                     b.HasIndex("bank_id");
@@ -343,6 +346,8 @@ namespace server.Migrations
                     b.HasIndex("money_box_id");
 
                     b.HasIndex("ownerid");
+
+                    b.HasIndex("wallet_id");
 
                     b.ToTable("investments");
                 });
@@ -503,6 +508,9 @@ namespace server.Migrations
                     b.Property<decimal>("value")
                         .HasColumnType("numeric");
 
+                    b.Property<Guid?>("wallet_id")
+                        .HasColumnType("uuid");
+
                     b.PrimitiveCollection<List<short>>("weekdays")
                         .IsRequired()
                         .HasColumnType("smallint[]");
@@ -512,6 +520,8 @@ namespace server.Migrations
                     b.HasIndex("bank_id");
 
                     b.HasIndex("owner_id");
+
+                    b.HasIndex("wallet_id");
 
                     b.ToTable("recurring_investments");
                 });
@@ -958,6 +968,35 @@ namespace server.Migrations
                     b.ToTable("users");
                 });
 
+            modelBuilder.Entity("server.Domain.Wallet", b =>
+                {
+                    b.Property<Guid>("id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("created_at")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("owner_id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("updated_at")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("id");
+
+                    b.HasIndex("owner_id");
+
+                    b.HasIndex("owner_id", "name")
+                        .IsUnique();
+
+                    b.ToTable("wallets");
+                });
+
             modelBuilder.Entity("server.Domain.AiUsage", b =>
                 {
                     b.HasOne("server.Domain.User", "user")
@@ -1029,11 +1068,17 @@ namespace server.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("server.Domain.Wallet", "wallet")
+                        .WithMany()
+                        .HasForeignKey("wallet_id");
+
                     b.Navigation("bank");
 
                     b.Navigation("money_box");
 
                     b.Navigation("owner");
+
+                    b.Navigation("wallet");
                 });
 
             modelBuilder.Entity("server.Domain.MoneyBox", b =>
@@ -1072,9 +1117,15 @@ namespace server.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("server.Domain.Wallet", "wallet")
+                        .WithMany()
+                        .HasForeignKey("wallet_id");
+
                     b.Navigation("bank");
 
                     b.Navigation("owner");
+
+                    b.Navigation("wallet");
                 });
 
             modelBuilder.Entity("server.Domain.Redemption", b =>
@@ -1176,6 +1227,17 @@ namespace server.Migrations
                     b.Navigation("actor_user");
 
                     b.Navigation("ticket");
+                });
+
+            modelBuilder.Entity("server.Domain.Wallet", b =>
+                {
+                    b.HasOne("server.Domain.User", "owner")
+                        .WithMany()
+                        .HasForeignKey("owner_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("owner");
                 });
 
             modelBuilder.Entity("server.Domain.BlogPost", b =>

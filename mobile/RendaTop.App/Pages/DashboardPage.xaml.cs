@@ -11,14 +11,17 @@ public partial class DashboardPage : ContentPage
     private readonly InvestmentService _investments;
     private readonly NotificationService _notifications;
     private readonly SessionService _session;
+    private readonly WalletService _wallets;
     private readonly NotificationTitleView _titleView;
     private bool _loaded;
+    private bool _walletSubscribed;
 
-    public DashboardPage(InvestmentService investments, SessionService session, NotificationService notifications)
+    public DashboardPage(InvestmentService investments, SessionService session, NotificationService notifications, WalletService wallets)
     {
         _investments = investments;
         _session = session;
         _notifications = notifications;
+        _wallets = wallets;
         InitializeComponent();
         _titleView = NotificationChrome.Apply(this, "Dashboard", notifications);
     }
@@ -29,9 +32,16 @@ public partial class DashboardPage : ContentPage
 
         WelcomeLabel.Text = $"Ola, {GetFirstName()}";
         _ = _titleView.RefreshAsync();
+        SubscribeWalletChanges();
 
         if (!_loaded)
             await LoadDashboardAsync();
+    }
+
+    protected override void OnDisappearing()
+    {
+        UnsubscribeWalletChanges();
+        base.OnDisappearing();
     }
 
     private async void OnRefresh(object? sender, EventArgs e)
@@ -39,6 +49,27 @@ public partial class DashboardPage : ContentPage
 
     private async void OnRetryClicked(object? sender, EventArgs e)
         => await LoadDashboardAsync(forceRefresh: true);
+
+    private void SubscribeWalletChanges()
+    {
+        if (_walletSubscribed)
+            return;
+
+        _wallets.ActiveWalletChanged += OnActiveWalletChanged;
+        _walletSubscribed = true;
+    }
+
+    private void UnsubscribeWalletChanges()
+    {
+        if (!_walletSubscribed)
+            return;
+
+        _wallets.ActiveWalletChanged -= OnActiveWalletChanged;
+        _walletSubscribed = false;
+    }
+
+    private void OnActiveWalletChanged(object? sender, Guid walletId)
+        => MainThread.BeginInvokeOnMainThread(async () => await LoadDashboardAsync(forceRefresh: true));
 
     private async Task LoadDashboardAsync(bool forceRefresh = false)
     {

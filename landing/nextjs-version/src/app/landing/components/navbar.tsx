@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Menu, ChevronDown, X, Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAnchorNavigation } from '@/hooks/useAnchorNavigation'
 import {
     NavigationMenu,
     NavigationMenuContent,
@@ -30,13 +31,13 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { useTheme } from '@/hooks/use-theme'
 
 const navigationItems = [
-    { name: 'Inicio', href: '#hero' },
+    { name: 'Inicio', href: '/' },
+    { name: 'Download', href: '#downloads' },
     { name: 'Recursos', href: '#features', hasMegaMenu: true },
-    { name: 'Capturas', href: '#screenshots' },
-    { name: 'Blog', href: '/blog' },
     { name: 'Planos', href: '#pricing' },
     { name: 'FAQ', href: '#faq' },
     { name: 'Contato', href: '#contact' },
+    { name: 'Blog', href: '/blog' },
 ]
 
 const solutionsItems = [
@@ -46,7 +47,6 @@ const solutionsItems = [
     { name: 'Calendario', href: '#features' },
     { name: 'Notificacoes', href: '#features' },
     { title: 'Aprofundar' },
-    { name: 'Capturas do app', href: '#screenshots' },
     { name: 'Planos', href: '#pricing' },
     { name: 'Perguntas frequentes', href: '#faq' },
     { name: 'Contato', href: '#contact' }
@@ -54,23 +54,11 @@ const solutionsItems = [
 
 const clientBaseUrl = process.env.BASE_URL_CLIENT || '/app'
 
-// Smooth scroll function
-const smoothScrollTo = (targetId: string) => {
-    if (targetId.startsWith('#')) {
-        const element = document.querySelector(targetId)
-        if (element) {
-            element.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start',
-            })
-        }
-    }
-}
-
 export function LandingNavbar() {
     const [isOpen, setIsOpen] = useState(false)
     const [solutionsOpen, setSolutionsOpen] = useState(false)
     const { setTheme, theme } = useTheme()
+    const { navigateToSection } = useAnchorNavigation()
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
@@ -105,7 +93,7 @@ export function LandingNavbar() {
                                         onClick={(e: React.MouseEvent) => {
                                             e.preventDefault()
                                             if (item.href.startsWith('#')) {
-                                                smoothScrollTo(item.href)
+                                                navigateToSection(item.href.slice(1))
                                             } else {
                                                 window.location.href = item.href
                                             }
@@ -123,7 +111,7 @@ export function LandingNavbar() {
                 <div className="hidden lg:flex items-center space-x-2">
                     <ModeToggle variant="ghost" />
                     <Button variant="ghost" asChild className="cursor-pointer">
-                        <Link href={clientBaseUrl+'/signup'}>Crie uma conta</Link>
+                        <Link href={clientBaseUrl+'/signup'}>Criar conta</Link>
                     </Button>
                     <Button asChild className="cursor-pointer">
                         <Link href={clientBaseUrl+'/login'}>Entrar</Link>
@@ -163,10 +151,22 @@ export function LandingNavbar() {
                                     </div>
                                 </div>
                             </SheetHeader>
-
+                            
                             {/* Navigation Links */}
                             <div className="flex-1 overflow-y-auto">
+                                
                                 <nav className="p-6 space-y-1">
+                                    {/* Primary Actions */}
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Button variant="outline" size="lg" asChild className="cursor-pointer">
+                                                <Link href="/app/login">Entrar</Link>
+                                            </Button>
+                                            <Button asChild size="lg" className="cursor-pointer" >
+                                                <Link href="/app/signup">Criar conta</Link>
+                                            </Button>
+                                        </div>
+                                    </div>
                                     {navigationItems.map((item) => (
                                         <div key={item.name}>
                                             {item.hasMegaMenu ? (
@@ -193,7 +193,7 @@ export function LandingNavbar() {
                                                                         setIsOpen(false)
                                                                         if (solution.href?.startsWith('#')) {
                                                                             e.preventDefault()
-                                                                            setTimeout(() => smoothScrollTo(solution.href), 100)
+                                                                            navigateToSection(solution.href.slice(1))
                                                                         }
                                                                     }}
                                                                 >
@@ -211,7 +211,7 @@ export function LandingNavbar() {
                                                         setIsOpen(false)
                                                         if (item.href.startsWith('#')) {
                                                             e.preventDefault()
-                                                            setTimeout(() => smoothScrollTo(item.href), 100)
+                                                            navigateToSection(item.href.slice(1))
                                                         }
                                                     }}
                                                 >
@@ -223,21 +223,7 @@ export function LandingNavbar() {
                                 </nav>
                             </div>
 
-                            {/* Footer Actions */}
-                            <div className="border-t p-6 space-y-4">
 
-                                {/* Primary Actions */}
-                                <div className="space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <Button variant="outline" size="lg" asChild className="cursor-pointer">
-                                            <Link href="/app/login">Entrar</Link>
-                                        </Button>
-                                        <Button asChild size="lg" className="cursor-pointer" >
-                                            <Link href="/app/signup">Crie uma conta</Link>
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </SheetContent>
                 </Sheet>

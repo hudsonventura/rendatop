@@ -9,6 +9,7 @@ import InvestmentsDataTable from "@/components/InvestmentsDataTable";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getReinvestmentInitialValues } from "@/utils/investment-actions";
+import { useWallet, walletParams } from "@/contexts/wallet-context";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getInvestmentTypeLabel } from "@/utils/investment-types";
 import { ALL_MONEY_BOXES, MONEY_BOX_UNCATEGORIZED } from "@/utils/money-boxes";
@@ -69,6 +70,7 @@ const MyInvestments = () => {
     const [selectedType, setSelectedType] = useState(ALL_TYPES);
     const [selectedIndex, setSelectedIndex] = useState(ALL_INDEXES);
     const [selectedMoneyBox, setSelectedMoneyBox] = useState(ALL_MONEY_BOXES);
+    const { activeWalletId } = useWallet();
     const [selectedRedemptionStatus, setSelectedRedemptionStatus] = useState(ALL_REDEMPTION_STATUSES);
 
     useEffect(() => {
@@ -76,7 +78,7 @@ const MyInvestments = () => {
         setLoadingInvestments(true);
 
         axiosInstance
-            .get("/Investments")
+            .get("/Investments", { params: walletParams(activeWalletId) })
             .then((response) => {
                 if (cancelled) return;
                 setInvestments(response.data ?? []);
@@ -94,7 +96,7 @@ const MyInvestments = () => {
         return () => {
             cancelled = true;
         };
-    }, [reload]);
+    }, [reload, activeWalletId]);
 
     const handleReinvest = (investment) => {
         setReinvestInitialValues(getReinvestmentInitialValues(investment));

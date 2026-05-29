@@ -16,6 +16,8 @@ import {
 import { Logo } from '@/components/logo'
 import { Globe, Heart, LogIn, Wallet } from 'lucide-react'
 
+
+
 const newsletterSchema = z.object({
   email: z.string().email({
     message: "Informe um e-mail valido.",
@@ -25,9 +27,7 @@ const newsletterSchema = z.object({
 const footerLinks = {
   product: [
     { name: 'Recursos', href: '#features' },
-    { name: 'Capturas', href: '#screenshots' },
     { name: 'Planos', href: '#pricing' },
-    { name: 'Criar conta', href: '/app/signup' },
   ],
   company: [
     { name: 'Sobre', href: '#about' },
@@ -37,9 +37,9 @@ const footerLinks = {
   ],
   resources: [
     { name: 'Dashboard', href: '#features' },
-    { name: 'Calendario', href: '#features' },
-    { name: 'Notificacoes', href: '#features' },
-    { name: 'Assinatura', href: '#pricing' },
+    { name: 'Calendario', href: '#calendario' },
+    { name: 'Controle de investimentos', href: '#controle' },
+    { name: 'Simulacao e comparacao', href: '#simulacao' },
   ],
   legal: [
     { name: 'Privacidade', href: '#privacy' },
@@ -72,33 +72,7 @@ export function LandingFooter() {
     <footer className="border-t bg-background">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="mb-16">
-          <div className="mx-auto max-w-2xl text-center">
-            <h3 className="text-2xl font-bold mb-4">Acompanhe a evolucao do produto</h3>
-            <p className="text-muted-foreground mb-6">
-              Deixe seu e-mail para receber novidades sobre o app, planos e proximas entregas.
-            </p>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-2 max-w-md mx-auto sm:flex-row">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="voce@empresa.com"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="cursor-pointer">Receber novidades</Button>
-              </form>
-            </Form>
-          </div>
+          
         </div>
 
         <div className="grid gap-8 grid-cols-4 lg:grid-cols-6">
@@ -107,10 +81,11 @@ export function LandingFooter() {
               <a href="https://RendaTop.com.br" target='_blank' className="flex items-center space-x-2 cursor-pointer" rel="noopener noreferrer">
                 <Logo size={32} />
                 <span className="font-bold text-xl">RendaTop</span>
+                <p>Gestão de Investimentos</p>
               </a>
             </div>
             <p className="text-muted-foreground mb-6 max-lg:text-center max-lg:flex max-lg:justify-center">
-              Consolide e acompanhe seus investimentos em um unico lugar.
+              Acompanhe e consolide seus investimentos em um unico lugar.
             </p>
             <div className="flex space-x-4 max-lg:justify-center">
               {socialLinks.map((social) => (
@@ -204,9 +179,10 @@ export function LandingFooter() {
               <a href="https://RendaTop.com.br" target='_blank' className="font-semibold text-foreground hover:text-primary transition-colors cursor-pointer" rel="noopener noreferrer">
                 RendaTop
               </a>
+              <p>{new Date().getFullYear()}</p>
             </div>
             <span className="hidden sm:inline">•</span>
-            <span>© {new Date().getFullYear()} para quem quer acompanhar melhor a carteira</span>
+            <span>®  Todos os direitos reservados</span>
           </div>
           <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-4 md:mt-0">
             <a href="#privacy" className="hover:text-foreground transition-colors">

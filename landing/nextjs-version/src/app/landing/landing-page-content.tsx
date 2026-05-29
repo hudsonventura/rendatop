@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { LandingNavbar } from './components/navbar'
 import { HeroSection } from './components/hero-section'
 import { LogoCarousel } from './components/logo-carousel'
+import AppDownloadButtons from './components/app-download-buttons'
 import { StatsSection } from './components/stats-section'
 import { FeaturesSection } from './components/features-section'
 import { BlogSection } from './components/blog-section'
@@ -60,13 +61,14 @@ export function LandingPageContent({ backendBaseUrl }: LandingPageContentProps) 
       <main>
         <HeroSection />
         <LogoCarousel />
+        <AppDownloadButtons />
         <StatsSection />
         <AboutSection />
         <FeaturesSection />
         <BlogSection backendBaseUrl={backendBaseUrl} />
         <PricingSection />
+        {/* <CTASection /> */}
         <FaqSection />
-        <CTASection />
         <ContactSection />
       </main>
 

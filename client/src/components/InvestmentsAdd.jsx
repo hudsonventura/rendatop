@@ -53,6 +53,7 @@ import {
 	INVESTMENT_TYPE_OPTIONS,
 } from "@/utils/investment-types"
 import { fetchMoneyBoxesOverview, MONEY_BOX_NONE } from "@/utils/money-boxes"
+import { useWallet } from "@/contexts/wallet-context"
 
 
 // ── IR / IOF helpers (mirror backend logic) ──────────────────────────────────
@@ -479,6 +480,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 		restriction_message: null,
 	});
 	const fileInputRef = useRef(null);
+	const { activeWalletId } = useWallet();
 	const autoDetectedInvestmentTypeRef = useRef(detectInvestmentTypeFromTitle(initialValues?.title ?? "") ?? INVESTMENT_TYPE_NONE);
 	const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
 	const setIsOpen = (value) => {
@@ -510,7 +512,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 	useEffect(() => {
 		if (!isOpen) return;
 
-		fetchMoneyBoxesOverview()
+		fetchMoneyBoxesOverview(activeWalletId)
 			.then((data) => {
 				setMoneyBoxesOverview(data);
 			})
@@ -521,7 +523,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 					restriction_message: null,
 				});
 			});
-	}, [isOpen]);
+	}, [isOpen, activeWalletId]);
 
 	useEffect(() => {
 		if (!isOpen) return;
@@ -609,6 +611,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			bank_code: values.bank_code,
 			value: Number(values.value),
 			investment_type: values.investment_type,
+			wallet_id: activeWalletId || null,
 			money_box_id: values.money_box_id ?? null,
 			index: Number(values.index),
 			index_percent: Number(values.index_percent),
@@ -770,7 +773,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 						<div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4">
 							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 								<div className="space-y-1">
-									<p className="text-sm font-medium">Importar comprovante com IA</p>
+									<p className="text-sm font-medium">Importar comprovante</p>
 									<p className="text-xs">
 										Envie `txt`, `html`, imagem ou `pdf` para tentar preencher os campos automaticamente.
 									</p>
@@ -779,8 +782,8 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 									</p>
 									<p className="text-xs text-muted-foreground">
 										{aiDocumentExtractionAccess.monthly_limit > 0
-											? `${aiDocumentExtractionAccess.current_usage}/${aiDocumentExtractionAccess.monthly_limit} leituras por IA usadas neste mês.`
-											: "Seu plano define um limite mensal de leituras por IA."}
+											? `${aiDocumentExtractionAccess.current_usage}/${aiDocumentExtractionAccess.monthly_limit} leituras de comprovantes usadas neste mês.`
+											: "Seu plano define um limite mensal de leituras de comprovantes."}
 									</p>
 									{aiDocumentExtractionAccess.restriction_message && (
 										<p className="text-xs text-destructive">
@@ -803,7 +806,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 										disabled={isExtracting || !aiDocumentExtractionAccess.enabled}
 									>
 										{isExtracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-										{isExtracting ? "Lendo arquivo..." : "Processar com IA"}
+										{isExtracting ? "Lendo arquivo..." : "Processar"}
 									</Button>
 								</div>
 							</div>

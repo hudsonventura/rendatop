@@ -20,12 +20,13 @@ public class RecurringInvestmentsController : AuthenticatedController
 
     [HttpGet("Investments/Recurring")]
     [ProducesResponseType(typeof(RecurringInvestmentsOverviewResponse), StatusCodes.Status200OK)]
-    public IActionResult Get()
+    public IActionResult Get([FromQuery] Guid? wallet_id = null)
     {
+        var wallet = WalletAccess.ResolveAccessibleWallet(_context, _user, wallet_id);
         var recurringInvestments = _context.recurring_investments
             .AsNoTracking()
             .Include(item => item.bank)
-            .Where(item => item.owner_id == _user.id)
+            .Where(item => item.owner_id == _user.id && (item.wallet_id == wallet.id || item.wallet_id == null))
             .OrderByDescending(item => item.active)
             .ThenBy(item => item.title)
             .ToList()
@@ -47,11 +48,14 @@ public class RecurringInvestmentsController : AuthenticatedController
 
         var bank = _context.banks.FirstOrDefault(item => item.Code == (ushort)request.bank_code)
             ?? throw new ExpectedException($"Banco com código {request.bank_code} não encontrado.");
+        var wallet = WalletAccess.ResolveAccessibleWallet(_context, _user, request.wallet_id);
 
         var user = _context.users.FirstOrDefault(item => item.id == _user.id)
             ?? throw new ExpectedException("Usuário não encontrado.");
 
         var recurringInvestment = new RecurringInvestment(request, user, bank);
+        recurringInvestment.wallet = wallet;
+        recurringInvestment.wallet_id = wallet.id;
         TryGenerateImmediateInvestment(recurringInvestment);
         _context.recurring_investments.Add(recurringInvestment);
         _context.SaveChanges();
@@ -76,8 +80,11 @@ public class RecurringInvestmentsController : AuthenticatedController
 
         var bank = _context.banks.FirstOrDefault(item => item.Code == (ushort)request.bank_code)
             ?? throw new ExpectedException($"Banco com código {request.bank_code} não encontrado.");
+        var wallet = WalletAccess.ResolveAccessibleWallet(_context, _user, request.wallet_id ?? recurringInvestment.wallet_id);
 
         recurringInvestment.Apply(request, bank);
+        recurringInvestment.wallet = wallet;
+        recurringInvestment.wallet_id = wallet.id;
         TryGenerateImmediateInvestment(recurringInvestment);
         _context.SaveChanges();
 
@@ -99,6 +106,8 @@ public class RecurringInvestmentsController : AuthenticatedController
         if (request.active)
             EnsureRecurringInvestmentsEnabled();
 
+        WalletAccess.ResolveAccessibleWallet(_context, _user, recurringInvestment.wallet_id);
+
         recurringInvestment.active = request.active;
         recurringInvestment.updated_at = DateTime.UtcNow;
         TryGenerateImmediateInvestment(recurringInvestment);
@@ -115,6 +124,8 @@ public class RecurringInvestmentsController : AuthenticatedController
         var recurringInvestment = _context.recurring_investments
             .FirstOrDefault(item => item.id == id && item.owner_id == _user.id)
             ?? throw new ExpectedException("Recorrência não encontrada.");
+
+        WalletAccess.ResolveAccessibleWallet(_context, _user, recurringInvestment.wallet_id);
 
         _context.recurring_investments.Remove(recurringInvestment);
         _context.SaveChanges();
@@ -172,6 +183,7 @@ public class RecurringInvestmentsController : AuthenticatedController
 
         return new RecurringInvestmentResponse(
             recurringInvestment.id,
+            recurringInvestment.wallet_id,
             recurringInvestment.title,
             recurringInvestment.investment_type,
             recurringInvestment.bank.Code,
@@ -214,6 +226,8 @@ public class RecurringInvestmentsController : AuthenticatedController
         var investment = new Investment(investmentRequest, recurringInvestment.owner, recurringInvestment.bank);
         _context.Entry(investment.owner).State = EntityState.Unchanged;
         _context.Entry(investment.bank).State = EntityState.Unchanged;
+        investment.wallet_id = recurringInvestment.wallet_id;
+        investment.wallet = recurringInvestment.wallet;
         _context.investments.Add(investment);
 
         recurringInvestment.last_generated_at = DateTime.UtcNow;
@@ -232,6 +246,7 @@ public record RecurringInvestmentActiveRequest(
 
 public record RecurringInvestmentResponse(
     Guid id,
+    Guid? wallet_id,
     string title,
     InvestmentType? investment_type,
     int bank_code,

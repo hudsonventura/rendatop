@@ -8,13 +8,16 @@ public partial class MyInvestmentsPage : ContentPage
 {
     private readonly InvestmentService _investmentService;
     private readonly ConnectivityService _connectivity;
+    private readonly WalletService _wallets;
     private readonly NotificationTitleView _titleView;
     private CancellationTokenSource? _loadCts;
+    private bool _walletSubscribed;
 
-    public MyInvestmentsPage(InvestmentService investmentService, ConnectivityService connectivity, NotificationService notifications)
+    public MyInvestmentsPage(InvestmentService investmentService, ConnectivityService connectivity, NotificationService notifications, WalletService wallets)
     {
         _investmentService = investmentService;
         _connectivity = connectivity;
+        _wallets = wallets;
         InitializeComponent();
         _titleView = NotificationChrome.Apply(this, "Meus Investimentos", notifications);
     }
@@ -23,6 +26,7 @@ public partial class MyInvestmentsPage : ContentPage
     {
         base.OnAppearing();
         _ = _titleView.RefreshAsync();
+        SubscribeWalletChanges();
         _loadCts?.Cancel();
         _loadCts = new CancellationTokenSource();
         _ = LoadInitialStateAsync(_loadCts.Token);
@@ -30,6 +34,7 @@ public partial class MyInvestmentsPage : ContentPage
 
     protected override void OnDisappearing()
     {
+        UnsubscribeWalletChanges();
         _loadCts?.Cancel();
         base.OnDisappearing();
     }
@@ -39,6 +44,27 @@ public partial class MyInvestmentsPage : ContentPage
 
     private async void OnRetryClicked(object? sender, EventArgs e)
         => await RefreshFromBackendAsync(showLoading: true);
+
+    private void SubscribeWalletChanges()
+    {
+        if (_walletSubscribed)
+            return;
+
+        _wallets.ActiveWalletChanged += OnActiveWalletChanged;
+        _walletSubscribed = true;
+    }
+
+    private void UnsubscribeWalletChanges()
+    {
+        if (!_walletSubscribed)
+            return;
+
+        _wallets.ActiveWalletChanged -= OnActiveWalletChanged;
+        _walletSubscribed = false;
+    }
+
+    private void OnActiveWalletChanged(object? sender, Guid walletId)
+        => MainThread.BeginInvokeOnMainThread(async () => await RefreshFromBackendAsync(showLoading: true));
 
     private async void OnCreateClicked(object? sender, EventArgs e)
         => await Shell.Current.GoToAsync(nameof(AddInvestmentPage));

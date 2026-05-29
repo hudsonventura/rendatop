@@ -8,13 +8,16 @@ public sealed class InvestmentService
 
     private readonly ApiClient _apiClient;
     private readonly InvestmentCacheService _cache;
+    private readonly WalletService _wallets;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private Task? _backgroundRefreshTask;
 
-    public InvestmentService(ApiClient apiClient, InvestmentCacheService cache)
+    public InvestmentService(ApiClient apiClient, InvestmentCacheService cache, WalletService wallets)
     {
         _apiClient = apiClient;
         _cache = cache;
+        _wallets = wallets;
+        _wallets.ActiveWalletChanged += async (_, _) => await _cache.ClearAsync();
     }
 
     public Task<IReadOnlyList<InvestmentDto>> GetInvestmentsAsync(
@@ -63,7 +66,7 @@ public sealed class InvestmentService
 
     private async Task<IReadOnlyList<InvestmentDto>> FetchInvestmentsAsync(CancellationToken cancellationToken)
     {
-        var investments = await _apiClient.GetAsync<List<InvestmentDto>>("/Investments", cancellationToken);
+        var investments = await _apiClient.GetAsync<List<InvestmentDto>>(_wallets.WithActiveWallet("/Investments"), cancellationToken);
         return investments ?? [];
     }
 
@@ -83,6 +86,7 @@ public sealed class InvestmentService
 
     public async Task<Guid> CreateInvestmentAsync(InvestmentRequestDto request, CancellationToken cancellationToken = default)
     {
+        request = request with { WalletId = _wallets.ActiveWalletId };
         var investmentId = await _apiClient.PostAsync<InvestmentRequestDto, Guid>("/Investments", request, cancellationToken);
         if (investmentId == Guid.Empty)
             throw new ApiException("Nao foi possivel obter o id do investimento criado.", 500);
@@ -91,7 +95,7 @@ public sealed class InvestmentService
     }
 
     public Task UpdateInvestmentAsync(Guid investmentId, InvestmentRequestDto request, CancellationToken cancellationToken = default)
-        => _apiClient.PatchAsync($"/Investments/{investmentId}", request, cancellationToken);
+        => _apiClient.PatchAsync($"/Investments/{investmentId}", request with { WalletId = _wallets.ActiveWalletId }, cancellationToken);
 
     public Task ArchiveInvestmentAsync(Guid investmentId, bool archived = true, CancellationToken cancellationToken = default)
         => _apiClient.PatchAsync(

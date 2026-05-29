@@ -6,12 +6,12 @@ import { Badge } from '@/components/ui/badge'
 const productHighlights = [
     'Dashboard',
     'Carteira',
-    'Calendario',
-    'Notificacoes',
-    'Configuracoes',
-    'Assinatura',
-    'Leitura por IA',
+    'Calendário',
+    'Notificações',
+    'Leitura de comprovantes',
     'Seguranca com TOTP',
+    'Investimentos recorrentes',
+    'Cofrinhos'
 ] as const
 
 export function LogoCarousel() {
@@ -19,16 +19,7 @@ export function LogoCarousel() {
         <section className="pb-12 sm:pb-16 lg:pb-20 pt-12">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center">
-                    <Badge variant="outline" className="mb-4">
-                        Estrutura do produto
-                    </Badge>
-                    <p className="text-sm font-medium text-muted-foreground mb-8">
-                        Recursos que compoem a experiencia principal do RendaTop
-                    </p>
-
                     <div className="relative">
-                        <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-                        <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
                         <div className="overflow-hidden">
                             <div className="flex animate-logo-scroll space-x-8 sm:space-x-12">
                                 {productHighlights.map((item, index) => (
@@ -56,7 +47,7 @@ export function LogoCarousel() {
                                     </Card>
                                 ))}
                             </div>
-                        </div>
+                        </div>  
                     </div>
                 </div>
             </div>

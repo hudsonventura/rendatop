@@ -6,6 +6,7 @@ import { ArrowRight, CalendarDays, PenSquare } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import type { PublicBlogPostListItem } from '@/lib/blog-api'
+import { API_CONFIG } from '@/config/api'
 
 type BlogSectionProps = {
   backendBaseUrl: string
@@ -25,14 +26,14 @@ export function BlogSection({ backendBaseUrl }: BlogSectionProps) {
 
   useEffect(() => {
     let cancelled = false
-    const apiBaseUrl = (backendBaseUrl || '').trim().replace(/\/+$/, '')
+    const baseUrl = API_CONFIG.BASE_URL;
 
-    if (!apiBaseUrl) {
+    if (!baseUrl) {
       setLoading(false)
       return
     }
 
-    fetch(`${apiBaseUrl}/public/blog/posts?limit=3`)
+    fetch(`${baseUrl}/public/blog/posts?limit=3`)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Falha ao carregar posts')
@@ -66,10 +67,10 @@ export function BlogSection({ backendBaseUrl }: BlogSectionProps) {
           <div className="max-w-2xl">
             <Badge variant="outline" className="mb-4">Blog</Badge>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Conteúdo prático para organizar investimentos com mais clareza
+              Dicas e informações sobre investimentos
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Leituras em estilo blog clássico, com textos completos, imagens e contexto útil para quem acompanha a carteira de perto.
+              Tenha conteúdo relevante para te ajudar a aproveitar melhor as funcionalidades do app e acompanhar as principais novidades do mercado financeiro. Novos artigos serão publicados regularmente para te manter informado e inspirado na sua jornada de investimentos.
             </p>
           </div>
 

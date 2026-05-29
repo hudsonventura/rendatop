@@ -20,6 +20,7 @@ import {
     INVESTMENT_TYPE_NONE,
     INVESTMENT_TYPE_OPTIONS,
 } from "@/utils/investment-types"
+import { useWallet, walletParams } from "@/contexts/wallet-context"
 
 const weekDays = [
     { value: 0, label: "Domingo" },
@@ -186,6 +187,7 @@ export default function RecurringInvestmentsManager() {
     const [editingItem, setEditingItem] = useState(null)
     const [form, setForm] = useState(defaultForm)
     const autoDetectedInvestmentTypeRef = useRef(INVESTMENT_TYPE_NONE)
+    const { activeWalletId } = useWallet()
 
     const frequency = Number(form.frequency)
 
@@ -194,7 +196,7 @@ export default function RecurringInvestmentsManager() {
         setError("")
 
         Promise.all([
-            axiosInstance.get("/Investments/Recurring"),
+            axiosInstance.get("/Investments/Recurring", { params: walletParams(activeWalletId) }),
             getCachedBanks().then((response) => {
                 primeBanksCache(response)
                 return response
@@ -217,7 +219,7 @@ export default function RecurringInvestmentsManager() {
 
     useEffect(() => {
         loadData()
-    }, [])
+    }, [activeWalletId])
 
     const sortedItems = useMemo(
         () => [...items].sort((a, b) => Number(b.active) - Number(a.active) || a.title.localeCompare(b.title)),
@@ -327,6 +329,7 @@ export default function RecurringInvestmentsManager() {
         const payload = {
             title: form.title.trim(),
             investment_type: form.investment_type === INVESTMENT_TYPE_NONE ? null : form.investment_type,
+            wallet_id: activeWalletId || null,
             bank_code: Number(form.bank_code),
             value: Number(form.value),
             index: Number(form.index),

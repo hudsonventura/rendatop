@@ -6,14 +6,15 @@ namespace server.Domain;
 /// </summary>
 public class Plan
 {
-    
+    internal string description { get; set; } = string.Empty;
 
     public string id { get; set; } = string.Empty;
     public string name { get; set; } = string.Empty;
+    
     public decimal price { get; set; }
 
     /// <summary>
-    /// Limite de leituras de comprovantes por IA por mês
+    /// Limite de leituras de comprovantes por mês
     /// </summary>
     public int ai_monthly_limit { get; set; } = 2;
 
@@ -43,6 +44,11 @@ public class Plan
     internal int money_boxes_limit { get; set; } = 3;
 
     /// <summary>
+    /// Limite de carteiras disponíveis no plano.
+    /// </summary>
+    internal int wallets_limit { get; set; } = 1;
+
+    /// <summary>
     /// Dicionário de features do plano.
     /// Key = identificador da feature (ex: "ai_usage", "export_data").
     /// Value = texto explicativo para exibição ao usuário.
@@ -62,6 +68,7 @@ public static class Plans
         {
             id = "free",
             name = "Free",
+            description = "Plano gratuito para controle financeiro básico",
             price = 0m,
             ai_monthly_limit = 2,
             calendar_ics = false,
@@ -69,10 +76,12 @@ public static class Plans
             whatsapp_notifications = false,
             recurring_investments = false,
             money_boxes_limit = 3,
+            wallets_limit = 1,
             features = new Dictionary<string, string>
             {
-                { "ai_usage", "2 leituras de comprovantes por IA por mês" },
+                { "ai_usage", "2 leituras de comprovantes por mês" },
                 { "investments", "Controle completo de investimentos" },
+                { "wallets", "1 carteira" },
                 { "money_boxes", "Até 3 cofrinhos para organizar sua carteira" },
                 { "calendar_ics", "Calendário de vencimentos" },
                 { "notifications", "Notificações de vencimento (Telegram e E-mail)" },
@@ -84,6 +93,7 @@ public static class Plans
         {
             id = "plus",
             name = "Plus",
+            description = "Plano intermediário para usuários que desejam mais recursos",
             price = 6.9m,
             ai_monthly_limit = 10,
             calendar_ics = true,
@@ -91,10 +101,12 @@ public static class Plans
             whatsapp_notifications = true,
             recurring_investments = true,
             money_boxes_limit = int.MaxValue,
+            wallets_limit = 5,
             features = new Dictionary<string, string>
             {
-                { "ai_usage", "10 leituras de comprovantes por IA por mês" },
+                { "ai_usage", "10 leituras de comprovantes por mês" },
                 { "investments", "Controle completo de investimentos" },
+                { "wallets", "Até 5 carteiras" },
                 { "money_boxes", "Cofrinhos ilimitados" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
                 { "whatsapp_notifications", "Notificações de vencimento (Telegram, E-mail e WhatsApp)" },
@@ -108,6 +120,7 @@ public static class Plans
         {
             id = "pro",
             name = "Pro",
+            description = "Plano profissional para usuários que desejam mais limites",
             price = 14.9m,
             ai_monthly_limit = 30,
             calendar_ics = true,
@@ -115,10 +128,12 @@ public static class Plans
             whatsapp_notifications = true,
             recurring_investments = true,
             money_boxes_limit = int.MaxValue,
+            wallets_limit = int.MaxValue,
             features = new Dictionary<string, string>
             {
-                { "ai_usage", "30 leituras de comprovantes por IA por mês" },
+                { "ai_usage", "30 leituras de comprovantes por mês" },
                 { "investments", "Controle completo de investimentos" },
+                { "wallets", "Carteiras ilimitadas" },
                 { "money_boxes", "Cofrinhos ilimitados" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
                 { "whatsapp_notifications", "Notificações de vencimento (Telegram, E-mail e WhatsApp)" },

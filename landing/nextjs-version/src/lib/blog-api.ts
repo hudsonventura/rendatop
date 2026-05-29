@@ -1,3 +1,5 @@
+import { API_CONFIG } from "@/config/api"
+
 export type PublicBlogPostListItem = {
   id: string
   slug: string
@@ -29,7 +31,7 @@ export type PublicBlogPostDetail = {
 }
 
 function getBackendBaseUrl() {
-  return (process.env.BASE_URL_SERVER || '').trim().replace(/\/+$/, '')
+  return API_CONFIG.BASE_URL;
 }
 
 async function fetchJson<T>(path: string): Promise<T> {

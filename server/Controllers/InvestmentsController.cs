@@ -28,6 +28,7 @@ public class InvestmentsController : AuthenticatedController
     {
         return _context.investments
                             .Include(x => x.bank)
+                            .Include(x => x.wallet)
                             .Include(x => x.money_box)
                             .Where(x => x.owner.id == _user.id && x.id == id)
                             .FirstOrDefault();
@@ -168,15 +169,17 @@ public class InvestmentsController : AuthenticatedController
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [HttpGet("Investments")]
-    public List<Investment> Get()
+    public List<Investment> Get([FromQuery] Guid? wallet_id = null)
     {
+        var wallet = WalletAccess.ResolveAccessibleWallet(_context, _user, wallet_id);
         List<Investment> investments = _context.investments
                                                 .AsNoTracking()
                                                 .Include(x => x.owner)
                                                 .Include(x => x.bank)
+                                                .Include(x => x.wallet)
                                                 .Include(x => x.money_box)
                                                 .Include(x => x.redemptions)
-                                                .Where(x => x.owner.id == _user.id)
+                                                .Where(x => x.owner.id == _user.id && (x.wallet_id == wallet.id || x.wallet_id == null))
                                                 .ToList();
         foreach (var invest in investments)
         {
@@ -221,7 +224,14 @@ public class InvestmentsController : AuthenticatedController
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [HttpGet("Investments/{id}")]
     public Investment Get(Guid id)
-        => GetInvestmentByID(id);
+    {
+        var investment = GetInvestmentByID(id);
+        if (investment == null)
+            throw new ExpectedException("Investimento não encontrado.");
+
+        WalletAccess.ResolveAccessibleWallet(_context, _user, investment.wallet_id);
+        return investment;
+    }
 
 
     /// <summary>
@@ -246,18 +256,21 @@ public class InvestmentsController : AuthenticatedController
 
             if (aiUsageCount >= plan.ai_monthly_limit)
                 throw new ExpectedException(
-                    $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por IA por mês. Faça upgrade para continuar usando este recurso.",
+                    $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por mês. Faça upgrade para continuar usando este recurso.",
                     System.Net.HttpStatusCode.Forbidden);
         }
 
         var bank = _context.banks.FirstOrDefault(b => b.Code == (ushort)request.bank_code)
             ?? throw new ExpectedException($"Banco com código {request.bank_code} não encontrado.");
+        var wallet = WalletAccess.ResolveAccessibleWallet(_context, _user, request.wallet_id);
         var moneyBox = ResolveMoneyBox(request.money_box_id);
         EnsureMoneyBoxSelectionAllowed(request.money_box_id);
 
         Investment investment = new Investment(request, _user, bank);
         _context.Entry(investment.owner).State = EntityState.Unchanged;
         _context.Entry(investment.bank).State = EntityState.Unchanged;
+        investment.wallet = wallet;
+        investment.wallet_id = wallet.id;
         investment.money_box = moneyBox;
         _context.investments.Add(investment);
 
@@ -301,7 +314,7 @@ public class InvestmentsController : AuthenticatedController
 
         if (aiUsageCount >= plan.ai_monthly_limit)
             throw new ExpectedException(
-                $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por IA por mês. Faça upgrade para continuar usando este recurso.",
+                $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por mês. Faça upgrade para continuar usando este recurso.",
                 System.Net.HttpStatusCode.Forbidden);
 
         var banks = _context.banks
@@ -330,9 +343,15 @@ public class InvestmentsController : AuthenticatedController
                 ?? throw new ExpectedException($"Banco com código {request.bank_code} não encontrado.");
 
             Investment investment = GetInvestmentByID(id);
+            if (investment == null)
+                throw new ExpectedException("Investimento não encontrado.");
+
+            var wallet = WalletAccess.ResolveAccessibleWallet(_context, _user, request.wallet_id ?? investment.wallet_id);
             var moneyBox = ResolveMoneyBox(request.money_box_id);
             EnsureMoneyBoxSelectionAllowed(request.money_box_id, investment.money_box_id);
             investment.Update(request, bank);
+            investment.wallet = wallet;
+            investment.wallet_id = wallet.id;
             investment.money_box = moneyBox;
             _context.investments.Update(investment);
             _context.SaveChanges();
@@ -358,6 +377,8 @@ public class InvestmentsController : AuthenticatedController
 
         if (investment == null)
             throw new ExpectedException("Investimento não encontrado.");
+
+        WalletAccess.ResolveAccessibleWallet(_context, _user, investment.wallet_id);
 
         if (request.archived && (!investment.due_date.HasValue || investment.due_date.Value.Date > DateTime.UtcNow.Date))
             throw new ExpectedException("Somente investimentos vencidos podem ser arquivados.");
@@ -385,6 +406,7 @@ public class InvestmentsController : AuthenticatedController
         if (investment == null)
             throw new ExpectedException("Investimento não encontrado ou já removido");
 
+        WalletAccess.ResolveAccessibleWallet(_context, _user, investment.wallet_id);
 
         _context.investments.Remove(investment);
         _context.SaveChanges();
@@ -403,6 +425,10 @@ public class InvestmentsController : AuthenticatedController
     public Investment Redeem(Guid id, [FromBody] RedemptionRequest request)
     {
         var invest = _context.investments.Where(x => x.id == id && x.owner.id == _user.id && x.id == id).FirstOrDefault();
+        if (invest == null)
+            throw new ExpectedException("Investimento não encontrado.");
+
+        WalletAccess.ResolveAccessibleWallet(_context, _user, invest.wallet_id);
 
         Redemption redemption = new Redemption(invest, request);
 
@@ -431,6 +457,8 @@ public class InvestmentsController : AuthenticatedController
 
         if (redemption == null)
             throw new ExpectedException("Resgate não encontrado.");
+
+        WalletAccess.ResolveAccessibleWallet(_context, _user, redemption.investment.wallet_id);
 
         redemption.title = request.title;
         redemption.value = request.value;
@@ -461,6 +489,8 @@ public class InvestmentsController : AuthenticatedController
 
         if (redemption == null)
             throw new ExpectedException("Resgate não encontrado.");
+
+        WalletAccess.ResolveAccessibleWallet(_context, _user, redemption.investment.wallet_id);
 
         _context.redemptions.Remove(redemption);
         _context.SaveChanges();

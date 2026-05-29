@@ -9,64 +9,59 @@ import {
   CalendarDays
 } from 'lucide-react'
 
+import {mainFeatures, secondaryFeatures, thirdFeatures, fourthFeatures} from '../../app/landing/components/features-section'
+
 const menuSections = [
   {
     title: 'Carteira',
     items: [
-      {
-        title: 'Dashboard',
-        description: 'Visualize vencimentos, distribuicao por banco e evolucao da carteira.',
-        icon: Rocket,
+      ...mainFeatures.map((feature) => ({
+        title: feature.title,
+        description: feature.description,
+        icon: feature.icon,
         href: '#features'
-      },
-      {
-        title: 'Meus investimentos',
-        description: 'Cadastre, acompanhe, resgate e arquive investimentos com mais contexto.',
-        icon: Wallet,
-        href: '#features'
-      }
+      })),
     ]
   },
   {
     title: 'Rotina',
     items: [
-      {
-        title: 'Calendario',
-        description: 'Acompanhe datas de aplicacao e vencimento em uma visao mensal clara.',
-        icon: CalendarDays,
+      ...secondaryFeatures.map((feature) => ({
+        title: feature.title,
+        description: feature.description,
+        icon: feature.icon,
         href: '#features'
-      },
-      {
-        title: 'Notificacoes',
-        description: 'Receba alertas no app e acompanhe o historico de leitura.',
-        icon: Bell,
-        href: '#features'
-      }
+      })),
     ]
   },
   {
     title: 'Conta',
     items: [
-      {
-        title: 'Configuracoes',
-        description: 'Ajuste email, telefone, canais de alerta, calendario e TOTP.',
-        icon: Settings,
+      ...thirdFeatures.map((feature) => ({
+        title: feature.title,
+        description: feature.description,
+        icon: feature.icon,
         href: '#features'
-      },
-      {
-        title: 'Assinatura',
-        description: 'Escolha entre os planos Free, Plus e Pro conforme sua rotina.',
-        icon: Building2,
-        href: '#pricing'
-      }
+      })),
+    ]
+  },
+  {
+    title: 'Conta',
+    items: [
+      ...fourthFeatures.map((feature) => ({
+        title: feature.title,
+        description: feature.description,
+        icon: feature.icon,
+        href: '#features'
+      })),
     ]
   }
 ]
 
 export function MegaMenu() {
   return (
-    <div className="w-[700px] max-w-[95vw] p-4 sm:p-6 lg:p-8 bg-background">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-12">
+    <div className="w-[700px] max-w-[85vw] p-8 sm:p-6 lg:p-8 bg-background">
+      <div className="grid grid-cols-2 sm:grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12">
         {menuSections.map((section) => (
           <div key={section.title} className="space-y-4 lg:space-y-6">
             {/* Section Header */}

@@ -3,6 +3,7 @@ import { HeroUIProvider } from "@heroui/react"
 import './App.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarConfigProvider } from '@/contexts/sidebar-context'
+import { WalletProvider } from '@/contexts/wallet-context'
 import { ROUTER_BASENAME } from '@/utils/appPath'
 
 import Login from "@/pages/Login"
@@ -32,8 +33,9 @@ function App() {
             <HeroUIProvider locale="pt-BR">
                 <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
                     <SidebarConfigProvider>
-                        <Router basename={ROUTER_BASENAME}>
-                            <Routes>
+                        <WalletProvider>
+                            <Router basename={ROUTER_BASENAME}>
+                                <Routes>
                                 <Route path="/" element={<Login />} />
                                 <Route path="/login" element={<Login />} />
                                 <Route path="/signup" element={<Signup />} />
@@ -54,8 +56,9 @@ function App() {
                                 <Route path="/admin/blog" element={<BlogAdminPage />} />
                                 <Route path="/atendimento" element={<SupportPage />} />
                                 <Route path="*" element={<NotFound />} />
-                            </Routes>
-                        </Router>
+                                </Routes>
+                            </Router>
+                        </WalletProvider>
                     </SidebarConfigProvider>
                 </ThemeProvider>
             </HeroUIProvider>

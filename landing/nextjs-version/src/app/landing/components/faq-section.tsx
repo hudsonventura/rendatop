@@ -16,37 +16,37 @@ const faqItems: FaqItem[] = [
     value: 'item-1',
     question: 'Para quem o RendaTop faz mais sentido?',
     answer:
-      'Para pessoas que querem acompanhar investimentos com mais organizacao, especialmente em renda fixa, sem depender apenas de planilhas e lembretes soltos.',
+      'Você tem muitos investimentos e já perdeu o controle dos valores e vencimentos? O RendaTop foi criado para pessoas que querem acompanhar investimentos com mais organização, especialmente em renda fixa, sem depender de planilhas, lembretes soltos e anotações. O app te avisa quando há um investimento próximo do vencimento para você antecipar a tomada de decisão.',
   },
   {
     value: 'item-2',
-    question: 'Quais investimentos aparecem melhor no app hoje?',
+    question: 'Quais investimentos consigo controlar no app hoje?',
     answer:
-      'A estrutura atual evidencia bem investimentos de renda fixa com CDI, IPCA+ e percentual ao ano. Alguns recursos para acoes e cripto ja aparecem previstos nos planos como evolucao futura.',
+      'A estrutura atual evidencia bem investimentos de renda fixa com CDI, IPCA+ e %a.a. Recursos para acompanhar acões e cripto já estão em desenvolvimento e estarão disponíveis em breve.',
   },
   {
     value: 'item-3',
-    question: 'Como funcionam as notificacoes?',
+    question: 'Como funcionam as notificações?',
     answer:
-      'O produto possui centro de notificacoes no proprio app e pode usar e-mail e Telegram. O WhatsApp fica disponivel conforme o plano escolhido e a configuracao da conta.',
+      'O produto possui centro de notificações no próprio app e pode usar e-mail e Telegram. O WhatsApp fica disponível conforme o plano escolhido e a configuração da conta.',
   },
   {
     value: 'item-4',
-    question: 'Existe integracao com calendario?',
+    question: 'Existe integração com calendário?',
     answer:
-      'Sim. Alem da tela de calendario dentro do app, os planos pagos habilitam calendario ICS para acompanhamento no Outlook ou em outros aplicativos de agenda.',
+      'Sim. Alem da tela de calendário dentro do app, os planos pagos habilitam calendário ICS para acompanhamento no Outlook ou em outros aplicativos de agenda.',
   },
   {
     value: 'item-5',
-    question: 'O app tem leitura de comprovantes por IA?',
+    question: 'O app tem leitura inteligente de comprovantes?',
     answer:
       'Sim. O cadastro de investimentos pode importar comprovantes com apoio de IA, respeitando os limites mensais definidos em cada plano.',
   },
   {
     value: 'item-6',
-    question: 'Posso reforcar a seguranca da conta?',
+    question: 'Como funciona a privacidade dos meus dados?',
     answer:
-      'Sim. A area de configuracoes inclui TOTP, testes dos canais de notificacao e gestao dos dados principais da conta para manter o acesso mais controlado.',
+      'Nós guardamos apenas os dados que são necessários para o funcionamento do app, como informações de investimentos e preferências de notificações. Não compartilhamos seus dados com terceiros. O CPF é usado apenas no processo de pagamento dos planos pagos e não é obrigatório para o uso do app no plano gratuito. O app pode ser usado apenas com um e-mail para cadastro e acesso às funcionalidades básicas.',
   },
 ]
 
@@ -60,7 +60,7 @@ const FaqSection = () => {
             Perguntas frequentes
           </h2>
           <p className="text-lg text-muted-foreground">
-            Respostas objetivas sobre o funcionamento atual do produto, com base no que ja esta implementado no app.
+            Veja aqui algumas infomações importantes sobre o app, seus recursos e planos. Se tiver outras dúvidas ou quiser sugerir melhorias, entre em contato conosco!
           </p>
         </div>
 
@@ -85,16 +85,7 @@ const FaqSection = () => {
             </div>
           </div>
 
-          <div className="text-center mt-12">
-            <p className="text-muted-foreground mb-4">
-              Se ainda restou alguma duvida, podemos conversar.
-            </p>
-            <Button className='cursor-pointer' asChild>
-              <a href="#contact">
-                Entrar em contato
-              </a>
-            </Button>
-          </div>
+          
         </div>
       </div>
     </section>

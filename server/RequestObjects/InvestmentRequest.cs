@@ -26,6 +26,11 @@ public class InvestmentRequest
     public Guid? money_box_id { get; set; }
 
     /// <summary>
+    /// Carteira do investimento.
+    /// </summary>
+    public Guid? wallet_id { get; set; }
+
+    /// <summary>
     /// Código do banco onde o investimento foi feito
     /// </summary>
     public int bank_code { get; set; }
@@ -83,7 +88,7 @@ public class InvestmentRequest
     public bool archived { get; set; } = false;
 
     /// <summary>
-    /// Indica se o preenchimento inicial deste investimento usou a extração por IA.
+    /// Indica se o preenchimento inicial deste investimento usou a leitura automática de comprovantes.
     /// Campo transitório para contabilização de uso no momento do salvamento.
     /// </summary>
     public bool ai_extracted { get; set; } = false;

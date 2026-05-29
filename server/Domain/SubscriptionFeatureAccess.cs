@@ -31,6 +31,34 @@ public static class SubscriptionFeatureAccess
     public static int GetMoneyBoxesLimit(Context context, Guid userId) =>
         GetEffectivePlan(context, userId).money_boxes_limit;
 
+    public static int GetWalletsLimit(Context context, Guid userId) =>
+        GetEffectivePlan(context, userId).wallets_limit;
+
+    public static bool CanCreateWallets(Context context, Guid userId, int existingCount) =>
+        existingCount < GetWalletsLimit(context, userId);
+
+    public static bool CanAccessWallet(Context context, Guid userId, Guid walletId)
+    {
+        var enabledWalletIds = GetEnabledWalletIds(context, userId);
+        return enabledWalletIds.Contains(walletId);
+    }
+
+    public static HashSet<Guid> GetEnabledWalletIds(Context context, Guid userId)
+    {
+        var limit = GetWalletsLimit(context, userId);
+        var query = context.wallets
+            .AsNoTracking()
+            .Where(wallet => wallet.owner_id == userId)
+            .OrderBy(wallet => wallet.created_at)
+            .ThenBy(wallet => wallet.id)
+            .Select(wallet => wallet.id);
+
+        if (limit != int.MaxValue)
+            query = query.Take(limit);
+
+        return query.ToHashSet();
+    }
+
     public static bool CanCreateMoneyBoxes(Context context, Guid userId, int existingCount) =>
         existingCount < GetMoneyBoxesLimit(context, userId);
 

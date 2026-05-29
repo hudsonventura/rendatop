@@ -1,22 +1,25 @@
-"use client";
+import type { Metadata } from 'next'
+import { LandingPageContent } from './landing/landing-page-content'
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+// Metadata for the landing page
+export const metadata: Metadata = {
+  title: 'RendaTop | Gestao de investimentos com mais clareza',
+  description: 'Organize sua carteira, acompanhe vencimentos, receba notificacoes e visualize sua evolucao financeira em um unico painel.',
+  keywords: ['rendatop', 'gestao de investimentos', 'renda fixa', 'calendario financeiro', 'notificacoes de vencimento'],
+  openGraph: {
+    title: 'RendaTop | Gestao de investimentos com mais clareza',
+    description: 'Dashboard, carteira, calendario e notificacoes para acompanhar seus investimentos com organizacao.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'RendaTop | Gestao de investimentos com mais clareza',
+    description: 'Organize sua carteira e acompanhe vencimentos, alertas e evolucao dos investimentos.',
+  },
+}
 
 export default function HomePage() {
-  const router = useRouter();
+  const backendBaseUrl = (process.env.BASE_URL_SERVER || '').trim()
 
-  useEffect(() => {
-    router.replace("/landing");
-  }, [router]);
-
-  // Show a loading state while redirecting
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-        <p className="text-muted-foreground mt-2">Redirecting to landing...</p>
-      </div>
-    </div>
-  );
+  return <LandingPageContent backendBaseUrl={backendBaseUrl} />
 }

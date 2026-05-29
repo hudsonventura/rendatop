@@ -192,10 +192,12 @@ Para iniciar a sessão manualmente:
 ```bash
 WHATSAPP_WWEBJS_API_KEY=sua_key
 WHATSAPP_WWEBJS_API_URL=http://10.10.1.202:3000
+SESSION=RendaTop
+PHONE=11912466241
 ```
 
 ```bash
-curl -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" $WHATSAPP_WWEBJS_API_URL:3000/session/start/Default
+curl -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" $WHATSAPP_WWEBJS_API_URL/session/start/$SESSION
 ```
 
 Para solicitar o pairing code:
@@ -204,8 +206,8 @@ Para solicitar o pairing code:
 curl -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" \
-  -d '{"phoneNumber":"5565999999999","showNotification":true}' \
-  $WHATSAPP_WWEBJS_API_URL:3000/session/requestPairingCode/Default
+  -d '{"phoneNumber":"$PHONE","showNotification":true}' \
+  $WHATSAPP_WWEBJS_API_URL/session/requestPairingCode/$SESSION
 ```
 
 Para solicitar o QR Code:
@@ -214,7 +216,7 @@ Para solicitar o QR Code:
 curl -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" \
-  $WHATSAPP_WWEBJS_API_URL:3000/session/qr/Default/image \
+  $WHATSAPP_WWEBJS_API_URL/session/qr/$SESSION/image \
   --output qrcode.png
 ```
 

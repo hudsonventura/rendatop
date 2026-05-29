@@ -33,6 +33,13 @@ public class Context : DbContext
         modelBuilder.Entity<LandingVisit>()
             .HasIndex(x => x.created_at);
 
+        modelBuilder.Entity<Wallet>()
+            .HasIndex(wallet => wallet.owner_id);
+
+        modelBuilder.Entity<Wallet>()
+            .HasIndex(wallet => new { wallet.owner_id, wallet.name })
+            .IsUnique();
+
         modelBuilder.Entity<User>()
             .Property(user => user.user_type)
             .HasDefaultValue(UserType.Common);
@@ -195,6 +202,11 @@ public class Context : DbContext
     /// Tabela de bancos
     /// </summary>
     public DbSet<Bank> banks { get; set; }
+
+    /// <summary>
+    /// Tabela de carteiras do usuário.
+    /// </summary>
+    public DbSet<Wallet> wallets { get; set; }
 
     /// <summary>
     /// Tabela de investimentos
