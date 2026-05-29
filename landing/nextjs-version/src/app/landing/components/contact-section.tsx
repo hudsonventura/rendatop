@@ -64,7 +64,7 @@ export function ContactSection() {
             Quer conversar?
           </h2>
           <p className="text-lg text-muted-foreground">
-            Dúvida, reclamaao, sugestão ou feedback?
+            Dúvida, reclamação, sugestão ou elogio?
             Entre em contato com a gente! Envie um email ou uma mensagem pelo WhatApp . Estamos sempre abertos a ouvir nossos usuários e melhorar o Rendatop.
           </p>
           <div className="flex justify-center items-center gap-6 mt-6">

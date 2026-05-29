@@ -28,7 +28,7 @@ const faqItems: FaqItem[] = [
     value: 'item-3',
     question: 'Como funcionam as notificações?',
     answer:
-      'O produto possui centro de notificações no próprio app e pode usar e-mail e Telegram. O WhatsApp fica disponível conforme o plano escolhido e a configuração da conta.',
+      'O RendaTop possui centro de notificações no próprio app, e-mail, Telegram e WhatsApp. O app te nofifica sempre que um investimento estiver próximo do vencimento, para que você possa se organizar e tomar decisões com antecedência. As notificações são configuráveis, e os planos pagos permitem personalizar os prazos de aviso e os canais de notificação.',
   },
   {
     value: 'item-4',
@@ -40,13 +40,13 @@ const faqItems: FaqItem[] = [
     value: 'item-5',
     question: 'O app tem leitura inteligente de comprovantes?',
     answer:
-      'Sim. O cadastro de investimentos pode importar comprovantes com apoio de IA, respeitando os limites mensais definidos em cada plano.',
+      'Sim. O cadastro de investimentos pode importar comprovantes com apoio de IA. Pode-se usar imagens ou PDFs, e o app extrai as informações relevantes para preencher os campos de cadastro. Pelo app no seu celular é possível compartilhar o comprovante diretamente para o RendaTop, e no desktop é possível fazer upload do arquivo.',
   },
   {
     value: 'item-6',
     question: 'Como funciona a privacidade dos meus dados?',
     answer:
-      'Nós guardamos apenas os dados que são necessários para o funcionamento do app, como informações de investimentos e preferências de notificações. Não compartilhamos seus dados com terceiros. O CPF é usado apenas no processo de pagamento dos planos pagos e não é obrigatório para o uso do app no plano gratuito. O app pode ser usado apenas com um e-mail para cadastro e acesso às funcionalidades básicas.',
+      'Nós guardamos apenas os dados que são necessários para o funcionamento do app, como informações de investimentos e preferências de notificações. Algumas informações pessoais são necessárias como nome e e-mail. Não compartilhamos seus dados com terceiros. O CPF é usado apenas no processo de pagamento dos planos pagos e não é obrigatório para o uso do app no plano gratuito. O app pode ser usado apenas com um e-mail para cadastro e acesso às funcionalidades do plano gratuito.',
   },
 ]
 
