@@ -53,6 +53,7 @@ import {
 	INVESTMENT_TYPE_OPTIONS,
 } from "@/utils/investment-types"
 import { fetchMoneyBoxesOverview, MONEY_BOX_NONE } from "@/utils/money-boxes"
+import { useWallet } from "@/contexts/wallet-context"
 
 
 // ── IR / IOF helpers (mirror backend logic) ──────────────────────────────────
@@ -479,6 +480,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 		restriction_message: null,
 	});
 	const fileInputRef = useRef(null);
+	const { activeWalletId } = useWallet();
 	const autoDetectedInvestmentTypeRef = useRef(detectInvestmentTypeFromTitle(initialValues?.title ?? "") ?? INVESTMENT_TYPE_NONE);
 	const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
 	const setIsOpen = (value) => {
@@ -510,7 +512,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 	useEffect(() => {
 		if (!isOpen) return;
 
-		fetchMoneyBoxesOverview()
+		fetchMoneyBoxesOverview(activeWalletId)
 			.then((data) => {
 				setMoneyBoxesOverview(data);
 			})
@@ -521,7 +523,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 					restriction_message: null,
 				});
 			});
-	}, [isOpen]);
+	}, [isOpen, activeWalletId]);
 
 	useEffect(() => {
 		if (!isOpen) return;
@@ -609,6 +611,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			bank_code: values.bank_code,
 			value: Number(values.value),
 			investment_type: values.investment_type,
+			wallet_id: activeWalletId || null,
 			money_box_id: values.money_box_id ?? null,
 			index: Number(values.index),
 			index_percent: Number(values.index_percent),

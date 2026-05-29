@@ -101,10 +101,8 @@ public class RecurringInvestmentsControllerTests
     {
         using var fixture = new RecurringInvestmentsControllerFixture();
         fixture.SeedActiveSubscription("plus");
-        var request = fixture.CreateRequest(frequency: RecurringInvestmentFrequency.Weekly) with
-        {
-            weekdays = []
-        };
+        var request = fixture.CreateRequest(frequency: RecurringInvestmentFrequency.Weekly);
+        request.weekdays = [];
 
         var exception = Assert.Throws<ExpectedException>(() => fixture.Controller.Create(request));
 
@@ -130,11 +128,9 @@ public class RecurringInvestmentsControllerTests
         var today = DateTime.Now;
         var request = fixture.CreateRequest(
             title: "Aporte recorrente CDI",
-            frequency: RecurringInvestmentFrequency.Monthly) with
-        {
-            day_of_month = today.Day,
-            months = [today.Month]
-        };
+            frequency: RecurringInvestmentFrequency.Monthly);
+        request.day_of_month = today.Day;
+        request.months = [today.Month];
 
         fixture.Controller.Create(request);
 
@@ -236,23 +232,24 @@ public class RecurringInvestmentsControllerTests
             string title = "Aporte recorrente CDI",
             RecurringInvestmentFrequency frequency = RecurringInvestmentFrequency.Monthly)
         {
-            return new RecurringInvestmentRequest(
-                title,
-                InvestmentType.CDB,
-                Bank.Code,
-                500m,
-                IdexesType.CDI,
-                110m,
-                0m,
-                true,
-                false,
-                365,
-                frequency,
-                frequency == RecurringInvestmentFrequency.Weekly ? [(short)1, (short)3, (short)5] : null,
-                frequency == RecurringInvestmentFrequency.Monthly ? 15 : null,
-                frequency == RecurringInvestmentFrequency.Monthly ? [1, 6, 12] : null,
-                true
-            );
+            return new RecurringInvestmentRequest
+            {
+                title = title,
+                investment_type = InvestmentType.CDB,
+                bank_code = Bank.Code,
+                value = 500m,
+                index = IdexesType.CDI,
+                index_percent = 110m,
+                index_value = 0m,
+                taxes = true,
+                liquidity_daily = false,
+                duration_days = 365,
+                frequency = frequency,
+                weekdays = frequency == RecurringInvestmentFrequency.Weekly ? [(short)1, (short)3, (short)5] : null,
+                day_of_month = frequency == RecurringInvestmentFrequency.Monthly ? 15 : null,
+                months = frequency == RecurringInvestmentFrequency.Monthly ? [1, 6, 12] : null,
+                active = true
+            };
         }
 
         public void Dispose()

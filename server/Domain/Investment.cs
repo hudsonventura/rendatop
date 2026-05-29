@@ -22,6 +22,14 @@ public class Investment
     public User owner { get; set; }
 
     /// <summary>
+    /// Carteira a que o investimento pertence.
+    /// </summary>
+    public Guid? wallet_id { get; set; }
+
+    [ForeignKey(nameof(wallet_id))]
+    public Wallet? wallet { get; set; }
+
+    /// <summary>
     /// Uma identificação sobre o investimento
     /// </summary>
     public string title { get; set; }
@@ -131,6 +139,7 @@ public class Investment
         this.owner = owner;
         this.title = request.title;
         this.investment_type = request.investment_type;
+        this.wallet_id = request.wallet_id;
         this.money_box_id = request.money_box_id;
         this.money_box = null;
         this.bank = bank;
@@ -151,6 +160,7 @@ public class Investment
     {
         this.title = request.title;
         this.investment_type = request.investment_type;
+        this.wallet_id = request.wallet_id;
         this.money_box_id = request.money_box_id;
         this.money_box = null;
         this.bank = bank;
@@ -172,6 +182,7 @@ public class Investment
             title = this.title,
             investment_type = this.investment_type,
             money_box_id = this.money_box_id,
+            wallet_id = this.wallet_id,
             bank_code = (int)(this.bank?.Code ?? 0),
             value = this.value,
             index = this.index,

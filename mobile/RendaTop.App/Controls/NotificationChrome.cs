@@ -11,4 +11,5 @@ public static class NotificationChrome
         Shell.SetTitleView(page, titleView);
         return titleView;
     }
+
 }

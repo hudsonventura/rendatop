@@ -8,13 +8,16 @@ public partial class MoneyBoxesPage : ContentPage
 {
     private readonly MoneyBoxService _service;
     private readonly ConnectivityService _connectivity;
+    private readonly WalletService _wallets;
     private readonly NotificationTitleView _titleView;
     private bool _canCreate;
+    private bool _walletSubscribed;
 
-    public MoneyBoxesPage(MoneyBoxService service, ConnectivityService connectivity, NotificationService notifications)
+    public MoneyBoxesPage(MoneyBoxService service, ConnectivityService connectivity, NotificationService notifications, WalletService wallets)
     {
         _service = service;
         _connectivity = connectivity;
+        _wallets = wallets;
         InitializeComponent();
         _titleView = NotificationChrome.Apply(this, "Cofrinhos", notifications);
     }
@@ -23,7 +26,14 @@ public partial class MoneyBoxesPage : ContentPage
     {
         base.OnAppearing();
         _ = _titleView.RefreshAsync();
+        SubscribeWalletChanges();
         await LoadAsync();
+    }
+
+    protected override void OnDisappearing()
+    {
+        UnsubscribeWalletChanges();
+        base.OnDisappearing();
     }
 
     private async void OnRefresh(object? sender, EventArgs e)
@@ -31,6 +41,27 @@ public partial class MoneyBoxesPage : ContentPage
 
     private async void OnRetryClicked(object? sender, EventArgs e)
         => await LoadAsync();
+
+    private void SubscribeWalletChanges()
+    {
+        if (_walletSubscribed)
+            return;
+
+        _wallets.ActiveWalletChanged += OnActiveWalletChanged;
+        _walletSubscribed = true;
+    }
+
+    private void UnsubscribeWalletChanges()
+    {
+        if (!_walletSubscribed)
+            return;
+
+        _wallets.ActiveWalletChanged -= OnActiveWalletChanged;
+        _walletSubscribed = false;
+    }
+
+    private void OnActiveWalletChanged(object? sender, Guid walletId)
+        => MainThread.BeginInvokeOnMainThread(async () => await LoadAsync());
 
     private async void OnCreateClicked(object? sender, EventArgs e)
         => await OpenCreateAsync();

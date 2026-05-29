@@ -438,6 +438,12 @@ void MigrateDatabase(){
             dbContext.Set<User>().Add(user);
             dbContext.SaveChanges();
         }
+        else
+        {
+            user = dbContext.Set<User>().OrderBy(item => item.id).First();
+        }
+
+        WalletAccess.EnsureDefaultWallet(dbContext, user);
 
         // Seed banks first so investments can reference them
         if (!dbContext.Set<Bank>().Any())

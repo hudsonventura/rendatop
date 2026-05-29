@@ -44,6 +44,11 @@ public class Plan
     internal int money_boxes_limit { get; set; } = 3;
 
     /// <summary>
+    /// Limite de carteiras disponíveis no plano.
+    /// </summary>
+    internal int wallets_limit { get; set; } = 1;
+
+    /// <summary>
     /// Dicionário de features do plano.
     /// Key = identificador da feature (ex: "ai_usage", "export_data").
     /// Value = texto explicativo para exibição ao usuário.
@@ -71,10 +76,12 @@ public static class Plans
             whatsapp_notifications = false,
             recurring_investments = false,
             money_boxes_limit = 3,
+            wallets_limit = 1,
             features = new Dictionary<string, string>
             {
                 { "ai_usage", "2 leituras de comprovantes por mês" },
                 { "investments", "Controle completo de investimentos" },
+                { "wallets", "1 carteira" },
                 { "money_boxes", "Até 3 cofrinhos para organizar sua carteira" },
                 { "calendar_ics", "Calendário de vencimentos" },
                 { "notifications", "Notificações de vencimento (Telegram e E-mail)" },
@@ -94,10 +101,12 @@ public static class Plans
             whatsapp_notifications = true,
             recurring_investments = true,
             money_boxes_limit = int.MaxValue,
+            wallets_limit = 5,
             features = new Dictionary<string, string>
             {
                 { "ai_usage", "10 leituras de comprovantes por mês" },
                 { "investments", "Controle completo de investimentos" },
+                { "wallets", "Até 5 carteiras" },
                 { "money_boxes", "Cofrinhos ilimitados" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
                 { "whatsapp_notifications", "Notificações de vencimento (Telegram, E-mail e WhatsApp)" },
@@ -119,10 +128,12 @@ public static class Plans
             whatsapp_notifications = true,
             recurring_investments = true,
             money_boxes_limit = int.MaxValue,
+            wallets_limit = int.MaxValue,
             features = new Dictionary<string, string>
             {
                 { "ai_usage", "30 leituras de comprovantes por mês" },
                 { "investments", "Controle completo de investimentos" },
+                { "wallets", "Carteiras ilimitadas" },
                 { "money_boxes", "Cofrinhos ilimitados" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
                 { "whatsapp_notifications", "Notificações de vencimento (Telegram, E-mail e WhatsApp)" },

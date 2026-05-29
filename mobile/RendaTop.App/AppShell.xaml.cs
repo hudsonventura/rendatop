@@ -6,14 +6,24 @@ namespace RendaTop.App;
 public partial class AppShell : Shell
 {
 	private readonly IServiceProvider _services;
+	private readonly WalletService _wallets;
+	private readonly Picker _walletPicker;
+	private bool _walletPickerUpdating;
 
 	public AppShell(IServiceProvider services)
 	{
 		_services = services;
+		_wallets = services.GetRequiredService<WalletService>();
+		_walletPicker = CreateWalletPicker();
 		InitializeComponent();
 
 		FlyoutHeader = CreateFlyoutHeader();
 		FlyoutFooter = CreateFlyoutFooter();
+		PropertyChanged += async (_, args) =>
+		{
+			if (args.PropertyName == nameof(FlyoutIsPresented) && FlyoutIsPresented)
+				await LoadWalletsAsync();
+		};
 
 		Items.Add(CreateShellContent<Pages.SplashPage>("splash", "Splash", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.WelcomePage>("welcome", "Boas-vindas", showInFlyout: false));
@@ -115,11 +125,11 @@ public partial class AppShell : Shell
 		};
 	}
 
-	private static View CreateFlyoutHeader()
+	private View CreateFlyoutHeader()
 	{
 		return new Grid
 		{
-			Padding = new Thickness(20, 24, 20, 12),
+			Padding = new Thickness(20, 24, 20, 14),
 			BackgroundColor = Color.FromArgb("#111827"),
 			Children =
 			{
@@ -147,11 +157,69 @@ public partial class AppShell : Shell
 							Text = "Gestao de investimentos",
 							FontSize = 13,
 							TextColor = Color.FromArgb("#CBD5E1")
-						}
+						},
+						_walletPicker
 					}
 				}
 			}
 		};
+	}
+
+	private Picker CreateWalletPicker()
+	{
+		var picker = new Picker
+		{
+			Title = "Carteira",
+			HeightRequest = 42,
+			FontSize = 14,
+			TextColor = Color.FromArgb("#111827"),
+			BackgroundColor = Colors.White,
+			Margin = new Thickness(0, 4, 0, 0),
+			HorizontalOptions = LayoutOptions.Fill,
+			ItemDisplayBinding = new Binding(nameof(ShellWalletItem.Name)),
+			IsVisible = false
+		};
+
+		picker.SelectedIndexChanged += OnWalletSelected;
+		return picker;
+	}
+
+	private async Task LoadWalletsAsync()
+	{
+		try
+		{
+			var overview = await _wallets.GetOverviewAsync();
+			var enabled = (overview.Items ?? [])
+				.Where(item => item.Enabled)
+				.Select(item => new ShellWalletItem(item.Id, item.Name))
+				.ToList();
+
+			_walletPickerUpdating = true;
+			_walletPicker.ItemsSource = enabled;
+
+			var activeId = _wallets.ActiveWalletId;
+			var activeIndex = activeId.HasValue
+				? enabled.FindIndex(item => item.Id == activeId.Value)
+				: -1;
+			_walletPicker.SelectedIndex = activeIndex >= 0 ? activeIndex : enabled.Count > 0 ? 0 : -1;
+			_walletPicker.IsVisible = enabled.Count > 0;
+		}
+		catch
+		{
+			_walletPicker.IsVisible = false;
+		}
+		finally
+		{
+			_walletPickerUpdating = false;
+		}
+	}
+
+	private void OnWalletSelected(object? sender, EventArgs e)
+	{
+		if (_walletPickerUpdating || _walletPicker.SelectedItem is not ShellWalletItem item)
+			return;
+
+		_wallets.SetActiveWallet(item.Id);
 	}
 
 	private View CreateFlyoutFooter()
@@ -179,3 +247,5 @@ public partial class AppShell : Shell
 		return logout;
 	}
 }
+
+public sealed record ShellWalletItem(Guid Id, string Name);

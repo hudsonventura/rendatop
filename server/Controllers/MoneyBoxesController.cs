@@ -20,8 +20,9 @@ public class MoneyBoxesController : AuthenticatedController
 
     [HttpGet("MoneyBoxes")]
     [ProducesResponseType(typeof(MoneyBoxesOverviewResponse), StatusCodes.Status200OK)]
-    public IActionResult Get()
+    public IActionResult Get([FromQuery] Guid? wallet_id = null)
     {
+        var wallet = WalletAccess.ResolveAccessibleWallet(_context, _user, wallet_id);
         var rawItems = _context.money_boxes
             .AsNoTracking()
             .Where(item => item.owner_id == _user.id)
@@ -33,7 +34,10 @@ public class MoneyBoxesController : AuthenticatedController
             .AsNoTracking()
             .Include(item => item.bank)
             .Include(item => item.redemptions)
-            .Where(item => item.owner.id == _user.id && item.money_box_id.HasValue && moneyBoxIds.Contains(item.money_box_id.Value))
+            .Where(item => item.owner.id == _user.id &&
+                           (item.wallet_id == wallet.id || item.wallet_id == null) &&
+                           item.money_box_id.HasValue &&
+                           moneyBoxIds.Contains(item.money_box_id.Value))
             .ToList();
 
         var totalsByMoneyBoxId = investments

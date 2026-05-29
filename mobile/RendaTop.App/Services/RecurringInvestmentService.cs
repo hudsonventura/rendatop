@@ -8,16 +8,18 @@ public sealed class RecurringInvestmentService
 
     private readonly ApiClient _apiClient;
     private readonly LocalSnapshotStore _snapshots;
+    private readonly WalletService _wallets;
 
-    public RecurringInvestmentService(ApiClient apiClient, LocalSnapshotStore snapshots)
+    public RecurringInvestmentService(ApiClient apiClient, LocalSnapshotStore snapshots, WalletService wallets)
     {
         _apiClient = apiClient;
         _snapshots = snapshots;
+        _wallets = wallets;
     }
 
     public async Task<RecurringInvestmentsOverviewDto> GetOverviewAsync(CancellationToken cancellationToken = default)
     {
-        var overview = await _apiClient.GetAsync<RecurringInvestmentsOverviewDto>("/Investments/Recurring", cancellationToken)
+        var overview = await _apiClient.GetAsync<RecurringInvestmentsOverviewDto>(_wallets.WithActiveWallet("/Investments/Recurring"), cancellationToken)
            ?? new RecurringInvestmentsOverviewDto { Items = [] };
 
         await _snapshots.SetAsync(CacheKey, overview, cancellationToken);
@@ -29,11 +31,11 @@ public sealed class RecurringInvestmentService
            ?? new RecurringInvestmentsOverviewDto { Items = [] };
 
     public async Task<RecurringInvestmentDto> CreateAsync(RecurringInvestmentRequestDto request, CancellationToken cancellationToken = default)
-        => await _apiClient.PostAsync<RecurringInvestmentRequestDto, RecurringInvestmentDto>("/Investments/Recurring", request, cancellationToken)
+        => await _apiClient.PostAsync<RecurringInvestmentRequestDto, RecurringInvestmentDto>("/Investments/Recurring", request with { WalletId = _wallets.ActiveWalletId }, cancellationToken)
            ?? throw new ApiException("Resposta de recorrencia invalida.", 500);
 
     public async Task<RecurringInvestmentDto> UpdateAsync(Guid id, RecurringInvestmentRequestDto request, CancellationToken cancellationToken = default)
-        => await _apiClient.PatchAsync<RecurringInvestmentRequestDto, RecurringInvestmentDto>($"/Investments/Recurring/{id}", request, cancellationToken)
+        => await _apiClient.PatchAsync<RecurringInvestmentRequestDto, RecurringInvestmentDto>($"/Investments/Recurring/{id}", request with { WalletId = _wallets.ActiveWalletId }, cancellationToken)
            ?? throw new ApiException("Resposta de recorrencia invalida.", 500);
 
     public async Task<RecurringInvestmentDto> UpdateActiveAsync(Guid id, bool active, CancellationToken cancellationToken = default)

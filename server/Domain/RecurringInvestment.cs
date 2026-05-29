@@ -22,6 +22,10 @@ public class RecurringInvestment
     public User owner { get; set; } = null!;
     public Guid owner_id { get; set; }
 
+    public Guid? wallet_id { get; set; }
+    [ForeignKey(nameof(wallet_id))]
+    public Wallet? wallet { get; set; }
+
     public Guid bank_id { get; set; }
     [ForeignKey(nameof(bank_id))]
     public Bank bank { get; set; } = null!;
@@ -56,12 +60,14 @@ public class RecurringInvestment
         this.owner_id = owner.id;
         this.bank = bank;
         this.bank_id = bank.Id;
+        this.wallet_id = request.wallet_id;
         Apply(request, bank);
     }
 
     public void Apply(RecurringInvestmentRequest request, Bank bank)
     {
         title = request.title.Trim();
+        wallet_id = request.wallet_id ?? wallet_id;
         investment_type = request.investment_type;
         this.bank = bank;
         bank_id = bank.Id;
@@ -161,6 +167,7 @@ public class RecurringInvestment
         {
             title = $"{title} {titleSuffix}",
             investment_type = investment_type,
+            wallet_id = wallet_id,
             bank_code = bank.Code,
             date_buy = buyDate,
             date_expected_sell = dueDate,

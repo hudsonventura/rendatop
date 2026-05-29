@@ -14,18 +14,21 @@ public partial class CalendarPage : ContentPage
     private readonly InvestmentService _investments;
     private readonly CalendarService _calendar;
     private readonly ConnectivityService _connectivity;
+    private readonly WalletService _wallets;
     private readonly NotificationTitleView _titleView;
     private readonly List<CalendarEventItem> _events = [];
 
     private DateTime _currentMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateTime? _selectedDate;
     private bool _loaded;
+    private bool _walletSubscribed;
 
-    public CalendarPage(InvestmentService investments, CalendarService calendar, ConnectivityService connectivity, NotificationService notifications)
+    public CalendarPage(InvestmentService investments, CalendarService calendar, ConnectivityService connectivity, NotificationService notifications, WalletService wallets)
     {
         _investments = investments;
         _calendar = calendar;
         _connectivity = connectivity;
+        _wallets = wallets;
         InitializeComponent();
         _titleView = NotificationChrome.Apply(this, "Calendario", notifications);
         BuildWeekDaysHeader();
@@ -35,6 +38,7 @@ public partial class CalendarPage : ContentPage
     {
         base.OnAppearing();
         _ = _titleView.RefreshAsync();
+        SubscribeWalletChanges();
 
         if (!_loaded)
         {
@@ -45,11 +49,38 @@ public partial class CalendarPage : ContentPage
         RenderCalendar();
     }
 
+    protected override void OnDisappearing()
+    {
+        UnsubscribeWalletChanges();
+        base.OnDisappearing();
+    }
+
     private async void OnRefresh(object? sender, EventArgs e)
         => await LoadCalendarAsync(forceRefresh: true);
 
     private async void OnRetryClicked(object? sender, EventArgs e)
         => await LoadCalendarAsync(forceRefresh: true);
+
+    private void SubscribeWalletChanges()
+    {
+        if (_walletSubscribed)
+            return;
+
+        _wallets.ActiveWalletChanged += OnActiveWalletChanged;
+        _walletSubscribed = true;
+    }
+
+    private void UnsubscribeWalletChanges()
+    {
+        if (!_walletSubscribed)
+            return;
+
+        _wallets.ActiveWalletChanged -= OnActiveWalletChanged;
+        _walletSubscribed = false;
+    }
+
+    private void OnActiveWalletChanged(object? sender, Guid walletId)
+        => MainThread.BeginInvokeOnMainThread(async () => await LoadCalendarAsync(forceRefresh: true));
 
     private void OnPreviousMonthClicked(object? sender, EventArgs e)
     {

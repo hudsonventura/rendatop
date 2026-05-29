@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { fetchMoneyBoxesOverview } from "@/utils/money-boxes"
+import { useWallet } from "@/contexts/wallet-context"
 import axiosInstance from "@/utils/axiosConfig"
 import { AlertCircle, PiggyBank, Pencil, Plus, Trash2 } from "lucide-react"
 
@@ -33,13 +34,14 @@ export default function MoneyBoxesPage() {
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
     const [selectedItem, setSelectedItem] = useState(null)
+    const { activeWalletId } = useWallet()
     const [form, setForm] = useState(defaultForm)
 
     const loadData = () => {
         setLoading(true)
         setError("")
 
-        fetchMoneyBoxesOverview()
+        fetchMoneyBoxesOverview(activeWalletId)
             .then((data) => {
                 setOverview(data)
             })
@@ -53,7 +55,7 @@ export default function MoneyBoxesPage() {
 
     useEffect(() => {
         loadData()
-    }, [])
+    }, [activeWalletId])
 
     const openCreate = () => {
         setEditingItem(null)

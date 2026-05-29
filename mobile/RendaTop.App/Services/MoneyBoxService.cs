@@ -8,16 +8,18 @@ public sealed class MoneyBoxService
 
     private readonly ApiClient _apiClient;
     private readonly LocalSnapshotStore _snapshots;
+    private readonly WalletService _wallets;
 
-    public MoneyBoxService(ApiClient apiClient, LocalSnapshotStore snapshots)
+    public MoneyBoxService(ApiClient apiClient, LocalSnapshotStore snapshots, WalletService wallets)
     {
         _apiClient = apiClient;
         _snapshots = snapshots;
+        _wallets = wallets;
     }
 
     public async Task<MoneyBoxesOverviewDto> GetOverviewAsync(CancellationToken cancellationToken = default)
     {
-        var overview = await _apiClient.GetAsync<MoneyBoxesOverviewDto>("/MoneyBoxes", cancellationToken)
+        var overview = await _apiClient.GetAsync<MoneyBoxesOverviewDto>(_wallets.WithActiveWallet("/MoneyBoxes"), cancellationToken)
            ?? new MoneyBoxesOverviewDto { Items = [] };
 
         await _snapshots.SetAsync(CacheKey, overview, cancellationToken);

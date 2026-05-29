@@ -27,6 +27,9 @@ public sealed record InvestmentDto
     [JsonPropertyName("money_box_id")]
     public Guid? MoneyBoxId { get; init; }
 
+    [JsonPropertyName("wallet_id")]
+    public Guid? WalletId { get; init; }
+
     [JsonPropertyName("index")]
     public string Index { get; init; } = "CDI";
 
@@ -122,6 +125,9 @@ public sealed record InvestmentRequestDto
 
     [JsonPropertyName("money_box_id")]
     public Guid? MoneyBoxId { get; init; }
+
+    [JsonPropertyName("wallet_id")]
+    public Guid? WalletId { get; init; }
 
     [JsonPropertyName("bank_code")]
     public int BankCode { get; init; }

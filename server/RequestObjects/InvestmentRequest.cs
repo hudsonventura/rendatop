@@ -26,6 +26,11 @@ public class InvestmentRequest
     public Guid? money_box_id { get; set; }
 
     /// <summary>
+    /// Carteira do investimento.
+    /// </summary>
+    public Guid? wallet_id { get; set; }
+
+    /// <summary>
     /// Código do banco onde o investimento foi feito
     /// </summary>
     public int bank_code { get; set; }

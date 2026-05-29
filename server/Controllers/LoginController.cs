@@ -168,6 +168,7 @@ public class LoginController : ControllerBase
 
         _context.users.Add(user);
         _context.SaveChanges();
+        WalletAccess.EnsureDefaultWallet(_context, user);
 
         try
         {
@@ -617,6 +618,7 @@ Se você não solicitou essa alteração, ignore este email.";
             };
             _context.users.Add(user);
             _context.SaveChanges();
+            WalletAccess.EnsureDefaultWallet(_context, user);
         }
         else
         {
@@ -638,6 +640,8 @@ Se você não solicitou essa alteração, ignore este email.";
 
             if (changed)
                 _context.SaveChanges();
+
+            WalletAccess.EnsureDefaultWallet(_context, user);
         }
 
         return user;

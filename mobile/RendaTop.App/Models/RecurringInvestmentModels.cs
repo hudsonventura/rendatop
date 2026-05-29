@@ -16,6 +16,9 @@ public sealed record RecurringInvestmentDto
     [JsonPropertyName("id")]
     public Guid Id { get; init; }
 
+    [JsonPropertyName("wallet_id")]
+    public Guid? WalletId { get; init; }
+
     [JsonPropertyName("title")]
     public string Title { get; init; } = string.Empty;
 
@@ -117,6 +120,9 @@ public sealed record RecurringInvestmentRequestDto
 
     [JsonPropertyName("investment_type")]
     public int? InvestmentType { get; init; }
+
+    [JsonPropertyName("wallet_id")]
+    public Guid? WalletId { get; init; }
 
     [JsonPropertyName("bank_code")]
     public int BankCode { get; init; }
