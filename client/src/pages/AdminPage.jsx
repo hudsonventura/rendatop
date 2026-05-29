@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 import { BaseLayout } from "@/components/layouts/base-layout"
@@ -7,8 +7,12 @@ import axiosInstance from "@/utils/axiosConfig"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getStoredUserType, isAdminUserType } from "@/utils/userSession"
-import { BarChart3, CreditCard, ShieldCheck, Users } from "lucide-react"
+import { BarChart3, ChevronLeft, ChevronRight, CreditCard, Gift, Loader2, Search, ShieldCheck, Users } from "lucide-react"
 
 const CHART_COLORS = [
     "var(--chart-1)",
@@ -152,11 +156,38 @@ function PieMetricCard({ title, description, icon: Icon, items, emptyMessage }) 
     )
 }
 
+function formatDate(value) {
+    if (!value) return "Sem assinatura"
+
+    const date = new Date(value)
+    return Number.isNaN(date.getTime())
+        ? "Sem assinatura"
+        : date.toLocaleDateString("pt-BR")
+}
+
+function getAuthProviderLabel(value) {
+    if (value === "Google" || value === 2) return "Google"
+    if (value === "Microsoft" || value === 3) return "Microsoft"
+    return "Senha"
+}
+
+function getUserTypeLabel(value) {
+    if (value === "Admin" || value === 2) return "Admin"
+    return "Comum"
+}
+
 export default function AdminPage() {
     const navigate = useNavigate()
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
     const [stats, setStats] = useState(null)
+    const [usersLoading, setUsersLoading] = useState(true)
+    const [usersError, setUsersError] = useState("")
+    const [usersData, setUsersData] = useState({ items: [], page: 1, page_size: 10, total: 0 })
+    const [usersPage, setUsersPage] = useState(1)
+    const [usersSearchInput, setUsersSearchInput] = useState("")
+    const [usersSearch, setUsersSearch] = useState("")
+    const [grantingTrial, setGrantingTrial] = useState("")
 
     useEffect(() => {
         const storedUserType = getStoredUserType()
@@ -193,6 +224,54 @@ export default function AdminPage() {
         }
     }, [navigate])
 
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setUsersPage(1)
+            setUsersSearch(usersSearchInput.trim())
+        }, 350)
+
+        return () => window.clearTimeout(timer)
+    }, [usersSearchInput])
+
+    const loadUsers = useCallback(() => {
+        let cancelled = false
+        setUsersLoading(true)
+        setUsersError("")
+
+        axiosInstance
+            .get("/admin/users", {
+                params: {
+                    page: usersPage,
+                    page_size: 10,
+                    search: usersSearch || undefined,
+                },
+            })
+            .then((response) => {
+                if (cancelled) return
+                setUsersData(response?.data || { items: [], page: usersPage, page_size: 10, total: 0 })
+            })
+            .catch((err) => {
+                if (cancelled) return
+
+                if (err?.response?.status === 403) {
+                    navigate("/home", { replace: true })
+                    return
+                }
+
+                setUsersError("Não foi possível carregar os usuários.")
+            })
+            .finally(() => {
+                if (cancelled) return
+                setUsersLoading(false)
+            })
+
+        return () => {
+            cancelled = true
+        }
+    }, [navigate, usersPage, usersSearch])
+
+    useEffect(() => loadUsers(), [loadUsers])
+
     const planChartItems = useMemo(
         () => buildChartItems(stats?.users_by_plan || [], "plan_id", "users_count", "plan_name"),
         [stats?.users_by_plan]
@@ -205,6 +284,23 @@ export default function AdminPage() {
         () => buildChartItems(stats?.visits_by_origin || [], "visit", "visits_count", "visit"),
         [stats?.visits_by_origin]
     )
+    const totalUserPages = Math.max(1, Math.ceil((usersData.total || 0) / (usersData.page_size || 10)))
+
+    const handleGrantTrial = (user, planId) => {
+        const actionKey = `${user.id}:${planId}`
+        setGrantingTrial(actionKey)
+        setUsersError("")
+
+        axiosInstance
+            .post(`/admin/users/${user.id}/trial`, { plan_id: planId })
+            .then(() => {
+                loadUsers()
+            })
+            .catch((err) => {
+                setUsersError(err?.response?.data?.message || err?.response?.data || "Não foi possível liberar a degustação.")
+            })
+            .finally(() => setGrantingTrial(""))
+    }
 
     return (
         <>
@@ -266,6 +362,147 @@ export default function AdminPage() {
                                     emptyMessage="Nenhuma visita registrada até o momento."
                                 />
                             </div>
+
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                        <div>
+                                            <CardTitle>Usuários</CardTitle>
+                                            <CardDescription>Busque usuários e libere degustações de 30 dias em planos pagos.</CardDescription>
+                                        </div>
+                                        <div className="relative w-full lg:w-80">
+                                            <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+                                            <Input
+                                                value={usersSearchInput}
+                                                onChange={(event) => setUsersSearchInput(event.target.value)}
+                                                placeholder="Buscar por nome ou email"
+                                                className="pl-9"
+                                            />
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {usersError && (
+                                        <Alert variant="destructive">
+                                            <AlertTitle>Falha na operação</AlertTitle>
+                                            <AlertDescription>{usersError}</AlertDescription>
+                                        </Alert>
+                                    )}
+
+                                    <div className="overflow-hidden rounded-lg border">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Usuário</TableHead>
+                                                    <TableHead>Tipo</TableHead>
+                                                    <TableHead>Autenticação</TableHead>
+                                                    <TableHead>Plano atual</TableHead>
+                                                    <TableHead>Vigência</TableHead>
+                                                    <TableHead className="text-right">Degustação</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {usersLoading ? (
+                                                    Array.from({ length: 5 }).map((_, index) => (
+                                                        <TableRow key={index}>
+                                                            <TableCell colSpan={6}>
+                                                                <Skeleton className="h-8 w-full" />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : usersData.items.length === 0 ? (
+                                                    <TableRow>
+                                                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                                            Nenhum usuário encontrado.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ) : (
+                                                    usersData.items.map((user) => (
+                                                        <TableRow key={user.id}>
+                                                            <TableCell>
+                                                                <div className="space-y-1">
+                                                                    <div className="font-medium">{user.name || "Sem nome"}</div>
+                                                                    <div className="text-xs text-muted-foreground">{user.email}</div>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge variant={getUserTypeLabel(user.user_type) === "Admin" ? "default" : "secondary"}>
+                                                                    {getUserTypeLabel(user.user_type)}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>{getAuthProviderLabel(user.auth_provider)}</TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                                                    <span>{user.active_plan_name || "Free"}</span>
+                                                                    {user.active_payment_method === "trial" && (
+                                                                        <Badge variant="outline">Degustação</Badge>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>{formatDate(user.active_plan_period_end)}</TableCell>
+                                                            <TableCell>
+                                                                <div className="flex justify-end gap-2">
+                                                                    {["plus", "pro"].map((planId) => {
+                                                                        const actionKey = `${user.id}:${planId}`
+                                                                        const busy = grantingTrial === actionKey
+
+                                                                        return (
+                                                                            <Button
+                                                                                key={planId}
+                                                                                type="button"
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                onClick={() => handleGrantTrial(user, planId)}
+                                                                                disabled={Boolean(grantingTrial)}
+                                                                            >
+                                                                                {busy ? (
+                                                                                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                                                                ) : (
+                                                                                    <Gift className="mr-2 h-3.5 w-3.5" />
+                                                                                )}
+                                                                                {planId === "plus" ? "Plus" : "Pro"}
+                                                                            </Button>
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <p className="text-sm text-muted-foreground">
+                                            Página {usersData.page || usersPage} de {totalUserPages} · {usersData.total || 0} usuário(s)
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setUsersPage((current) => Math.max(1, current - 1))}
+                                                disabled={usersLoading || usersPage <= 1}
+                                            >
+                                                <ChevronLeft className="mr-2 h-4 w-4" />
+                                                Anterior
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setUsersPage((current) => Math.min(totalUserPages, current + 1))}
+                                                disabled={usersLoading || usersPage >= totalUserPages}
+                                            >
+                                                Próxima
+                                                <ChevronRight className="ml-2 h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </>
                     )}
                 </div>
