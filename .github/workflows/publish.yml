@@ -2,13 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "testing" ]
     
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: self-hosted
+  deploy-mainserver:
+    if: github.ref == 'refs/heads/testing'
+    runs-on: [self-hosted, mainserver]
 
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +50,47 @@ jobs:
         working-directory: /rendatop
         run: docker compose up migrator
 
+
+      - name: Restart compose
+        working-directory: /rendatop
+        run: docker compose down && docker compose up -d
+
+  deploy-secondserver:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, secondserver]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Git pull
+        working-directory: /rendatop
+        run: git pull
+
+      - name: Docker build tests
+        working-directory: /rendatop
+        run: docker compose -f docker-compose-tests.yml build --no-cache
+
+      - name: Run pipeline tests
+        working-directory: /rendatop
+        run: docker compose -f docker-compose-tests.yml up --abort-on-container-exit --exit-code-from tests tests
+
+      - name: Show test logs on failure
+        if: failure()
+        working-directory: /rendatop
+        run: docker compose -f docker-compose-tests.yml logs
+
+      - name: Shutdown test stack
+        if: always()
+        working-directory: /rendatop
+        run: docker compose -f docker-compose-tests.yml down
+
+      - name: Docker build
+        working-directory: /rendatop
+        run: docker compose build
+
+      - name: Apply migrations
+        working-directory: /rendatop
+        run: docker compose up migrator
 
       - name: Restart compose
         working-directory: /rendatop
