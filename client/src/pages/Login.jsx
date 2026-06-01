@@ -10,7 +10,7 @@ import { appPath } from "@/utils/appPath";
 import LoginCandleWallpaper from "@/components/LoginCandleWallpaper";
 import { persistSessionUser } from "@/utils/userSession";
 
-const apiBaseUrl = (import.meta.env.VITE_API_URL || "/api").replace(/\/+$/, "") || "/api";
+const apiBaseUrl = (import.meta.env.VITE_API_URL).replace(/\/+$/, "");
 
 const Login = () => {
 

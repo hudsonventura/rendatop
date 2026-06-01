@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const apiBaseUrl = (import.meta.env.VITE_API_URL || "/api").replace(/\/+$/, "") || "/api";
+const apiBaseUrl = (import.meta.env.VITE_API_URL).replace(/\/+$/, "");
 
 // Axios instance — cookies (HttpOnly jwt) are sent automatically via withCredentials
 const axiosInstance = axios.create({
