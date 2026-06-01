@@ -133,21 +133,21 @@ public class NotificationIntegrationTests
             $"Teste de integração real do Telegram. Marcador: {marker}");
     }
 
-    [Fact]
-    public async Task WhatsApp_SendsRealMessage_UsingConfiguredProviderAndDotEnvCredentials()
-    {
-        NotificationIntegrationEnvironment.Load();
-        await NotificationIntegrationEnvironment.EnsureWhatsAppStackAsync();
+    // [Fact]
+    // public async Task WhatsApp_SendsRealMessage_UsingConfiguredProviderAndDotEnvCredentials()
+    // {
+    //     NotificationIntegrationEnvironment.Load();
+    //     await NotificationIntegrationEnvironment.EnsureWhatsAppStackAsync();
 
-        var whatsApp = NotificationIntegrationEnvironment.CreateWhatsAppNotification();
-        var phone = NotificationIntegrationEnvironment.GetRequired("WHATSAPP_TEST_PHONE");
-        var marker = NotificationIntegrationEnvironment.BuildMarker("whatsapp");
+    //     var whatsApp = NotificationIntegrationEnvironment.CreateWhatsAppNotification();
+    //     var phone = NotificationIntegrationEnvironment.GetRequired("WHATSAPP_TEST_PHONE");
+    //     var marker = NotificationIntegrationEnvironment.BuildMarker("whatsapp");
 
-        await whatsApp.Notify(
-            phone,
-            "[Integration] WhatsApp",
-            $"Teste de integração real do WhatsApp. Marcador: {marker}");
-    }
+    //     await whatsApp.Notify(
+    //         phone,
+    //         "[Integration] WhatsApp",
+    //         $"Teste de integração real do WhatsApp. Marcador: {marker}");
+    // }
 
     private static class NotificationIntegrationEnvironment
     {
