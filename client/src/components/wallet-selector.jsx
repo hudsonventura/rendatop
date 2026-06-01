@@ -9,10 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { UpgradePlanModal } from "@/components/upgrade-plan-modal"
+import { cn } from "@/lib/utils"
 
 const upgradeMessage = "Apenas usuarios de planos pagos podem criar mais carteiras e acessar limites extendidos."
 
-export function WalletSelector() {
+export function WalletSelector({ className, triggerClassName }) {
     const {
         wallets,
         activeWalletId,
@@ -57,9 +58,9 @@ export function WalletSelector() {
     }
 
     return (
-        <div className="flex items-center gap-1">
+        <div className={cn("flex items-center gap-1", className)}>
             <Select value={activeWalletId} onValueChange={setActiveWalletId} disabled={loading || enabledWallets.length === 0}>
-                <SelectTrigger className="h-9 w-[190px] max-w-[46vw]">
+                <SelectTrigger className={cn("h-9 w-[190px] max-w-[46vw]", triggerClassName)}>
                     <WalletCards className="mr-2 h-4 w-4 shrink-0" />
                     <SelectValue placeholder="Carteira" />
                 </SelectTrigger>

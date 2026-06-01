@@ -22,6 +22,7 @@ import {
     SidebarContent,
     SidebarFooter,
     SidebarHeader,
+    SidebarSeparator,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
@@ -41,6 +42,7 @@ import {
 import { Button } from "@/components/ui/button"
 import axiosInstance from "@/utils/axiosConfig"
 import { getStoredUserType, isAdminUserType, persistSessionUser } from "@/utils/userSession"
+import { WalletSelector } from "@/components/wallet-selector"
 
 const navItems = [
     {
@@ -196,6 +198,13 @@ export function AppSidebar({ ...props }) {
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     </SidebarMenu>
+                    <div className="px-2 pt-1 group-data-[collapsible=icon]:hidden">
+                        <WalletSelector
+                            className="w-full"
+                            triggerClassName="w-full max-w-none"
+                        />
+                    </div>
+                    <SidebarSeparator className="group-data-[collapsible=icon]:hidden" />
                 </SidebarHeader>
                 <SidebarContent>
                     <SidebarGroup>
