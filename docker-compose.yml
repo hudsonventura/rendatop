@@ -6,8 +6,8 @@ services:
     restart: always
     env_file:
       - .env
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"
     volumes:
       - ./.data/postgres:/var/lib/postgresql
     
@@ -18,20 +18,6 @@ services:
     volumes:
       - ./.data/redis:/data
 
-
-  # evolution:
-  #   container_name: evolution_api
-  #   image: atendai/evolution-api:v2.2.3
-  #   restart: always
-  #   ports:
-  #     - "8080:8080"
-  #   env_file:
-  #     - .env
-  #   depends_on:
-  #     - db
-  #     - redis
-  #   volumes:
-  #     - ./.data/evolution:/evolution/instances
 
   whatsapp-wwebjs:
     image: avoylenko/wwebjs-api:v1.34.6
@@ -45,8 +31,8 @@ services:
       - ENABLE_LOCAL_CALLBACK_EXAMPLE=FALSE
     volumes:
       - ./.data/wwebjs:/usr/src/app/sessions
-    ports:
-      - "3000:3000"
+    # ports:
+    #   - "3000:3000" # descomente apenas em caso de configurar. Se nao, não é necessário expor a porta, pois o server se comunica internamente com o whatsapp-wwebjs
 
 
   server:
@@ -89,18 +75,18 @@ services:
     depends_on: 
       - server
 
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    container_name: rendatop-nginx
-    restart: always
-    depends_on:
-      - landing
-      - client
-      - server
-    ports:
-      - "80:80"
+  # nginx:
+  #   build:
+  #     context: ./nginx
+  #     dockerfile: Dockerfile
+  #   container_name: rendatop-nginx
+  #   restart: always
+  #   depends_on:
+  #     - landing
+  #     - client
+  #     - server
+  #   ports:
+  #     - "80:80"
     
 
   landing:
@@ -113,4 +99,10 @@ services:
     depends_on: 
       - server
     restart: always
+
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    restart: always
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
     
