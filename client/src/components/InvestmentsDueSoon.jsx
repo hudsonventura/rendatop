@@ -24,6 +24,11 @@ const formatCurrency = (val) =>
 const formatDate = (dateStr) =>
     new Date(dateStr).toLocaleDateString("pt-BR")
 
+function getBankLogoSrc(bankCode) {
+    if (bankCode === null || bankCode === undefined || bankCode === "") return null
+    return `/bank-logos/${String(bankCode).padStart(3, "0")}.svg`
+}
+
 const isDueDateTodayOrPast = (dateStr) => {
     const due = new Date(dateStr)
     due.setHours(0, 0, 0, 0)
@@ -89,6 +94,7 @@ export default function InvestmentsDueSoon({ investments, onArchive, onReinvest 
                 <TableHeader className="bg-muted">
                     <TableRow>
                         <TableHead>Nome</TableHead>
+                        <TableHead>Banco</TableHead>
                         <TableHead>Valor</TableHead>
                         <TableHead>Valor líquido</TableHead>
                         <TableHead>IR</TableHead>
@@ -109,6 +115,24 @@ export default function InvestmentsDueSoon({ investments, onArchive, onReinvest 
                                         className={`text-xs ${isDueDateTodayOrPast(investment.due_date) ? "text-red-600 dark:text-red-400 font-medium" : "text-muted-foreground"}`}
                                     >
                                         Vencimento: {formatDate(investment.due_date)}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        {investment.bank?.code ? (
+                                            <img
+                                                src={getBankLogoSrc(investment.bank.code)}
+                                                alt=""
+                                                aria-hidden="true"
+                                                className="h-4 w-4 shrink-0 rounded-sm object-contain"
+                                                onError={(event) => {
+                                                    event.currentTarget.style.display = "none"
+                                                }}
+                                            />
+                                        ) : null}
+                                        <span className="truncate">
+                                            {investment.bank?.name || "Banco Desconhecido"}
+                                        </span>
                                     </div>
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap">
