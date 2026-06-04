@@ -67,6 +67,38 @@ const formatCurrency = (val) =>
 const VALUE_LIQUID_CURRENT_HINT = "Valor líquido atual, já descontados os impostos, considerando o resgate hoje. Não reflete o valor no vencimento para investimentos sem liquidez diária."
 const OVERDUE_INVESTMENT_HINT = "Este investimento passou da data de vencimento e provavelmente foi resgatado automaticamente pelo banco. Informe o reinvestimento, o resgate total ou arquive este item."
 
+function getBankLogoSrc(bank) {
+    const rawCode = bank?.code
+    if (rawCode === null || rawCode === undefined || rawCode === "") return null
+
+    const normalizedCode = String(rawCode).padStart(3, "0")
+    return `/bank-logos/${normalizedCode}.svg`
+}
+
+function BankCell({ bank }) {
+    const bankName = bank?.name || "Banco Desconhecido"
+    const logoSrc = getBankLogoSrc(bank)
+
+    return (
+        <span className="flex items-center gap-2 min-w-0">
+            {logoSrc ? (
+                <img
+                    src={logoSrc}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-4 w-4 shrink-0 rounded-sm object-contain"
+                    onError={(event) => {
+                        event.currentTarget.style.display = "none"
+                    }}
+                />
+            ) : null}
+            <span className="whitespace-normal break-words leading-snug min-w-0">
+                {bankName}
+            </span>
+        </span>
+    )
+}
+
 function parseDateValue(dateValue) {
     if (!dateValue) return null
 
@@ -690,8 +722,7 @@ function getColumns(onView, onEdit, onRedeem, onReinvest, onArchive, onDelete) {
                 </Button>
             ),
             cell: ({ row }) => {
-                const bankName = row.original.bank?.name || "Banco Desconhecido"
-                return <span className="whitespace-normal break-words leading-snug">{bankName}</span>
+                return <BankCell bank={row.original.bank} />
             },
             sortingFn: (rowA, rowB) => {
                 const a = rowA.original.bank?.name || ""

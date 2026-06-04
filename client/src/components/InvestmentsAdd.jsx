@@ -93,42 +93,55 @@ function getIndexLabelByType(indexType, rawPercent) {
 	return `${formattedPercent}% a.a.`
 }
 
-function getLciEquivalentPercent(selectedIndexType, rawPercent, taxes) {
+function getAnnualRateByType(selectedIndexType, rawPercent) {
 	const SELIC_ANNUAL_ESTIMATE = 0.1315
 	const IPCA_ANNUAL_ESTIMATE = 0.045
-	const assumedDays = 366
-	const irFactor = 1 - (getIRPercent(taxes ?? true, assumedDays) / 100)
-
-	let annualNetRate = 0
 
 	if (selectedIndexType === 0) {
-		annualNetRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100) * irFactor
-	} else if (selectedIndexType === 1) {
-		annualNetRate = (IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)) * irFactor
-	} else if (selectedIndexType === 3) {
-		annualNetRate = (SELIC_ANNUAL_ESTIMATE + (rawPercent / 100)) * irFactor
-	} else {
-		annualNetRate = (rawPercent / 100) * irFactor
+		return SELIC_ANNUAL_ESTIMATE * (rawPercent / 100)
 	}
 
+	if (selectedIndexType === 1) {
+		return IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)
+	}
+
+	if (selectedIndexType === 3) {
+		return SELIC_ANNUAL_ESTIMATE + (rawPercent / 100)
+	}
+
+	return rawPercent / 100
+}
+
+function getNetAnnualRate(selectedIndexType, rawPercent, taxes) {
+	const assumedDays = 366
+	const irFactor = 1 - (getIRPercent(taxes ?? true, assumedDays) / 100)
+	const annualRate = getAnnualRateByType(selectedIndexType, rawPercent)
+
+	return (taxes ?? true) ? annualRate * irFactor : annualRate
+}
+
+function getTaxFreeCdbEquivalentPercent(selectedIndexType, rawPercent, taxes) {
+	const SELIC_ANNUAL_ESTIMATE = 0.1315
+	const annualNetRate = getNetAnnualRate(selectedIndexType, rawPercent, taxes)
+
 	return SELIC_ANNUAL_ESTIMATE <= 0 ? 0 : (annualNetRate / SELIC_ANNUAL_ESTIMATE) * 100
+}
+
+function getTaxableCdbEquivalentPercent(selectedIndexType, rawPercent, taxes) {
+	const SELIC_ANNUAL_ESTIMATE = 0.1315
+	const assumedDays = 366
+	const irFactor = 1 - (getIRPercent(true, assumedDays) / 100)
+	const annualNetRate = getNetAnnualRate(selectedIndexType, rawPercent, taxes)
+
+	return SELIC_ANNUAL_ESTIMATE <= 0 || irFactor <= 0
+		? 0
+		: (annualNetRate / (SELIC_ANNUAL_ESTIMATE * irFactor)) * 100
 }
 
 function getEquivalentPercent(indexType, selectedIndexType, rawPercent) {
 	const SELIC_ANNUAL_ESTIMATE = 0.1315
 	const IPCA_ANNUAL_ESTIMATE = 0.045
-
-	let annualRate = 0
-
-	if (selectedIndexType === 0) {
-		annualRate = SELIC_ANNUAL_ESTIMATE * (rawPercent / 100)
-	} else if (selectedIndexType === 1) {
-		annualRate = IPCA_ANNUAL_ESTIMATE + (rawPercent / 100)
-	} else if (selectedIndexType === 3) {
-		annualRate = SELIC_ANNUAL_ESTIMATE + (rawPercent / 100)
-	} else {
-		annualRate = rawPercent / 100
-	}
+	const annualRate = getAnnualRateByType(selectedIndexType, rawPercent)
 
 	if (indexType === 0) {
 		return SELIC_ANNUAL_ESTIMATE <= 0 ? 0 : (annualRate / SELIC_ANNUAL_ESTIMATE) * 100
@@ -143,6 +156,69 @@ function getEquivalentPercent(indexType, selectedIndexType, rawPercent) {
 	}
 
 	return annualRate * 100
+}
+
+function getLciEquivalentPercent(selectedIndexType, rawPercent, taxes) {
+	return getTaxFreeCdbEquivalentPercent(selectedIndexType, rawPercent, taxes)
+}
+
+function formatCdiPercent(value) {
+	return Number(value).toLocaleString("pt-BR", {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	})
+}
+
+function buildFixedComparisons(indexType, rawPercent, taxes) {
+	const taxableCdb = {
+		type: "cdb-taxable",
+		label: `Equivale a um CDB de ${formatCdiPercent(
+			getTaxableCdbEquivalentPercent(indexType, rawPercent, taxes)
+		)}% CDI`,
+	}
+	const taxFreeCdb = {
+		type: "cdb-tax-free",
+		label: `Equivale a um CDB sem impostos de ${formatCdiPercent(
+			getTaxFreeCdbEquivalentPercent(indexType, rawPercent, taxes)
+		)}% CDI`,
+	}
+
+	if (indexType === 0) {
+		return (taxes ?? true) ? [taxFreeCdb] : [taxableCdb]
+	}
+
+	return [taxableCdb, taxFreeCdb]
+}
+
+function buildLegacyComparisons(indexType, rawPercent, taxes) {
+	const comparisons = [0, 1, 2, 3]
+		.filter((type) => type !== indexType)
+		.map((type) => {
+			const equivalentPercent = getEquivalentPercent(type, indexType, rawPercent)
+			return {
+				type: `legacy-${type}`,
+				equivalentPercent,
+				label: `Equivale a um ${getIndexLabelByType(type, equivalentPercent)}`,
+			}
+		})
+		.filter((item) => !(item.type === "legacy-3" && Math.abs(item.equivalentPercent) < 0.005))
+
+	const lciComparison = (taxes ?? true)
+		? {
+			type: "legacy-lci",
+			label: `Equivale a um LCI/LCA de ${Number(
+				getLciEquivalentPercent(indexType, rawPercent, taxes)
+			).toLocaleString("pt-BR", {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
+			})}% CDI`,
+		}
+		: null
+
+	return [
+		...comparisons,
+		...(lciComparison ? [lciComparison] : []),
+	]
 }
 
 function buildPreview({
@@ -321,31 +397,12 @@ function InvestmentPreview({ form }) {
 			watchTaxes,
 		})
 
-		const comparisons = [0, 1, 2, 3]
-			.filter((type) => type !== indexType)
-			.map((type) => {
-				const equivalentPercent = getEquivalentPercent(type, indexType, rawPercent)
-				return {
-					type,
-					equivalentPercent,
-					label: `Equivale a um ${getIndexLabelByType(type, equivalentPercent)}`,
-				}
-			})
-			.filter((item) => !(item.type === 3 && Math.abs(item.equivalentPercent) < 0.005))
+		const comparisons = [
+			...buildLegacyComparisons(indexType, rawPercent, watchTaxes),
+			...buildFixedComparisons(indexType, rawPercent, watchTaxes),
+		]
 
-		const lciComparison = (watchTaxes ?? true)
-			? {
-				type: "lci",
-				label: `Equivale a um LCI/LCA de ${Number(
-					getLciEquivalentPercent(indexType, rawPercent, watchTaxes)
-				).toLocaleString("pt-BR", {
-					minimumFractionDigits: 2,
-					maximumFractionDigits: 2,
-				})}% CDI`,
-			}
-			: null
-
-		return { rawValue, selected, comparisons, lciComparison }
+		return { rawValue, selected, comparisons }
 	}, [watchValue, watchIndex, watchIndexPercent, watchDateBuy, watchDueDate, watchTaxes, watchLiquidez])
 
 	return (
@@ -356,10 +413,7 @@ function InvestmentPreview({ form }) {
 				rawValue={previews?.rawValue ?? 0}
 			/>
 			<ComparativesCard
-				items={[
-					...(previews?.comparisons ?? []),
-					...(previews?.lciComparison ? [previews.lciComparison] : []),
-				]}
+				items={previews?.comparisons ?? []}
 			/>
 			<p className="text-xs text-muted-foreground">
 				Estimativa para o período selecionado.

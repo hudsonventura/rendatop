@@ -13,6 +13,7 @@ import { useWallet, walletParams } from "@/contexts/wallet-context";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getInvestmentTypeLabel } from "@/utils/investment-types";
 import { ALL_MONEY_BOXES, MONEY_BOX_UNCATEGORIZED } from "@/utils/money-boxes";
+import { Input } from "@/components/ui/input";
 
 function parseDateValue(dateValue) {
     if (!dateValue) return null;
@@ -70,6 +71,7 @@ const MyInvestments = () => {
     const [selectedType, setSelectedType] = useState(ALL_TYPES);
     const [selectedIndex, setSelectedIndex] = useState(ALL_INDEXES);
     const [selectedMoneyBox, setSelectedMoneyBox] = useState(ALL_MONEY_BOXES);
+    const [searchText, setSearchText] = useState("");
     const { activeWalletId } = useWallet();
     const [selectedRedemptionStatus, setSelectedRedemptionStatus] = useState(ALL_REDEMPTION_STATUSES);
 
@@ -212,6 +214,7 @@ const MyInvestments = () => {
 
     const filteredInvestments = useMemo(
         () => investmentsWithAvailability.filter((investment) => {
+            const normalizedSearch = searchText.trim().toLocaleLowerCase("pt-BR");
             const matchesBank = selectedBank === ALL_BANKS || investment?.bank?.name === selectedBank;
             const matchesType =
                 selectedType === ALL_TYPES ||
@@ -227,11 +230,17 @@ const MyInvestments = () => {
             const matchesRedemptionStatus =
                 selectedRedemptionStatus === ALL_REDEMPTION_STATUSES ||
                 investment.redemption_status === selectedRedemptionStatus;
+            const matchesSearch =
+                !normalizedSearch ||
+                String(investment?.title ?? "")
+                    .toLocaleLowerCase("pt-BR")
+                    .includes(normalizedSearch);
 
-            return matchesBank && matchesType && matchesIndex && matchesMoneyBox && matchesRedemptionStatus;
+            return matchesBank && matchesType && matchesIndex && matchesMoneyBox && matchesRedemptionStatus && matchesSearch;
         }),
         [
             investmentsWithAvailability,
+            searchText,
             selectedBank,
             selectedType,
             selectedIndex,
@@ -256,6 +265,14 @@ const MyInvestments = () => {
                         />
                         Mostrar também os investimentos arquivados
                     </label>
+
+                    <div className="max-w-md">
+                        <Input
+                            value={searchText}
+                            onChange={(event) => setSearchText(event.target.value)}
+                            placeholder="Buscar por título do investimento"
+                        />
+                    </div>
 
                     {loadingInvestments ? (
                         <div className="space-y-4">

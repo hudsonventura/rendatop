@@ -30,6 +30,11 @@ function formatCurrency(value) {
     }).format(value)
 }
 
+function getBankLogoSrc(bankCode) {
+    if (bankCode === null || bankCode === undefined || bankCode === "") return null
+    return `/bank-logos/${String(bankCode).padStart(3, "0")}.svg`
+}
+
 function buildChartData(investments) {
     const map = new Map()
     const colorMap = new Map()
@@ -41,13 +46,19 @@ function buildChartData(investments) {
         if (liquidValue <= 0) continue
         const bankName = inv.bank?.name || "Banco Desconhecido"
         const bankColor = inv.bank?.color
-        map.set(bankName, (map.get(bankName) ?? 0) + liquidValue)
+        const bankCode = inv.bank?.code ?? null
+        const current = map.get(bankName)
+        map.set(bankName, {
+            value: (current?.value ?? 0) + liquidValue,
+            bankCode: current?.bankCode ?? bankCode,
+        })
         if (bankColor) colorMap.set(bankName, bankColor)
     }
 
-    return Array.from(map.entries()).map(([bank, value], index) => ({
+    return Array.from(map.entries()).map(([bank, item], index) => ({
         bank,
-        value,
+        value: item.value,
+        bankCode: item.bankCode,
         fill: colorMap.get(bank) ?? CHART_COLORS[index % CHART_COLORS.length],
     }))
 }
@@ -174,30 +185,47 @@ export default function BanksPieChart({ investments }) {
                                     content={({ viewBox }) => {
                                         if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                                             return (
-                                                <text
-                                                    x={viewBox.cx}
-                                                    y={viewBox.cy}
-                                                    textAnchor="middle"
-                                                    dominantBaseline="middle"
-                                                >
-                                                    <tspan
+                                                <g>
+                                                    <text
                                                         x={viewBox.cx}
-                                                        y={(viewBox.cy ?? 0) - 12}
-                                                        fontSize="14"
-                                                        fontWeight="bold"
-                                                        fill="currentColor"
+                                                        y={viewBox.cy}
+                                                        textAnchor="middle"
+                                                        dominantBaseline="middle"
                                                     >
-                                                        {formatCurrency(activeSlice?.value ?? totalValue)}
-                                                    </tspan>
-                                                    <tspan
-                                                        x={viewBox.cx}
-                                                        y={(viewBox.cy ?? 0) + 10}
-                                                        fontSize="11"
-                                                        fill="#888"
-                                                    >
-                                                        {activeSlice?.bank ?? "Total"}
-                                                    </tspan>
-                                                </text>
+                                                        <tspan
+                                                            x={viewBox.cx}
+                                                            y={(viewBox.cy ?? 0) - 2}
+                                                            fontSize="14"
+                                                            fontWeight="bold"
+                                                            fill="currentColor"
+                                                        >
+                                                            {formatCurrency(activeSlice?.value ?? totalValue)}
+                                                        </tspan>
+                                                        <tspan
+                                                            x={viewBox.cx}
+                                                            y={(viewBox.cy ?? 0) + 20}
+                                                            fontSize="11"
+                                                            fill="#888"
+                                                        >
+                                                            {activeSlice?.bank ?? "Total"}
+                                                        </tspan>
+                                                    </text>
+                                                    {activeSlice?.bankCode ? (
+                                                        <foreignObject
+                                                            x={(viewBox.cx ?? 0) - 10}
+                                                            y={(viewBox.cy ?? 0) - 38}
+                                                            width="20"
+                                                            height="20"
+                                                        >
+                                                            <img
+                                                                src={getBankLogoSrc(activeSlice.bankCode)}
+                                                                alt=""
+                                                                aria-hidden="true"
+                                                                style={{ width: 20, height: 20, objectFit: "contain" }}
+                                                            />
+                                                        </foreignObject>
+                                                    ) : null}
+                                                </g>
                                             )
                                         }
                                     }}
@@ -223,6 +251,17 @@ export default function BanksPieChart({ investments }) {
                                             className="flex h-3 w-3 shrink-0 rounded-full"
                                             style={{ backgroundColor: item.fill }}
                                         />
+                                        {item.bankCode ? (
+                                            <img
+                                                src={getBankLogoSrc(item.bankCode)}
+                                                alt=""
+                                                aria-hidden="true"
+                                                className="h-4 w-4 shrink-0 rounded-sm object-contain"
+                                                onError={(event) => {
+                                                    event.currentTarget.style.display = "none"
+                                                }}
+                                            />
+                                        ) : null}
                                         <span className="font-medium">{item.bank}</span>
                                     </div>
                                     <div className="text-right">
