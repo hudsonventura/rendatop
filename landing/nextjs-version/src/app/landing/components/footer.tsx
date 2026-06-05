@@ -42,8 +42,8 @@ const footerLinks = {
     { name: 'Simulacao e comparacao', href: '#simulacao' },
   ],
   legal: [
-    { name: 'Privacidade', href: '#privacy' },
-    { name: 'Termos', href: '#terms' },
+    { name: 'Privacidade', href: '/politica-de-privacidade' },
+    { name: 'Termos', href: '/termos-de-uso' },
     { name: 'Seguranca', href: '#faq' },
     { name: 'Status', href: '#contact' },
   ],
@@ -185,13 +185,13 @@ export function LandingFooter() {
             <span>®  Todos os direitos reservados</span>
           </div>
           <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-4 md:mt-0">
-            <a href="#privacy" className="hover:text-foreground transition-colors">
+            <a href="/politica-de-privacidade" className="hover:text-foreground transition-colors">
               Politica de Privacidade
             </a>
-            <a href="#terms" className="hover:text-foreground transition-colors">
+            <a href="/termos-de-uso" className="hover:text-foreground transition-colors">
               Termos de Uso
             </a>
-            <a href="#cookies" className="hover:text-foreground transition-colors">
+            <a href="/politica-de-cookies" className="hover:text-foreground transition-colors">
               Politica de Cookies
             </a>
           </div>

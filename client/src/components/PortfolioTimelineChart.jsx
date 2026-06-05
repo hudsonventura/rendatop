@@ -31,8 +31,17 @@ function formatTooltipDate(value) {
     })
 }
 
+function getBankLogoSrc(bankCode) {
+    if (bankCode === null || bankCode === undefined || bankCode === "") return null
+    return `/bank-logos/${String(bankCode).padStart(3, "0")}.svg`
+}
+
 function getBankName(investment) {
     return investment.bank?.name || "Banco Desconhecido"
+}
+
+function getBankCode(investment) {
+    return investment.bank?.code || null
 }
 
 function getBankColor(investment) {
@@ -52,19 +61,26 @@ function buildTimelineData(investments) {
     const validInvestments = (investments ?? []).filter((investment) => investment?.date_buy)
     if (validInvestments.length === 0) return []
     const bankColorMap = new Map()
+    const bankCodeMap = new Map()
 
     for (const investment of validInvestments) {
         const bankName = getBankName(investment)
         const bankColor = getBankColor(investment)
+        const bankCode = getBankCode(investment)
 
         if (bankColor && !bankColorMap.has(bankName)) {
             bankColorMap.set(bankName, bankColor)
+        }
+
+        if (bankCode && !bankCodeMap.has(bankName)) {
+            bankCodeMap.set(bankName, bankCode)
         }
     }
 
     const bankNames = Array.from(new Set(validInvestments.map(getBankName)))
     const bankSeries = bankNames.map((bankName, index) => ({
         bankName,
+        bankCode: bankCodeMap.get(bankName) ?? null,
         key: getBankKey(bankName),
         color: bankColorMap.get(bankName) ?? CHART_COLORS[index % CHART_COLORS.length],
     }))
@@ -134,9 +150,22 @@ function CustomTooltip({ active, label, payload }) {
             <p className="mb-2 text-sm font-medium text-foreground">{formatTooltipDate(label)}</p>
             <div className="space-y-1">
                 {payload.map((entry) => (
-                    <p key={entry.dataKey} className="text-sm" style={{ color: entry.color }}>
-                        {entry.name}: {formatCurrency(Number(entry.value))}
-                    </p>
+                    <div key={entry.dataKey} className="flex items-center gap-2 text-sm" style={{ color: entry.color }}>
+                        {"payload" in entry && entry.payload?.bankCode ? (
+                            <img
+                                src={getBankLogoSrc(entry.payload.bankCode)}
+                                alt=""
+                                aria-hidden="true"
+                                className="h-4 w-4 shrink-0 rounded-sm object-contain"
+                                onError={(event) => {
+                                    event.currentTarget.style.display = "none"
+                                }}
+                            />
+                        ) : null}
+                        <span>
+                            {entry.name}: {formatCurrency(Number(entry.value))}
+                        </span>
+                    </div>
                 ))}
             </div>
         </div>
@@ -242,6 +271,17 @@ export default function PortfolioTimelineChart({ investments }) {
                                         className="h-2.5 w-2.5 rounded-full"
                                         style={{ backgroundColor: series.color }}
                                     />
+                                    {series.bankCode ? (
+                                        <img
+                                            src={getBankLogoSrc(series.bankCode)}
+                                            alt=""
+                                            aria-hidden="true"
+                                            className="h-4 w-4 shrink-0 rounded-sm object-contain"
+                                            onError={(event) => {
+                                                event.currentTarget.style.display = "none"
+                                            }}
+                                        />
+                                    ) : null}
                                     {series.bankName}
                                 </Button>
                             )
@@ -322,6 +362,7 @@ export default function PortfolioTimelineChart({ investments }) {
                                     dot={false}
                                     activeDot={{ r: 3 }}
                                     name={series.bankName}
+                                    bankCode={series.bankCode}
                                 />
                             ))}
                         </AreaChart>

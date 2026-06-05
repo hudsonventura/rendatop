@@ -1,0 +1,212 @@
+[
+  {
+    "code": "001",
+    "bank": "Banco do Brasil",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco do Brasil S.A/banco-do-brasil-sem-fundo.svg"
+  },
+  {
+    "code": "004",
+    "bank": "Banco do Nordeste",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco do Nordeste do Brasil S.A/Logo_BNB.svg"
+  },
+  {
+    "code": "021",
+    "bank": "Banestes",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco do Estado do Espirito Santo/banestes.svg"
+  },
+  {
+    "code": "033",
+    "bank": "Santander",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco Santander Brasil S.A/banco-santander-logo.svg"
+  },
+  {
+    "code": "041",
+    "bank": "Banrisul",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banrisul/banrisul-logo-2023.svg"
+  },
+  {
+    "code": "070",
+    "bank": "BRB",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "BRB - Banco de Brasilia/brb-logo-abreviado.svg"
+  },
+  {
+    "code": "077",
+    "bank": "Banco Inter",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco Inter S.A/inter.svg"
+  },
+  {
+    "code": "104",
+    "bank": "Caixa Economica Federal",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Caixa Econ\u00f4mica Federal/caixa-economica-federal-X.svg"
+  },
+  {
+    "code": "121",
+    "bank": "Agibank",
+    "source_type": "custom-fallback",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_note": "Fallback custom icon; bank not available in Tgentil/Bancos-em-SVG."
+  },
+  {
+    "code": "136",
+    "bank": "Unicred",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Unicred/verde.svg"
+  },
+  {
+    "code": "140",
+    "bank": "NuFinanceira",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Nu Pagamentos S.A/nubank-logo-2021.svg"
+  },
+  {
+    "code": "208",
+    "bank": "BTG Pactual",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco BTG Pacutal/btg-pactual.svg"
+  },
+  {
+    "code": "212",
+    "bank": "Banco Original",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco Original S.A/banco-original-logo-verde.svg"
+  },
+  {
+    "code": "218",
+    "bank": "BS2",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco BS2 S.A/Banco_BS2.svg"
+  },
+  {
+    "code": "237",
+    "bank": "Bradesco",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Bradesco S.A/bradesco.svg"
+  },
+  {
+    "code": "260",
+    "bank": "Nubank",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Nu Pagamentos S.A/nubank-logo-2021.svg"
+  },
+  {
+    "code": "290",
+    "bank": "PagBank",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "PagSeguro Internet S.A/logo-pagbank.svg"
+  },
+  {
+    "code": "318",
+    "bank": "BMG",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco BMG/banco-bmg-logo.svg"
+  },
+  {
+    "code": "323",
+    "bank": "Mercado Pago",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Mercado Pago/mercado-pago.svg"
+  },
+  {
+    "code": "336",
+    "bank": "C6 Bank",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco C6 S.A/c6 bank.svg"
+  },
+  {
+    "code": "341",
+    "bank": "Itau",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Ita\u00fa Unibanco S.A/itau.svg"
+  },
+  {
+    "code": "386",
+    "bank": "NuFinanceira",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Nu Pagamentos S.A/nubank-logo-2021.svg"
+  },
+  {
+    "code": "389",
+    "bank": "Mercantil do Brasil",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco Mercantil do Brasil S.A/banco-mercantil-novo-azul.svg"
+  },
+  {
+    "code": "422",
+    "bank": "Safra",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco Safra S.A/logo-safra.svg"
+  },
+  {
+    "code": "623",
+    "bank": "PAN",
+    "source_type": "custom-fallback",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_note": "Fallback custom icon; bank not available in Tgentil/Bancos-em-SVG."
+  },
+  {
+    "code": "637",
+    "bank": "Sofisa",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco Sofisa/logo-sofisa.svg"
+  },
+  {
+    "code": "655",
+    "bank": "BV",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco Votorantim/banco-bv-logo.svg"
+  },
+  {
+    "code": "707",
+    "bank": "Daycoval",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Banco Daycoval/logo-Daycoval.svg"
+  },
+  {
+    "code": "748",
+    "bank": "Sicredi",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Sicredi/logo-svg2.svg"
+  },
+  {
+    "code": "756",
+    "bank": "Sicoob",
+    "source_type": "github-repo",
+    "source_repo": "https://github.com/Tgentil/Bancos-em-SVG",
+    "source_path": "Sicoob/sicoob-minimalista-com.svg"
+  }
+]
