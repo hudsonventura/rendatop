@@ -8,6 +8,8 @@ export default function AppDownloadButtons() {
   const appStoreUrl = process.env.NEXT_PUBLIC_APPS_APP_STORE_URL || 'https://www.apple.com/app-store'
 const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL 
 
+const clientBaseUrl = process.env.BASE_URL_CLIENT || '/app'
+
   return (
     <div id="downloads" className="flex flex-col sm:flex-row gap-4 items-center justify-center p-6 bg-background">
         <section id="about" className="py-24 sm:py-32">
@@ -128,7 +130,7 @@ const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL
 
             {/* Web Interface Button */}
             <a
-                href="/app/login"
+                href={clientBaseUrl+'/login'}
                 className="inline-flex items-center gap-3 bg-black text-white px-5 py-2.5 rounded-xl border border-neutral-800 hover:bg-neutral-900 transition-colors duration-200 min-w-[200px] select-none shadow-sm"
             >
                 {/* Browser SVG Icon */}

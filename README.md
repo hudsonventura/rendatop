@@ -187,17 +187,9 @@ WHATSAPP_WWEBJS_SESSION_ID=Default
 
 O container recomendado é `avoylenko/wwebjs-api:v1.34.6`, com sessão persistida em volume local.
 
-Para iniciar a sessão manualmente:
-
 ```bash
-WHATSAPP_WWEBJS_API_KEY=sua_key
-WHATSAPP_WWEBJS_API_URL=http://10.10.1.202:3000
-SESSION=RendaTop
-PHONE=11912466241
-```
-
-```bash
-curl -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" $WHATSAPP_WWEBJS_API_URL/session/start/$SESSION
+export $(xargs < .env) && \
+curl -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" $WHATSAPP_WWEBJS_URL/session/start/$WHATSAPP_WWEBJS_SESSION_ID
 ```
 
 Para solicitar o pairing code:
@@ -207,7 +199,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" \
   -d '{"phoneNumber":"$PHONE","showNotification":true}' \
-  $WHATSAPP_WWEBJS_API_URL/session/requestPairingCode/$SESSION
+  $WHATSAPP_WWEBJS_URL/session/requestPairingCode/$WHATSAPP_WWEBJS_SESSION_ID
 ```
 
 Para solicitar o QR Code:
@@ -216,7 +208,7 @@ Para solicitar o QR Code:
 curl -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: $WHATSAPP_WWEBJS_API_KEY" \
-  $WHATSAPP_WWEBJS_API_URL/session/qr/$SESSION/image \
+  $WHATSAPP_WWEBJS_URL/session/qr/$WHATSAPP_WWEBJS_SESSION_ID/image \
   --output qrcode.png
 ```
 
@@ -248,3 +240,17 @@ sudo docker compose -f docker-compose-tests.yml down --remove-orphans && \
 sudo docker compose -f docker-compose-tests.yml up && \
 sudo docker compose -f docker-compose-tests.yml down --remove-orphans
 ```
+
+
+# Dados do Dominio Production e Testing
+- Dominio base: `rendatop.com.br`
+- URL PROD: `rendatop.com.br` ou `www.rendatop.com.br`
+- URL Testing: `testing-landing.rendatop.com.br`
+- Local do registro: https://registro.br/login/?session=required
+- Nome de usuário: `HUVEN23`
+- Válido até: **31/05/2028**
+
+
+# Logos
+https://commons.wikimedia.org/wiki/Category:SVG_logos_of_banks_in_Brazil
+https://github.com/Tgentil/Bancos-em-SVG/

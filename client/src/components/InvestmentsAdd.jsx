@@ -178,7 +178,7 @@ function buildFixedComparisons(indexType, rawPercent, taxes) {
 	}
 	const taxFreeCdb = {
 		type: "cdb-tax-free",
-		label: `Equivale a um CDB sem impostos de ${formatCdiPercent(
+		label: `Equivale a um CDB isento de impostos de ${formatCdiPercent(
 			getTaxFreeCdbEquivalentPercent(indexType, rawPercent, taxes)
 		)}% CDI`,
 	}

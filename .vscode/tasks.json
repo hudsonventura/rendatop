@@ -61,6 +61,56 @@
             }
         },
         {
+            "label": "api dotnet run",
+            "type": "shell",
+            "command": "dotnet run --project server/server.csproj",
+            "isBackground": true,
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "ASPNETCORE_ENVIRONMENT": "Development",
+                    "ASPNETCORE_URLS": "http://0.0.0.0:5000"
+                }
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "dedicated"
+            },
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^$",
+                    "file": 1,
+                    "line": 2,
+                    "message": 3
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*",
+                    "endsPattern": "\\bNow listening on:\\s+http://0\\.0\\.0\\.0:5000|\\bNow listening on:\\s+http://localhost:5000|\\bNow listening on:\\s+http://\\[::\\]:5000"
+                }
+            }
+        },
+        {
+            "label": "stop api dotnet run",
+            "type": "shell",
+            "command": "kill $(lsof -ti:5000) 2>/dev/null; echo 'api stopped'",
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Prepare Debug Mobile",
+            "dependsOn": [
+                "npm run dev",
+                "docker compose up",
+                "dotrush: Build",
+                "maui: Build",
+                "api dotnet run"
+            ],
+            "dependsOrder": "parallel"
+        },
+        {
             "label": "Prepare Debug",
             "dependsOn": [
                 "npm run dev",
@@ -73,6 +123,7 @@
             "label": "Cleanup Debug",
             "dependsOn": [
                 "stop npm dev",
+                "stop api dotnet run",
                 "docker compose down"
             ]
         }

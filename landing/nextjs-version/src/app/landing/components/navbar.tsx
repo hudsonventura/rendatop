@@ -35,6 +35,7 @@ const navigationItems = [
     { name: 'Download', href: '#downloads' },
     { name: 'Recursos', href: '#features', hasMegaMenu: true },
     { name: 'Planos', href: '#pricing' },
+    { name: 'Sobre', href: '/sobre' },
     { name: 'FAQ', href: '#faq' },
     { name: 'Contato', href: '#contact' },
     { name: 'Blog', href: '/blog' },

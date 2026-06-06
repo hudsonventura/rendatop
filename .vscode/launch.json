@@ -5,10 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET MAUI",
+            "name": "mobile",
             "type": "maui",
             "request": "launch",
-            "preLaunchTask": "maui: Build"
+            "preLaunchTask": "Prepare Debug Mobile",
+            "postDebugTask": "Cleanup Debug"
         },
         {
             "name": "api (launch)",
