@@ -30,28 +30,25 @@ const footerLinks = {
     { name: 'Planos', href: '#pricing' },
   ],
   company: [
-    { name: 'Sobre', href: '#about' },
+    { name: 'Sobre', href: '/sobre' },
     { name: 'FAQ', href: '#faq' },
     { name: 'Contato', href: '#contact' },
-    { name: 'Entrar', href: '/app/login' },
   ],
   resources: [
     { name: 'Dashboard', href: '#features' },
-    { name: 'Calendario', href: '#calendario' },
+    { name: 'Calendário', href: '#calendario' },
     { name: 'Controle de investimentos', href: '#controle' },
-    { name: 'Simulacao e comparacao', href: '#simulacao' },
+    { name: 'Simulação e comparação', href: '#simulacao' },
   ],
   legal: [
-    { name: 'Privacidade', href: '/politica-de-privacidade' },
-    { name: 'Termos', href: '/termos-de-uso' },
-    { name: 'Seguranca', href: '#faq' },
-    { name: 'Status', href: '#contact' },
+    { name: 'Politica de Privacidade', href: '/politica-de-privacidade' },
+    { name: 'Termos de Uso', href: '/termos-de-uso' },
+    { name: 'Politica de Cookies', href: '/politica-de-cookies' },
   ],
 }
 
 const socialLinks = [
   { name: 'Site', href: 'https://rendatop.com.br', icon: Globe },
-  { name: 'Entrar', href: '/app/login', icon: LogIn },
   { name: 'Planos', href: '#pricing', icon: Wallet },
 ]
 
@@ -184,17 +181,7 @@ export function LandingFooter() {
             <span className="hidden sm:inline">•</span>
             <span>®  Todos os direitos reservados</span>
           </div>
-          <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-4 md:mt-0">
-            <a href="/politica-de-privacidade" className="hover:text-foreground transition-colors">
-              Politica de Privacidade
-            </a>
-            <a href="/termos-de-uso" className="hover:text-foreground transition-colors">
-              Termos de Uso
-            </a>
-            <a href="/politica-de-cookies" className="hover:text-foreground transition-colors">
-              Politica de Cookies
-            </a>
-          </div>
+          
         </div>
       </div>
     </footer>

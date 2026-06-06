@@ -49,7 +49,7 @@ export function PricingSection() {
 
     const fetchPlans = async () => {
       try {
-        const response = await fetch(`${baseUrl}/api/public/subscription/plans`)
+        const response = await fetch(`${baseUrl}/public/subscription/plans`)
         if (!response.ok) throw new Error('Falha ao carregar planos')
         const data = await response.json()
         setPlans(data)
