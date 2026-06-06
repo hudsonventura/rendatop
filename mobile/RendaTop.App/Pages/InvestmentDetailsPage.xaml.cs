@@ -177,6 +177,8 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
             : "Acompanhe impostos, rendimentos e valor liquido atual deste investimento.";
 
         BankLabel.Text = investment.Bank?.Name ?? "Banco";
+        BankLogoImage.Source = BuildBankLogoSource(investment.Bank?.Code);
+        BankLogoImage.IsVisible = investment.Bank is not null;
         TypeLabel.Text = string.IsNullOrWhiteSpace(investment.InvestmentType) ? "Sem tipo" : NormalizeInvestmentType(investment.InvestmentType);
         IndexLabel.Text = BuildIndexLabel(investment);
         var currentInvested = MoneyFormatter.Currency(investment.PrincipalForDisplay);
@@ -431,6 +433,9 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
             _ => investment.Index
         };
     }
+
+    private static string? BuildBankLogoSource(int? bankCode)
+        => bankCode.HasValue ? $"bank_logo_{bankCode.Value:000}.svg" : null;
 
     private bool CanArchiveCurrentInvestment()
     {

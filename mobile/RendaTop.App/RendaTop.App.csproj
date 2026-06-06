@@ -35,6 +35,7 @@
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
+		<MauiImage Update="Resources\Images\bank_logo_*.svg" Resize="False" />
 		<MauiImage Update="Resources\Images\brand_icon.svg" Resize="True" BaseSize="128,128" />
 		
 		<!-- Custom Fonts -->
