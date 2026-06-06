@@ -240,3 +240,12 @@ sudo docker compose -f docker-compose-tests.yml down --remove-orphans && \
 sudo docker compose -f docker-compose-tests.yml up && \
 sudo docker compose -f docker-compose-tests.yml down --remove-orphans
 ```
+
+
+# Dados do Dominio Production e Testing
+- Dominio base: `rendatop.com.br`
+- URL PROD: `rendatop.com.br` ou `www.rendatop.com.br`
+- URL Testing: `testing-landing.rendatop.com.br`
+- Local do registro: https://registro.br/login/?session=required
+- Nome de usuário: `HUVEN23`
+- Válido até: **31/05/2028**
