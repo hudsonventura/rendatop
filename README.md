@@ -249,3 +249,8 @@ sudo docker compose -f docker-compose-tests.yml down --remove-orphans
 - Local do registro: https://registro.br/login/?session=required
 - Nome de usuário: `HUVEN23`
 - Válido até: **31/05/2028**
+
+
+# Logos
+https://commons.wikimedia.org/wiki/Category:SVG_logos_of_banks_in_Brazil
+https://github.com/Tgentil/Bancos-em-SVG/
