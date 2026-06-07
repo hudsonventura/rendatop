@@ -1,5 +1,6 @@
 'use client'
 
+import { APP_CONFIG } from '@/config/app';
 import React from 'react';
 
 export default function AppDownloadButtons() {
@@ -8,7 +9,7 @@ export default function AppDownloadButtons() {
   const appStoreUrl = process.env.NEXT_PUBLIC_APPS_APP_STORE_URL || 'https://www.apple.com/app-store'
 const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL 
 
-const clientBaseUrl = process.env.BASE_URL_CLIENT || '/app'
+    const clientBaseUrl = APP_CONFIG.BASE_URL
 
   return (
     <div id="downloads" className="flex flex-col sm:flex-row gap-4 items-center justify-center p-6 bg-background">
