@@ -5,12 +5,20 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { LandingFooter } from '@/app/landing/components/footer'
 import { LandingNavbar } from '@/app/landing/components/navbar'
-import { fetchPublishedBlogPosts } from '@/lib/blog-api'
+import { StructuredData } from '@/components/structured-data'
+import { fetchPublishedBlogPosts, type PublicBlogPostListItem } from '@/lib/blog-api'
+import { absoluteUrl, createPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
-  title: 'Blog | RendaTop',
-  description: 'Artigos sobre organização da carteira, clareza financeira e uso inteligente do RendaTop.',
-}
+const blogTitle = 'Blog | RendaTop'
+const blogDescription =
+  'Artigos sobre organização da carteira, clareza financeira e uso inteligente do RendaTop.'
+
+export const metadata: Metadata = createPageMetadata({
+  title: blogTitle,
+  description: blogDescription,
+  path: '/blog',
+  keywords: ['blog de investimentos', 'organizacao financeira', 'renda fixa'],
+})
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +31,7 @@ function formatPublishedAt(value: string | null) {
 }
 
 export default async function BlogIndexPage() {
-  let posts = []
+  let posts: PublicBlogPostListItem[] = []
 
   try {
     const response = await fetchPublishedBlogPosts()
@@ -32,8 +40,27 @@ export default async function BlogIndexPage() {
     posts = []
   }
 
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: blogTitle,
+    description: blogDescription,
+    url: absoluteUrl('/blog'),
+    blogPost: posts.map((post) => ({
+      '@type': 'BlogPosting',
+      headline: post.title,
+      url: absoluteUrl(`/blog/${post.slug}`),
+      datePublished: post.published_at || undefined,
+      author: {
+        '@type': 'Person',
+        name: post.author_user_name,
+      },
+    })),
+  }
+
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData data={structuredData} />
       <LandingNavbar />
 
       <main className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
