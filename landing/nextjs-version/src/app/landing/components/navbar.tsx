@@ -161,10 +161,10 @@ export function LandingNavbar() {
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-2 gap-3">
                                             <Button variant="outline" size="lg" asChild className="cursor-pointer">
-                                                <Link href="/app/login">Entrar</Link>
+                                                <Link href={clientBaseUrl+'/login'}>Entrar</Link>
                                             </Button>
                                             <Button asChild size="lg" className="cursor-pointer" >
-                                                <Link href="/app/signup">Criar conta</Link>
+                                                <Link href={clientBaseUrl+'/signup'}>Criar conta</Link>
                                             </Button>
                                         </div>
                                     </div>
