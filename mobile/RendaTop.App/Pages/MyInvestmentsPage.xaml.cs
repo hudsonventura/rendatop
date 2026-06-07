@@ -197,6 +197,8 @@ public partial class MyInvestmentsPage : ContentPage
         Guid Id,
         string Title,
         string BankName,
+        string? BankLogoSource,
+        bool BankLogoVisible,
         string CurrentValue,
         string IndexLabel,
         string DueDateLabel)
@@ -214,9 +216,14 @@ public partial class MyInvestmentsPage : ContentPage
                 investment.Id,
                 investment.Title,
                 investment.Bank?.Name ?? "Banco",
+                BuildBankLogoSource(investment.Bank?.Code),
+                investment.Bank is not null,
                 MoneyFormatter.Currency(investment.CurrentValueForDisplay),
                 index,
                 dueDate);
         }
+
+        private static string? BuildBankLogoSource(int? bankCode)
+            => bankCode.HasValue ? $"bank_logo_{bankCode.Value:000}.svg" : null;
     }
 }

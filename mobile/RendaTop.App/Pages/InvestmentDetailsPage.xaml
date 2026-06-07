@@ -46,7 +46,15 @@
                             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
                                 <VerticalStackLayout Spacing="3">
                                     <Label Text="Banco" FontSize="12" TextColor="#64748B" />
-                                    <Label x:Name="BankLabel" FontAttributes="Bold" TextColor="#111827" />
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Image
+                                            x:Name="BankLogoImage"
+                                            WidthRequest="26"
+                                            HeightRequest="26"
+                                            Aspect="AspectFit"
+                                            IsVisible="False" />
+                                        <Label x:Name="BankLabel" FontAttributes="Bold" TextColor="#111827" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
                                 </VerticalStackLayout>
                                 <VerticalStackLayout Grid.Column="1" Spacing="3">
                                     <Label Text="Tipo" FontSize="12" TextColor="#64748B" />

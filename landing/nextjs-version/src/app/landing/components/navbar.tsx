@@ -29,12 +29,14 @@ import { Logo } from '@/components/logo'
 import { MegaMenu } from '@/components/landing/mega-menu'
 import { ModeToggle } from '@/components/mode-toggle'
 import { useTheme } from '@/hooks/use-theme'
+import { APP_CONFIG } from '@/config/app'
 
 const navigationItems = [
     { name: 'Inicio', href: '/' },
     { name: 'Download', href: '#downloads' },
     { name: 'Recursos', href: '#features', hasMegaMenu: true },
     { name: 'Planos', href: '#pricing' },
+    { name: 'Sobre', href: '/sobre' },
     { name: 'FAQ', href: '#faq' },
     { name: 'Contato', href: '#contact' },
     { name: 'Blog', href: '/blog' },
@@ -52,14 +54,15 @@ const solutionsItems = [
     { name: 'Contato', href: '#contact' }
 ]
 
-const clientBaseUrl = process.env.BASE_URL_CLIENT || '/app'
+
 
 export function LandingNavbar() {
     const [isOpen, setIsOpen] = useState(false)
     const [solutionsOpen, setSolutionsOpen] = useState(false)
     const { setTheme, theme } = useTheme()
     const { navigateToSection } = useAnchorNavigation()
-
+    const clientBaseUrl = APP_CONFIG.BASE_URL
+    
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
@@ -160,10 +163,10 @@ export function LandingNavbar() {
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-2 gap-3">
                                             <Button variant="outline" size="lg" asChild className="cursor-pointer">
-                                                <Link href="/app/login">Entrar</Link>
+                                                <Link href={clientBaseUrl+'/login'}>Entrar</Link>
                                             </Button>
                                             <Button asChild size="lg" className="cursor-pointer" >
-                                                <Link href="/app/signup">Criar conta</Link>
+                                                <Link href={clientBaseUrl+'/signup'}>Criar conta</Link>
                                             </Button>
                                         </div>
                                     </div>

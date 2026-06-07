@@ -286,6 +286,7 @@ app.UseCors(builder =>
                .AllowAnyMethod()
                .AllowAnyHeader()
                .AllowCredentials();
+        logger.LogInformation("CORS configured for origins: {Origins}", string.Join(", ", corsOrigins));
     });
 app.Use(async (context, next) =>
 {

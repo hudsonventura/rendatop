@@ -23,6 +23,9 @@ export function LegalDocumentPage({
   description,
   sections,
 }: LegalDocumentPageProps) {
+
+  const clientBaseUrl = process.env.BASE_URL_CLIENT || '/app'
+
   return (
     <div className="min-h-screen bg-background">
       <LandingNavbar />
@@ -46,10 +49,10 @@ export function LegalDocumentPage({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
-              <Link href="/app/login">Entrar</Link>
+              <Link href={clientBaseUrl+'/login'}>Entrar</Link>
             </Button>
             <Button asChild>
-              <Link href="/app/signup">Criar conta</Link>
+              <Link href={clientBaseUrl+'/signup'}>Criar conta</Link>
             </Button>
           </div>
         </div>

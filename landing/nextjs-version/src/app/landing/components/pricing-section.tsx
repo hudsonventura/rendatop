@@ -44,12 +44,16 @@ export function PricingSection() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
 
+  const clientBaseUrl = API_CONFIG.BASE_URL;
+
   useEffect(() => {
     const baseUrl = API_CONFIG.BASE_URL;
 
+    
+
     const fetchPlans = async () => {
       try {
-        const response = await fetch(`${baseUrl}/api/public/subscription/plans`)
+        const response = await fetch(`${baseUrl}/public/subscription/plans`)
         if (!response.ok) throw new Error('Falha ao carregar planos')
         const data = await response.json()
         setPlans(data)
@@ -127,7 +131,7 @@ export function PricingSection() {
                           variant={isPopular ? 'default' : 'secondary'}
                           asChild
                         >
-                          <a href="/app/signup">{metadata.cta}</a>
+                          <a href={clientBaseUrl+'/login'}>{metadata.cta}</a>
                         </Button>
                       </div>
 

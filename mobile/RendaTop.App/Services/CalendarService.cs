@@ -81,6 +81,17 @@ public sealed class CalendarService
                     investment.DueDate.Value.ToLocalTime().Date,
                     CalendarEventType.Due));
             }
+
+            foreach (var redemption in investment.Redemptions ?? [])
+            {
+                events.Add(new CalendarEventItem(
+                    $"{investment.Id}-redemption-{redemption.Id}",
+                    investment.Id,
+                    investment,
+                    redemption.Title,
+                    redemption.Date.ToLocalTime().Date,
+                    CalendarEventType.Redemption));
+            }
         }
 
         return events;

@@ -1,5 +1,6 @@
 'use client'
 
+import { APP_CONFIG } from '@/config/app';
 import React from 'react';
 
 export default function AppDownloadButtons() {
@@ -7,6 +8,8 @@ export default function AppDownloadButtons() {
   const googlePlayActive = !!process.env.NEXT_PUBLIC_APPS_GOOGLE_PLAY_URL
   const appStoreUrl = process.env.NEXT_PUBLIC_APPS_APP_STORE_URL || 'https://www.apple.com/app-store'
 const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL 
+
+    const clientBaseUrl = APP_CONFIG.BASE_URL
 
   return (
     <div id="downloads" className="flex flex-col sm:flex-row gap-4 items-center justify-center p-6 bg-background">
@@ -128,7 +131,7 @@ const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL
 
             {/* Web Interface Button */}
             <a
-                href="/app/login"
+                href={clientBaseUrl+'/login'}
                 className="inline-flex items-center gap-3 bg-black text-white px-5 py-2.5 rounded-xl border border-neutral-800 hover:bg-neutral-900 transition-colors duration-200 min-w-[200px] select-none shadow-sm"
             >
                 {/* Browser SVG Icon */}

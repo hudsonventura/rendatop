@@ -252,6 +252,7 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
     const hasDueEstimate = Boolean(investment.due_date && calcDue)
     const showReinvest = canShowReinvest(investment.due_date)
     const canArchive = investment.archived || isDueDateTodayOrPast(investment.due_date)
+    const logoSrc = getBankLogoSrc(investment.bank)
     const redemptions = [...(investment.redemptions ?? [])].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     )
@@ -262,8 +263,19 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
                 <DialogHeader>
                     <DialogTitle>{investment.title}</DialogTitle>
                     <DialogDescription className="space-y-1">
-                        <div>
-                            {investment.bank?.name || "Banco Desconhecido"} · {getIndexLabel(investment)}
+                        <div className="flex items-center gap-2">
+                            {logoSrc ? (
+                                <img
+                                    src={logoSrc}
+                                    alt=""
+                                    aria-hidden="true"
+                                    className="h-5 w-5 shrink-0 rounded-sm object-contain"
+                                    onError={(event) => {
+                                        event.currentTarget.style.display = "none"
+                                    }}
+                                />
+                            ) : null}
+                            <span>{investment.bank?.name || "Banco Desconhecido"} · {getIndexLabel(investment)}</span>
                         </div>
                         <div>
                             Data do investimento: {formatDate(investment.date_buy)}
