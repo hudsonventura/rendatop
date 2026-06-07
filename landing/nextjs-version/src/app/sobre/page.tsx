@@ -3,9 +3,11 @@ import Link from "next/link"
 import { ArrowRight, BriefcaseBusiness, ChartCandlestick, Handshake, ShieldCheck } from "lucide-react"
 import { LandingNavbar } from "@/app/landing/components/navbar"
 import { LandingFooter } from "@/app/landing/components/footer"
+import { StructuredData } from "@/components/structured-data"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { absoluteUrl, createPageMetadata } from "@/lib/seo"
 
 const pillars = [
   {
@@ -34,15 +36,62 @@ const pillars = [
   },
 ]
 
-export const metadata: Metadata = {
-  title: "Sobre | RendaTop",
-  description:
-    "Conheca a RendaTop, software house especializada em solucoes digitais para investimentos, organização de carteira e inteligencia operacional.",
-}
+const aboutTitle = "Sobre | RendaTop"
+const aboutDescription =
+  "Conheca a RendaTop, software house especializada em solucoes digitais para investimentos, organização de carteira e inteligencia operacional."
+
+export const metadata: Metadata = createPageMetadata({
+  title: aboutTitle,
+  description: aboutDescription,
+  path: "/sobre",
+  keywords: [
+    "software house para investimentos",
+    "organizacao da carteira",
+    "tecnologia financeira",
+  ],
+})
 
 export default function AboutPage() {
+  const structuredData = [
+    {
+      "@context": "https://schema.org",
+      "@type": "AboutPage",
+      name: aboutTitle,
+      description: aboutDescription,
+      url: absoluteUrl("/sobre"),
+      isPartOf: absoluteUrl("/"),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "RendaTop",
+      url: absoluteUrl("/"),
+      logo: absoluteUrl("/favicon.svg"),
+      description: aboutDescription,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Inicio",
+          item: absoluteUrl("/"),
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Sobre",
+          item: absoluteUrl("/sobre"),
+        },
+      ],
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData data={structuredData} />
       <LandingNavbar />
 
       <main>
