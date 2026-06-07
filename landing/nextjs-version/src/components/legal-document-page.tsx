@@ -9,7 +9,7 @@ import { LEGAL_LAST_UPDATED } from "@/content/legal"
 
 type LegalSection = {
   title: string
-  paragraphs: string[]
+  paragraphs: readonly string[]
 }
 
 type LegalDocumentPageProps = {

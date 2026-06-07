@@ -4,7 +4,9 @@ import { CalendarDays, ChevronLeft } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { LandingFooter } from '@/app/landing/components/footer'
 import { LandingNavbar } from '@/app/landing/components/navbar'
+import { StructuredData } from '@/components/structured-data'
 import { fetchPublishedBlogPostBySlug } from '@/lib/blog-api'
+import { absoluteUrl, createPageMetadata } from '@/lib/seo'
 import { notFound } from 'next/navigation'
 
 type BlogPostPageProps = {
@@ -28,21 +30,30 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
   if (!post) {
     return {
       title: 'Postagem não encontrada | RendaTop',
+      robots: {
+        index: false,
+        follow: false,
+      },
     }
   }
 
-  return {
+  return createPageMetadata({
     title: `${post.title} | Blog RendaTop`,
     description: post.excerpt,
-    openGraph: {
-      title: post.title,
-      description: post.excerpt,
-      type: 'article',
-      publishedTime: post.published_at || undefined,
-      url: post.public_post_url,
-      images: post.cover_image_url ? [{ url: post.cover_image_url }] : undefined,
-    },
-  }
+    path: `/blog/${post.slug}`,
+    type: 'article',
+    images: post.cover_image_url
+      ? [
+          {
+            url: post.cover_image_url,
+            alt: post.title,
+          },
+        ]
+      : undefined,
+    publishedTime: post.published_at || undefined,
+    modifiedTime: post.updated_at,
+    keywords: ['blog de investimentos', 'artigo de investimentos', post.title],
+  })
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
@@ -53,8 +64,32 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     notFound()
   }
 
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    image: post.cover_image_url ? [post.cover_image_url] : [absoluteUrl('/landing.png')],
+    datePublished: post.published_at || post.created_at,
+    dateModified: post.updated_at,
+    mainEntityOfPage: absoluteUrl(`/blog/${post.slug}`),
+    author: {
+      '@type': 'Person',
+      name: post.author_user_name,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'RendaTop',
+      logo: {
+        '@type': 'ImageObject',
+        url: absoluteUrl('/favicon.svg'),
+      },
+    },
+  }
+
   return (
     <div className="min-h-screen bg-background">
+      <StructuredData data={structuredData} />
       <LandingNavbar />
 
       <main className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
