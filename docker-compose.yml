@@ -93,6 +93,8 @@ services:
     build:
       context: ./landing
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_BASE_URL_SERVER: ${BASE_URL_SERVER}
     container_name: rendatop-landing
     env_file:
       - .env

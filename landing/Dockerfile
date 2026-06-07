@@ -14,9 +14,12 @@ RUN npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-factor=2 --fetch
 FROM node:22-alpine AS build
 WORKDIR /app/nextjs-version
 
+ARG NEXT_PUBLIC_BASE_URL_SERVER
+
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 ENV NODE_OPTIONS=--max-old-space-size=2048
+ENV NEXT_PUBLIC_BASE_URL_SERVER=$NEXT_PUBLIC_BASE_URL_SERVER
 
 COPY --from=deps /app/nextjs-version/node_modules ./node_modules
 COPY nextjs-version/ ./
