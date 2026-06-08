@@ -34,6 +34,15 @@ public static class SubscriptionFeatureAccess
     public static int GetWalletsLimit(Context context, Guid userId) =>
         GetEffectivePlan(context, userId).wallets_limit;
 
+    public static int GetInvestmentsLimit(Context context, Guid userId) =>
+        GetEffectivePlan(context, userId).investments;
+
+    public static int GetActiveInvestmentsCount(Context context, Guid userId) =>
+        context.investments.Count(investment => investment.owner.id == userId && !investment.archived);
+
+    public static bool CanCreateInvestments(Context context, Guid userId, int existingCount) =>
+        existingCount < GetInvestmentsLimit(context, userId);
+
     public static bool CanCreateWallets(Context context, Guid userId, int existingCount) =>
         existingCount < GetWalletsLimit(context, userId);
 

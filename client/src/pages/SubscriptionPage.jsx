@@ -292,7 +292,7 @@ const SubscriptionPage = () => {
             <Logged />
             <BaseLayout title="Assinatura" description="Escolha o plano ideal para você">
                 <div className="px-4 lg:px-6">
-                    <div className="mx-auto w-full max-w-5xl">
+                    <div className="w-full">
                         <SubscriptionPlanGrid
                             plans={plans}
                             loading={loading}

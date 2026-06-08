@@ -21,8 +21,8 @@ export function SubscriptionPlanGrid({
 }) {
     if (loading) {
         return (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {[1, 2, 3].map((item) => (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {[1, 2, 3, 4].map((item) => (
                     <Skeleton key={item} className={compact ? "h-72 rounded-xl" : "h-80 rounded-xl"} />
                 ))}
             </div>
@@ -30,7 +30,7 @@ export function SubscriptionPlanGrid({
     }
 
     return (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {plans.map((plan) => {
                 const isActive = currentPlanId === plan.id
                 const isPending = pendingPlanId === plan.id

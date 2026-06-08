@@ -93,4 +93,10 @@ public class InvestmentRequest
     /// </summary>
     public bool ai_extracted { get; set; } = false;
 
+    /// <summary>
+    /// Investimento ativo que será arquivado após a criação deste novo registro.
+    /// Usado para reinvestimento, para não tratar a substituição como aumento de limite.
+    /// </summary>
+    public Guid? replacement_source_investment_id { get; set; }
+
 }

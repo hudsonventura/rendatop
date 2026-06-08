@@ -6,17 +6,27 @@ namespace server.Domain;
 /// </summary>
 public class Plan
 {
+    
+
     internal string description { get; set; } = string.Empty;
 
     public string id { get; set; } = string.Empty;
     public string name { get; set; } = string.Empty;
     
-    public decimal price { get; set; }
+    /// <summary>
+    /// Valor do plano em reais. Ex: 4.9 para R$4,90.
+    /// </summary>
+    public decimal price { get; set; } = 0;
+
+    /// <summary>
+    /// Limite de investimentos em renda fixa para o plano.
+    /// </summary>
+    internal int investments { get; set; } = 15;
 
     /// <summary>
     /// Limite de leituras de comprovantes por mês
     /// </summary>
-    public int ai_monthly_limit { get; set; } = 2;
+    public int ai_monthly_limit { get; set; } = 0;
 
     /// <summary>
     /// Usuario tem permissao para usar o ICS?
@@ -41,7 +51,7 @@ public class Plan
     /// <summary>
     /// Limite de cofrinhos disponíveis no plano.
     /// </summary>
-    internal int money_boxes_limit { get; set; } = 3;
+    internal int money_boxes_limit { get; set; } = 2;
 
     /// <summary>
     /// Limite de carteiras disponíveis no plano.
@@ -70,23 +80,51 @@ public static class Plans
             name = "Free",
             description = "Plano gratuito para controle financeiro básico",
             price = 0m,
-            ai_monthly_limit = 2,
+            ai_monthly_limit = 0,
             calendar_ics = false,
-            stoks = 5,
+            investments = 15,
+            stoks = 3,
             whatsapp_notifications = false,
             recurring_investments = false,
-            money_boxes_limit = 3,
+            money_boxes_limit = 2,
             wallets_limit = 1,
             features = new Dictionary<string, string>
             {
-                { "ai_usage", "2 leituras de comprovantes por mês" },
-                { "investments", "Controle completo de investimentos" },
+                { "investments", "Controle de até 15 investimentos em renda fixa" },
                 { "wallets", "1 carteira" },
-                { "money_boxes", "Até 3 cofrinhos para organizar sua carteira" },
-                { "calendar_ics", "Calendário de vencimentos" },
+                { "money_boxes", "Até 2 cofrinhos para organizar sua carteira" },
+                { "calendar_ics", "Calendário de vencimentos no app" },
                 { "notifications", "Notificações de vencimento (Telegram e E-mail)" },
-                {"stoks", "Controle de ações brasileiras, até 5 posições em aberto (em breve)" },
+                { "stoks", "Controle de ações (em breve)" },
                 { "priority_support", "Suporte padrão" },
+            }
+        },
+        new Plan
+        {
+            id = "starter",
+            name = "Starter",
+            description = "Plano com mais limites para usuários que possuem mais investimentos",
+            price = 4.9m,
+            ai_monthly_limit = 2,
+            calendar_ics = false,
+            stoks = 10,
+            investments = 30,
+            whatsapp_notifications = false,
+            recurring_investments = true,
+            money_boxes_limit = 5,
+            wallets_limit = 5,
+            features = new Dictionary<string, string>
+            {  
+                { "investments", "Controle de até 30 investimentos em renda fixa" },
+                { "wallets", "1 carteira" },
+                { "money_boxes", "Até 5 cofrinhos para organizar sua carteira" },
+                { "calendar_ics", "Calendário de vencimentos no app" },
+                { "notifications", "Notificações de vencimento (Telegram e E-mail)" },
+                { "stoks", "Controle de ações (em breve)" },
+                { "priority_support", "Suporte prioritário" },
+
+                { "ai_usage", "2 leituras automáticas de comprovantes por mês" },
+
             }
         },
         new Plan
@@ -94,26 +132,29 @@ public static class Plans
             id = "plus",
             name = "Plus",
             description = "Plano intermediário para usuários que desejam mais recursos",
-            price = 6.9m,
+            price = 8.9m,
             ai_monthly_limit = 10,
             calendar_ics = true,
             stoks = 30,
+            investments = 50,
             whatsapp_notifications = true,
             recurring_investments = true,
             money_boxes_limit = int.MaxValue,
             wallets_limit = 5,
             features = new Dictionary<string, string>
             {
-                { "ai_usage", "10 leituras de comprovantes por mês" },
-                { "investments", "Controle completo de investimentos" },
+                { "investments", "Controle de até 50 investimentos em renda fixa" },
                 { "wallets", "Até 5 carteiras" },
                 { "money_boxes", "Cofrinhos ilimitados" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
                 { "whatsapp_notifications", "Notificações de vencimento (Telegram, E-mail e WhatsApp)" },
-                { "export_export_data", "Importação e Exportação de dados (em breve)" },
-                { "stoks", "Controle de ações brasileiras, até 30 posições em aberto (em breve)" },
-                { "pripto", "Controle de criptomoedas, até 10 posições em aberto (em breve)" },
+                { "stoks", "Controle de ações (em breve)" },
                 { "priority_support", "Suporte prioritário" },
+
+                { "ai_usage", "10 leituras automáticas de comprovantes por mês" },
+                { "recurring_investments", "Investimentos recorrentes automatizados" },
+                { "pripto", "Controle de criptomoedas (em breve)" },
+                { "export_export_data", "Importação e Exportação de dados (em breve)" },
             }
         },
         new Plan
@@ -125,22 +166,25 @@ public static class Plans
             ai_monthly_limit = 30,
             calendar_ics = true,
             stoks = 100,
+            investments = int.MaxValue,
             whatsapp_notifications = true,
             recurring_investments = true,
             money_boxes_limit = int.MaxValue,
             wallets_limit = int.MaxValue,
             features = new Dictionary<string, string>
             {
-                { "ai_usage", "30 leituras de comprovantes por mês" },
-                { "investments", "Controle completo de investimentos" },
+                { "investments", "Controle ilimitado de investimentos" },
                 { "wallets", "Carteiras ilimitadas" },
                 { "money_boxes", "Cofrinhos ilimitados" },
                 { "calendar_ics", "Calendário de vencimentos no seu Outlook ou App de calendário" },
                 { "whatsapp_notifications", "Notificações de vencimento (Telegram, E-mail e WhatsApp)" },
-                { "export_export_data", "Importação e Exportação de dados (em breve)" },
-                { "stoks", "Controle de ações brasileiras, até 100 posições em aberto (em breve)" },
-                { "pripto", "Controle de criptomoedas, até 20 posições em aberto (em breve)" },
+                { "stoks", "Controle de ações (em breve)" },
                 { "priority_support", "Suporte prioritário" },
+
+                { "ai_usage", "30 leituras automáticas de comprovantes por mês" },
+                { "recurring_investments", "Investimentos recorrentes automatizados" },
+                { "pripto", "Controle de criptomoedas (em breve)" },
+                { "export_export_data", "Importação e Exportação de dados (em breve)" },
             }
         }
     };

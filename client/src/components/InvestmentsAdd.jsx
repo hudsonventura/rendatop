@@ -10,7 +10,6 @@ import {
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 	DialogFooter
 } from "@/components/ui/dialog"
 
@@ -509,6 +508,7 @@ function parseApiDate(value) {
 
 function extractErrorMessage(error, fallbackMessage) {
 	const candidates = [
+		typeof error?.response?.data === "string" ? error.response.data : null,
 		error?.response?.data?.message,
 		error?.response?.data?.Message,
 		error?.response?.data?.error,
@@ -524,7 +524,18 @@ function extractErrorMessage(error, fallbackMessage) {
 	return fallbackMessage
 }
 
-const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValues }) => {
+function isInvestmentLimitError(error, message) {
+	return error?.response?.status === 403 && /investimento|investimentos|plano|limite/i.test(message || "")
+}
+
+const InvestmentsAdd = ({
+	setReload,
+	externalOpen,
+	onExternalClose,
+	initialValues,
+	investmentLimitOverview,
+	onInvestmentLimitChanged,
+}) => {
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [isExtracting, setIsExtracting] = useState(false);
 	const [upgradePrompt, setUpgradePrompt] = useState({ open: false, message: "" });
@@ -553,6 +564,27 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			open: true,
 			message: message || "Apenas usuarios de planos pagos podem usar esta funcionalidade e acessar limites extendidos.",
 		});
+	};
+
+	const refreshInvestmentLimitOverview = () => {
+		return axiosInstance
+			.get("/Investments/limits")
+			.then((response) => {
+				onInvestmentLimitChanged?.(response.data ?? null);
+				return response.data ?? null;
+			})
+			.catch(() => null);
+	};
+
+	const openCreateDialog = async () => {
+		const overview = investmentLimitOverview ?? await refreshInvestmentLimitOverview();
+
+		if (!initialValues && overview && !overview.can_create) {
+			openUpgradePrompt(overview.restriction_message || "Seu plano atual atingiu o limite de investimentos ativos. Faça upgrade para adicionar novos investimentos.");
+			return;
+		}
+
+		setIsOpen(true);
 	};
 
 
@@ -679,6 +711,7 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 			index: Number(values.index),
 			index_percent: Number(values.index_percent),
 			ai_extracted: hasAiExtraction,
+			replacement_source_investment_id: initialValues?.source_investment_id ?? null,
 		}
 
 		axiosInstance
@@ -707,12 +740,20 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 				});
 				setLiquidezDiaria(false);
 				setHasAiExtraction(false);
+				refreshInvestmentLimitOverview();
 				setReload(Math.floor(Math.random() * 10000) + 1);
 			})
 			.catch((err) => {
+				const message = extractErrorMessage(err, "Não foi possível salvar o investimento.");
+				if (isInvestmentLimitError(err, message)) {
+					openUpgradePrompt(message);
+					refreshInvestmentLimitOverview();
+					return;
+				}
+
 				toast({
 					title: "Falha ao salvar investimento",
-					description: extractErrorMessage(err, "Não foi possível salvar o investimento."),
+					description: message,
 					variant: "destructive",
 				});
 			});
@@ -815,16 +856,14 @@ const InvestmentsAdd = ({ setReload, externalOpen, onExternalClose, initialValue
 		<>
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			{externalOpen === undefined && (
-				<DialogTrigger asChild>
-					<Button
-						type="button"
-						onClick={() => setIsOpen(true)}
-						size="sm"
-					>
-						<Plus className="h-4 w-4 mr-1" />
-						Adicionar investimento
-					</Button>
-				</DialogTrigger>
+				<Button
+					type="button"
+					onClick={openCreateDialog}
+					size="sm"
+				>
+					<Plus className="h-4 w-4 mr-1" />
+					Adicionar investimento
+				</Button>
 			)}
 			<DialogContent className="w-[95vw] sm:max-w-5xl md:w-[85vw] max-h-[90vh] overflow-y-auto">
 				<DialogHeader>

@@ -954,7 +954,7 @@ function getColumns(onView, onEdit, onRedeem, onReinvest, onArchive, onDelete) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function InvestmentsDataTable({ investments, setReload, onReinvest }) {
+export default function InvestmentsDataTable({ investments, setReload, onReinvest, onInvestmentModalOpen }) {
     const [sorting, setSorting] = useState([{ id: "due_date", desc: false }])
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
 
@@ -969,14 +969,18 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [archiveOpen, setArchiveOpen] = useState(false)
 
-    const openView = (inv) => { setSelectedInvestment(inv); setViewOpen(true) }
-    const openEdit = (inv) => { setSelectedInvestment(inv); setEditOpen(true) }
-    const openRedeem = (inv) => { setSelectedInvestment(inv); setRedeemOpen(true) }
-    const handleReinvest = (inv) => { onReinvest?.(inv) }
+    const notifyInvestmentModalOpen = () => {
+        onInvestmentModalOpen?.()
+    }
+
+    const openView = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setViewOpen(true) }
+    const openEdit = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setEditOpen(true) }
+    const openRedeem = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setRedeemOpen(true) }
+    const handleReinvest = (inv) => { notifyInvestmentModalOpen(); onReinvest?.(inv) }
     const openEditRedemption = (redemption) => { setSelectedRedemption(redemption); setEditRedemptionOpen(true) }
     const openDeleteRedemption = (redemption) => { setSelectedRedemption(redemption); setDeleteRedemptionOpen(true) }
-    const openDelete = (inv) => { setSelectedInvestment(inv); setDeleteOpen(true) }
-    const openArchive = (inv) => { setSelectedInvestment(inv); setArchiveOpen(true) }
+    const openDelete = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setDeleteOpen(true) }
+    const openArchive = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setArchiveOpen(true) }
 
     React.useEffect(() => {
         setPagination((current) => ({ ...current, pageIndex: 0 }))
