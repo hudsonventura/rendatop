@@ -6,6 +6,7 @@ import { BaseLayout } from "@/components/layouts/base-layout";
 import Logged from "@/components/Logged";
 import InvestmentsAdd from "@/components/InvestmentsAdd";
 import InvestmentsDataTable from "@/components/InvestmentsDataTable";
+import { UpgradePlanModal } from "@/components/upgrade-plan-modal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getReinvestmentInitialValues } from "@/utils/investment-actions";
@@ -62,6 +63,8 @@ const MyInvestments = () => {
     const ALL_INDEXES = "__all_indexes__";
     const ALL_REDEMPTION_STATUSES = "__all_redemption_statuses__";
     const [investments, setInvestments] = useState([]);
+    const [investmentLimitOverview, setInvestmentLimitOverview] = useState(null);
+    const [upgradePrompt, setUpgradePrompt] = useState({ open: false, message: "" });
     const [loadingInvestments, setLoadingInvestments] = useState(true);
     const [reload, setReload] = useState(0);
     const [reinvestOpen, setReinvestOpen] = useState(false);
@@ -79,11 +82,22 @@ const MyInvestments = () => {
         let cancelled = false;
         setLoadingInvestments(true);
 
-        axiosInstance
-            .get("/Investments", { params: walletParams(activeWalletId) })
-            .then((response) => {
+        Promise.all([
+            axiosInstance.get("/Investments", { params: walletParams(activeWalletId) }),
+            axiosInstance.get("/Investments/limits").catch(() => ({ data: null })),
+        ])
+            .then(([investmentsResponse, limitsResponse]) => {
                 if (cancelled) return;
-                setInvestments(response.data ?? []);
+                const limits = limitsResponse.data ?? null;
+                setInvestments(investmentsResponse.data ?? []);
+                setInvestmentLimitOverview(limits);
+
+                if (limits?.is_over_limit) {
+                    setUpgradePrompt({
+                        open: true,
+                        message: limits.restriction_message || "Seu plano atual possui menos investimentos do que sua carteira cadastrada. Faça upgrade para liberar novos investimentos.",
+                    });
+                }
             })
             .catch((err) => {
                 console.error("Erro ao buscar investimentos:", err);
@@ -100,7 +114,21 @@ const MyInvestments = () => {
         };
     }, [reload, activeWalletId]);
 
+    const openInvestmentLimitPrompt = () => {
+        if (!investmentLimitOverview?.is_over_limit) return;
+
+        setUpgradePrompt({
+            open: true,
+            message: investmentLimitOverview.restriction_message || "Seu plano atual possui menos investimentos do que sua carteira cadastrada. Faça upgrade para liberar novos investimentos.",
+        });
+    };
+
+    const handleInvestmentLimitChanged = (overview) => {
+        setInvestmentLimitOverview(overview);
+    };
+
     const handleReinvest = (investment) => {
+        openInvestmentLimitPrompt();
         setReinvestInitialValues(getReinvestmentInitialValues(investment));
         setReinvestOpen(true);
     };
@@ -256,7 +284,11 @@ const MyInvestments = () => {
                 <div className="px-4 lg:px-6 space-y-6">
                     <div className="flex items-center justify-between">
                         <h2 className="text-lg font-semibold tracking-tight">Carteira</h2>
-                        <InvestmentsAdd setReload={setReload} />
+                        <InvestmentsAdd
+                            setReload={setReload}
+                            investmentLimitOverview={investmentLimitOverview}
+                            onInvestmentLimitChanged={handleInvestmentLimitChanged}
+                        />
                     </div>
                     <label className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Checkbox
@@ -359,7 +391,12 @@ const MyInvestments = () => {
                                 </div>
                             </div>
 
-                            <InvestmentsDataTable investments={filteredInvestments} setReload={setReload} onReinvest={handleReinvest} />
+                            <InvestmentsDataTable
+                                investments={filteredInvestments}
+                                setReload={setReload}
+                                onReinvest={handleReinvest}
+                                onInvestmentModalOpen={openInvestmentLimitPrompt}
+                            />
                         </div>
                     )}
                 </div>
@@ -372,6 +409,13 @@ const MyInvestments = () => {
                     setReinvestInitialValues(null);
                 }}
                 initialValues={reinvestInitialValues}
+                investmentLimitOverview={investmentLimitOverview}
+                onInvestmentLimitChanged={handleInvestmentLimitChanged}
+            />
+            <UpgradePlanModal
+                open={upgradePrompt.open}
+                onOpenChange={(open) => setUpgradePrompt((current) => ({ ...current, open }))}
+                message={upgradePrompt.message}
             />
         </>
     );

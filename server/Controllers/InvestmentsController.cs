@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using server.Domain;
 using server.RequestObjects;
 using server.Utils;
+using System.Net;
 
 namespace server.Controllers;
 
@@ -54,6 +55,59 @@ public class InvestmentsController : AuthenticatedController
 
         if (!selectionEnabled && requestedMoneyBoxId != currentMoneyBoxId)
             throw new ExpectedException("Seu plano Free permite apenas 3 cofrinhos ativos para selecao. Remova cofrinhos excedentes ou volte para um plano pago para escolher um cofrinho nos investimentos.");
+    }
+
+    private InvestmentLimitOverviewResponse BuildInvestmentLimitOverview()
+    {
+        var plan = SubscriptionFeatureAccess.GetEffectivePlan(_context, _user.id);
+        var count = SubscriptionFeatureAccess.GetActiveInvestmentsCount(_context, _user.id);
+        var limit = plan.investments;
+        var canCreate = limit == int.MaxValue || count < limit;
+        var isOverLimit = limit != int.MaxValue && count > limit;
+
+        return new InvestmentLimitOverviewResponse(
+            count,
+            limit == int.MaxValue ? null : limit,
+            canCreate,
+            isOverLimit,
+            plan.id,
+            plan.name,
+            BuildInvestmentLimitRestrictionMessage(plan, count, limit, canCreate, isOverLimit));
+    }
+
+    private Investment? GetValidReplacementSource(Guid? replacementSourceInvestmentId)
+    {
+        if (!replacementSourceInvestmentId.HasValue)
+            return null;
+
+        var source = _context.investments.FirstOrDefault(investment =>
+            investment.id == replacementSourceInvestmentId.Value &&
+            investment.owner.id == _user.id &&
+            !investment.archived);
+
+        if (source is null)
+            return null;
+
+        if (!source.due_date.HasValue || source.due_date.Value.Date > DateTime.UtcNow.Date)
+            return null;
+
+        return source;
+    }
+
+    private static string? BuildInvestmentLimitRestrictionMessage(Plan plan, int count, int limit, bool canCreate, bool isOverLimit)
+    {
+        if (limit == int.MaxValue)
+            return null;
+
+        var limitDescription = limit == 1 ? "1 investimento ativo" : $"até {limit} investimentos ativos";
+
+        if (isOverLimit)
+            return $"Seu plano {plan.name} permite {limitDescription}. Você possui {count} investimentos ativos; pode continuar usando o sistema normalmente, mas faça upgrade para liberar novos investimentos.";
+
+        if (!canCreate)
+            return $"Seu plano {plan.name} permite {limitDescription}. Faça upgrade para adicionar novos investimentos.";
+
+        return $"Seu plano {plan.name} permite {limitDescription}. Você está usando {count} de {limit}.";
     }
 
     private static List<Calculated> BuildTableCalculated(Investment investment)
@@ -212,6 +266,10 @@ public class InvestmentsController : AuthenticatedController
         return investments;
     }
 
+    [HttpGet("Investments/limits")]
+    [ProducesResponseType(typeof(InvestmentLimitOverviewResponse), StatusCodes.Status200OK)]
+    public InvestmentLimitOverviewResponse GetInvestmentLimits() => BuildInvestmentLimitOverview();
+
 
 
 
@@ -245,6 +303,14 @@ public class InvestmentsController : AuthenticatedController
     public Guid Insert([FromBody] InvestmentRequest request)
     {
         var now = DateTime.UtcNow;
+        var investmentLimit = BuildInvestmentLimitOverview();
+        var replacementSource = GetValidReplacementSource(request.replacement_source_investment_id);
+
+        if (!investmentLimit.can_create && replacementSource is null)
+            throw new ExpectedException(
+                investmentLimit.restriction_message ?? "Seu plano atual atingiu o limite de investimentos ativos. Faça upgrade para adicionar novos investimentos.",
+                HttpStatusCode.Forbidden);
+
         if (request.ai_extracted)
         {
             var plan = SubscriptionFeatureAccess.GetEffectivePlan(_context, _user.id);
@@ -273,6 +339,12 @@ public class InvestmentsController : AuthenticatedController
         investment.wallet_id = wallet.id;
         investment.money_box = moneyBox;
         _context.investments.Add(investment);
+
+        if (replacementSource is not null)
+        {
+            replacementSource.archived = true;
+            _context.investments.Update(replacementSource);
+        }
 
         if (request.ai_extracted)
         {
@@ -499,3 +571,13 @@ public class InvestmentsController : AuthenticatedController
     }
 
 }
+
+public record InvestmentLimitOverviewResponse(
+    int active_investments_count,
+    int? investments_limit,
+    bool can_create,
+    bool is_over_limit,
+    string active_plan_id,
+    string active_plan_name,
+    string? restriction_message
+);
