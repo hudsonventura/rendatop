@@ -36,7 +36,6 @@ export function HeroSection() {
 
         <div className="">
             <img className='rounded-lg' src="landing.png"/>
-            <img className='mx-auto max-w-6xl rounded-lg' src="main.png"/>
         </div>
       </div>
     </section>
