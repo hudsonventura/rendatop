@@ -167,9 +167,26 @@ public class InvestmentsControllerTests
     // }
 
     [Fact]
-    public void Insert_RecordsAiUsageAfterAiAssistedSave()
+    public void Insert_BlocksAiAssistedSaveWhenUserPlanDoesNotAllowReceipts()
     {
         using var fixture = new InvestmentsControllerFixture();
+        var request = fixture.CreateInvestmentRequest();
+        request.ai_extracted = true;
+
+        var exception = Assert.Throws<ExpectedException>(() => fixture.Controller.Insert(request));
+
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, exception.StatusCode);
+        Assert.Contains("Seu plano Free permite 0 leituras de comprovantes por mês", exception.Message);
+        using var assertionContext = fixture.CreateAssertionContext();
+        Assert.Empty(assertionContext.ai_usages);
+        Assert.Empty(assertionContext.investments);
+    }
+
+    [Fact]
+    public void Insert_RecordsAiUsageAfterAiAssistedSaveWhenPlanAllowsReceipts()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        fixture.SeedActiveSubscription("plus");
         var request = fixture.CreateInvestmentRequest();
         request.ai_extracted = true;
 
@@ -424,6 +441,21 @@ public class InvestmentsControllerTests
             Context.investments.Add(investment);
             Context.SaveChanges();
             return investment;
+        }
+
+        public void SeedActiveSubscription(string planId)
+        {
+            Context.subscriptions.Add(new Subscription
+            {
+                user = User,
+                user_id = User.id,
+                plan_id = planId,
+                status = SubscriptionStatus.Active,
+                payment_method = "test",
+                current_period_start = DateTime.UtcNow.AddDays(-1),
+                current_period_end = DateTime.UtcNow.AddMonths(1)
+            });
+            Context.SaveChanges();
         }
 
         public InvestmentRequest CreateInvestmentRequest(
