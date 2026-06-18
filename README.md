@@ -241,6 +241,62 @@ sudo docker compose -f docker-compose-tests.yml up && \
 sudo docker compose -f docker-compose-tests.yml down --remove-orphans
 ```
 
+## Build release do app mobile
+
+O app mobile fica em `mobile/RendaTop.App` e, em `Release`, usa a URL de producao definida em [AppConfig.cs](/home/hudsonventura/source/rendatop/mobile/RendaTop.App/Services/AppConfig.cs).
+
+Build release simples:
+
+```bash
+dotnet build mobile/RendaTop.App/RendaTop.App.csproj -c Release
+```
+
+Criar um keystore para assinatura:
+
+```bash
+keytool -genkeypair \
+  -v \
+  -storetype PKCS12 \
+  -keystore rendatop-release.keystore \
+  -alias rendatop \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000
+```
+
+Gerar `AAB` assinado para Google Play:
+
+```bash
+export SENHA=SUA_SENHA
+
+./scripts/publish-mobile-release.sh
+```
+
+Gerar `APK` assinado para instalacao manual:
+
+```bash
+dotnet publish mobile/RendaTop.App/RendaTop.App.csproj \
+  -f net10.0-android \
+  -c Release \
+  -p:AndroidPackageFormat=apk \
+  -p:AndroidKeyStore=true \
+  -p:AndroidSigningKeyStore=/caminho/para/rendatop-release.keystore \
+  -p:AndroidSigningStorePass=SUA_SENHA \
+  -p:AndroidSigningKeyAlias=rendatop \
+  -p:AndroidSigningKeyPass=SUA_SENHA
+```
+
+Saida esperada:
+- build: `mobile/RendaTop.App/bin/Release/net10.0-android/`
+- publish: `mobile/RendaTop.App/bin/Release/net10.0-android/publish/`
+
+Observacoes:
+- quando voce compila em `Release`, o app aponta para `https://api.rendatop.com.br`
+- quando voce depura pelo VS Code com debugger anexado, o app usa o endpoint local definido no `AppConfig`
+- para Google Play, prefira enviar o arquivo `.aab`
+- guarde com cuidado o `keystore`, o `alias` e as senhas
+- nao versionar senhas de assinatura no repositorio
+
 
 # Dados do Dominio Production e Testing
 - Dominio base: `rendatop.com.br`
