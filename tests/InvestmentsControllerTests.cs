@@ -82,6 +82,24 @@ public class InvestmentsControllerTests
     }
 
     [Fact]
+    public void Get_WithUnknownWalletId_FallsBackToDefaultWallet()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var investment = fixture.SeedInvestment(
+            title: "Investimento carteira padrao",
+            value: 1000m,
+            dueDate: DateTime.UtcNow.Date.AddYears(1),
+            archived: false,
+            index: IdexesType.PERCENT_YEAR,
+            indexPercent: 10m);
+
+        var result = fixture.Controller.Get(wallet_id: Guid.NewGuid());
+
+        var returnedInvestment = Assert.Single(result);
+        Assert.Equal(investment.id, returnedInvestment.id);
+    }
+
+    [Fact]
     public void Get_ArchivedInvestmentKeepsOriginalDisplayValues()
     {
         using var fixture = new InvestmentsControllerFixture();

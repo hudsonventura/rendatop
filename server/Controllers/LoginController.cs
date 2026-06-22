@@ -618,7 +618,6 @@ Se você não solicitou essa alteração, ignore este email.";
             };
             _context.users.Add(user);
             _context.SaveChanges();
-            WalletAccess.EnsureDefaultWallet(_context, user);
         }
         else
         {
@@ -640,8 +639,6 @@ Se você não solicitou essa alteração, ignore este email.";
 
             if (changed)
                 _context.SaveChanges();
-
-            WalletAccess.EnsureDefaultWallet(_context, user);
         }
 
         return user;
@@ -649,6 +646,8 @@ Se você não solicitou essa alteração, ignore este email.";
 
     private LoginResponse SetSession(User user)
     {
+        WalletAccess.EnsureDefaultWallet(_context, user);
+
         ITokenService token_service = new TokenServiceJWT();
         var token = token_service.Generate(user, "Common User");
 

@@ -31,7 +31,7 @@ public static class WalletAccess
 
     public static Wallet ResolveAccessibleWallet(Context context, User user, Guid? walletId)
     {
-        EnsureDefaultWallet(context, user);
+        var defaultWallet = EnsureDefaultWallet(context, user);
 
         var requestedId = walletId ?? context.wallets
             .AsNoTracking()
@@ -43,7 +43,7 @@ public static class WalletAccess
 
         var wallet = context.wallets
             .FirstOrDefault(item => item.id == requestedId && item.owner_id == user.id)
-            ?? throw new ExpectedException("Carteira não encontrada.", HttpStatusCode.NotFound);
+            ?? defaultWallet;
 
         if (!SubscriptionFeatureAccess.CanAccessWallet(context, user.id, wallet.id))
             throw new ExpectedException("Esta carteira está indisponível no seu plano atual. Faça upgrade para acessá-la.", HttpStatusCode.Forbidden);

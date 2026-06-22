@@ -33,6 +33,8 @@ public class LoginControllerTests
         Assert.Equal(AuthProvider.Password, savedUser.auth_provider);
         Assert.False(string.IsNullOrWhiteSpace(savedUser.email_verification_secret));
         Assert.NotNull(savedUser.email_verification_sent_at);
+        var wallet = assertionContext.wallets.Single(x => x.owner_id == savedUser.id);
+        Assert.Equal(Wallet.DefaultName, wallet.name);
 
         var email = Assert.Single(fixture.Email.Messages);
         Assert.Equal("novo@example.com", email.ToEmail);
@@ -67,6 +69,30 @@ public class LoginControllerTests
         Assert.True(savedUser.email_verified);
         Assert.Null(savedUser.email_verification_secret);
         Assert.Null(savedUser.email_verification_sent_at);
+        var wallet = assertionContext.wallets.Single(x => x.owner_id == user.id);
+        Assert.Equal(Wallet.DefaultName, wallet.name);
+    }
+
+    [Fact]
+    public void Login_CreatesDefaultWalletForLegacyUserWithoutWallet()
+    {
+        using var fixture = new LoginControllerFixture();
+        var user = fixture.SeedUser(
+            email: "legacy@example.com",
+            password: "secret123",
+            emailVerified: true);
+
+        var result = fixture.Controller.Login(new LoginRecord("legacy@example.com", "secret123"));
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<LoginStartResponse>(okResult.Value);
+
+        Assert.False(response.requires_totp);
+        Assert.Equal(user.email, response.email);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var wallet = assertionContext.wallets.Single(x => x.owner_id == user.id);
+        Assert.Equal(Wallet.DefaultName, wallet.name);
     }
 
     [Fact]
