@@ -66,6 +66,7 @@ const formatCurrency = (val) =>
 
 const VALUE_LIQUID_CURRENT_HINT = "Valor líquido atual, já descontados os impostos, considerando o resgate hoje. Não reflete o valor no vencimento para investimentos sem liquidez diária."
 const OVERDUE_INVESTMENT_HINT = "Este investimento passou da data de vencimento e provavelmente foi resgatado automaticamente pelo banco. Informe o reinvestimento, o resgate total ou arquive este item."
+const EARLY_DUE_WINDOW_DAYS = 5
 
 function getBankLogoSrc(bank) {
     const rawCode = bank?.code
@@ -142,6 +143,17 @@ const isDueDateTodayOrPast = (dateStr) => {
     return due <= today
 }
 
+const isDueDateWithinArchiveWindow = (dateStr) => {
+    if (!dateStr) return false
+    const due = parseDateValue(dateStr)
+    if (!due) return false
+
+    const threshold = getTodayStart()
+    threshold.setDate(threshold.getDate() + EARLY_DUE_WINDOW_DAYS)
+
+    return due <= threshold
+}
+
 const isDueDatePast = (dateStr) => {
     if (!dateStr) return false
     const due = parseDateValue(dateStr)
@@ -160,14 +172,7 @@ function getDueDateSortValue(dateValue) {
 }
 
 const canShowReinvest = (dateStr) => {
-    if (!dateStr) return false
-
-    const due = parseDateValue(dateStr)
-    if (!due) return false
-
-    const today = getTodayStart()
-
-    return due <= today
+    return isDueDateWithinArchiveWindow(dateStr)
 }
 
 function getIndexLabel(investment) {
@@ -251,7 +256,7 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
     const calcDue = getTableCalculated(investment, 1)
     const hasDueEstimate = Boolean(investment.due_date && calcDue)
     const showReinvest = canShowReinvest(investment.due_date)
-    const canArchive = investment.archived || isDueDateTodayOrPast(investment.due_date)
+    const canArchive = investment.archived || isDueDateWithinArchiveWindow(investment.due_date)
     const logoSrc = getBankLogoSrc(investment.bank)
     const redemptions = [...(investment.redemptions ?? [])].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -551,7 +556,7 @@ function ArchiveDialog({ investment, open, onOpenChange, onConfirm }) {
     )
 }
 
-const archiveReinvestHint = "Você só poderá reinvestir o valor deste investimento ou arquivá-lo quando chegar a data de resgate"
+const archiveReinvestHint = "Você só poderá reinvestir o valor deste investimento ou arquivá-lo a partir de 5 dias corridos antes da data de resgate"
 
 function ActionMenuItemWithHint({ disabled, onClick, className, children }) {
     const item = (
@@ -586,7 +591,7 @@ function ActionsCell({ investment, onView, onEdit, onRedeem, onReinvest, onArchi
     const btnRef = React.useRef(null)
     const menuRef = React.useRef(null)
     const showReinvest = canShowReinvest(investment.due_date)
-    const canArchive = showReinvest
+    const canArchive = investment.archived || isDueDateWithinArchiveWindow(investment.due_date)
 
     // Close menu when clicking outside or scrolling
     React.useEffect(() => {

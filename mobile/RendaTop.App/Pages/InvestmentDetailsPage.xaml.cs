@@ -6,7 +6,8 @@ namespace RendaTop.App.Pages;
 
 public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
 {
-    private const string ArchiveReinvestHint = "Voce so podera reinvestir o valor deste investimento ou arquiva-lo quando chegar a data de resgate.";
+    private const int EarlyDueWindowDays = 5;
+    private const string ArchiveReinvestHint = "Voce so podera reinvestir o valor deste investimento ou arquiva-lo a partir de 5 dias corridos antes da data de resgate.";
 
     private readonly InvestmentService _investmentService;
     private readonly ConnectivityService _connectivity;
@@ -444,8 +445,8 @@ public partial class InvestmentDetailsPage : ContentPage, IQueryAttributable
             return false;
 
         var due = dueDate.Value.ToLocalTime().Date;
-        var today = DateTime.Today;
-        return due <= today;
+        var threshold = DateTime.Today.AddDays(EarlyDueWindowDays);
+        return due <= threshold;
     }
 
     private Task ShowArchiveUnavailableModalAsync()
