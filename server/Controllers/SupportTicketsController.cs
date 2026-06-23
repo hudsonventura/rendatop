@@ -358,6 +358,19 @@ public class SupportTicketsController : AuthenticatedController
             created_at = now
         });
 
+        if (request.status == SupportTicketStatus.AguardandoRespostaUsuario)
+        {
+            _context.notifications.Add(new Notification
+            {
+                id = SnowflakeGuid.NewGuid(),
+                user_id = ticket.requester_user_id,
+                title = "Chamado atualizado",
+                message = $"Seu chamado \"{ticket.subject}\" está aguardando sua resposta.",
+                is_read = false,
+                created_at = now
+            });
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return Ok(BuildDetailResponse(ticket));
