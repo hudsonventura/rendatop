@@ -67,6 +67,7 @@ const formatCurrency = (val) =>
 const VALUE_LIQUID_CURRENT_HINT = "Valor líquido atual, já descontados os impostos, considerando o resgate hoje. Não reflete o valor no vencimento para investimentos sem liquidez diária."
 const OVERDUE_INVESTMENT_HINT = "Este investimento passou da data de vencimento e provavelmente foi resgatado automaticamente pelo banco. Informe o reinvestimento, o resgate total ou arquive este item."
 const EARLY_DUE_WINDOW_DAYS = 5
+const UPCOMING_DUE_PRIORITY_DAYS = 10
 
 function getBankLogoSrc(bank) {
     const rawCode = bank?.code
@@ -163,12 +164,20 @@ const isDueDatePast = (dateStr) => {
 }
 
 function getDueDateSortValue(dateValue) {
-    const todayTimestamp = getTodayStart().getTime()
-    const dueTimestamp = getDateSortValue(dateValue)
+    const dueDate = parseDateValue(dateValue)
+    const today = getTodayStart()
+    const todayTimestamp = today.getTime()
+    const windowEnd = new Date(today)
+    windowEnd.setDate(windowEnd.getDate() + UPCOMING_DUE_PRIORITY_DAYS)
+    const dueTimestamp = dueDate?.getTime()
 
-    if (dueTimestamp == null) return todayTimestamp
-    if (dueTimestamp <= todayTimestamp) return dueTimestamp - 1
-    return dueTimestamp
+    if (dueDate && dueDate >= today && dueDate <= windowEnd)
+        return dueTimestamp ?? 0
+
+    if (!dueDate)
+        return 1_000_000_000_000_000 + todayTimestamp
+
+    return 2_000_000_000_000_000 + dueTimestamp
 }
 
 const canShowReinvest = (dateStr) => {
