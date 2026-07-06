@@ -117,6 +117,30 @@ public class SupportTicketsControllerTests
     }
 
     [Fact]
+    public async Task ChangeStatus_ToAwaitingUserResponse_CreatesNotificationForRequester()
+    {
+        using var fixture = new SupportTicketsFixture();
+        var ticket = fixture.SeedTicket(fixture.CommonUser, SupportTicketStatus.EmAtendimento);
+        var controller = fixture.CreateController(fixture.AdminUser);
+
+        var result = await controller.ChangeStatus(
+            ticket.id,
+            new ChangeSupportTicketStatusRequest(SupportTicketStatus.AguardandoRespostaUsuario),
+            CancellationToken.None);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<SupportTicketDetailResponse>(okResult.Value);
+
+        Assert.Equal(SupportTicketStatus.AguardandoRespostaUsuario, response.status);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var notification = Assert.Single(assertionContext.notifications);
+        Assert.Equal(fixture.CommonUser.id, notification.user_id);
+        Assert.Equal("Chamado atualizado", notification.title);
+        Assert.Contains("aguardando sua resposta", notification.message);
+    }
+
+    [Fact]
     public async Task DownloadAttachment_RestrictsAccessToOwnerOrAdmin()
     {
         using var fixture = new SupportTicketsFixture();

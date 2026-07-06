@@ -6,6 +6,7 @@ namespace RendaTop.App.Pages;
 
 public partial class MyInvestmentsPage : ContentPage
 {
+    private const int UpcomingDuePriorityDays = 10;
     private readonly InvestmentService _investmentService;
     private readonly ConnectivityService _connectivity;
     private readonly WalletService _wallets;
@@ -181,7 +182,8 @@ public partial class MyInvestmentsPage : ContentPage
     {
         var investments = source
             .Where(item => !item.Archived)
-            .OrderBy(item => item.DueDate ?? DateTime.MaxValue)
+            .OrderBy(GetDueDateSortBucket)
+            .ThenBy(item => item.DueDate?.ToLocalTime().Date ?? DateTime.MaxValue.Date)
             .ToList();
 
         InvestmentsCollection.ItemsSource = investments.Select(InvestmentRow.FromDto).ToList();
@@ -191,6 +193,18 @@ public partial class MyInvestmentsPage : ContentPage
         CountLabel.Text = investments.Count.ToString();
         TotalLabel.Text = MoneyFormatter.Currency(investments.Sum(item => item.CurrentValueForDisplay));
         SubtitleLabel.Text = investments.Count == 1 ? "1 investimento ativo" : $"{investments.Count} investimentos ativos";
+    }
+
+    private static int GetDueDateSortBucket(InvestmentDto investment)
+    {
+        if (!investment.DueDate.HasValue)
+            return 1;
+
+        var dueDate = investment.DueDate.Value.ToLocalTime().Date;
+        var today = DateTime.Today;
+        var windowEnd = today.AddDays(UpcomingDuePriorityDays);
+
+        return dueDate >= today && dueDate <= windowEnd ? 0 : 2;
     }
 
     private sealed record InvestmentRow(

@@ -11,6 +11,7 @@ namespace server.Controllers;
 public class UserController : AuthenticatedController
 {
     private const string TestEmailDestination = "hudsonventura@gmail.com";
+    private const string DeleteAccountConfirmationText = "EXCLUIR";
     private const int EmailVerificationDigits = 6;
     private const int EmailVerificationPeriodSeconds = 300;
     private const int EmailVerificationAllowedDriftSteps = 1;
@@ -509,6 +510,34 @@ public class UserController : AuthenticatedController
         return Ok(new GenericMessageResponse("Notificações do navegador desabilitadas neste dispositivo."));
     }
 
+    [HttpDelete("User/Settings/DeleteAccount")]
+    [ProducesResponseType(typeof(GenericMessageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> DeleteOwnAccount([FromBody] DeleteOwnAccountRequest request)
+    {
+        var user = await _context.users.FirstOrDefaultAsync(x => x.id == _user.id);
+        if (user is null)
+            throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+
+        if (!request.confirm_first_step || !request.confirm_second_step)
+            throw new ExpectedException("Confirmação de exclusão incompleta.");
+
+        if (!string.Equals(
+                (request.confirmation_text ?? string.Empty).Trim(),
+                DeleteAccountConfirmationText,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ExpectedException($"Digite {DeleteAccountConfirmationText} para confirmar a exclusão da conta.");
+        }
+
+        await DeleteUserAccountAsync(user);
+
+        HttpContext?.Response?.Cookies.Delete("jwt", new CookieOptions { Path = "/" });
+
+        return Ok(new GenericMessageResponse("Sua conta foi excluída permanentemente."));
+    }
+
     private static void ValidateEmail(string email)
     {
         try
@@ -661,6 +690,122 @@ public class UserController : AuthenticatedController
 
         return chatId.Trim();
     }
+
+    private async Task DeleteUserAccountAsync(User user)
+    {
+        var userId = user.id;
+
+        var aiUsages = await _context.ai_usages
+            .Where(x => x.user_id == userId)
+            .ToListAsync();
+
+        var browserPushSubscriptions = await _context.browser_push_subscriptions
+            .Where(x => x.user_id == userId)
+            .ToListAsync();
+
+        var notifications = await _context.notifications
+            .Where(x => x.user_id == userId)
+            .ToListAsync();
+
+        var subscriptions = await _context.subscriptions
+            .Where(x => x.user_id == userId)
+            .ToListAsync();
+
+        var subscriptionCharges = await _context.subscription_charges
+            .Where(x => x.user_id == userId)
+            .ToListAsync();
+
+        var blogPosts = await _context.blog_posts
+            .Include(x => x.assets)
+            .Include(x => x.social_publications)
+            .Where(x => x.author_user_id == userId)
+            .ToListAsync();
+
+        var supportTickets = await _context.support_tickets
+            .Include(x => x.messages!)
+                .ThenInclude(x => x.attachments)
+            .Include(x => x.status_history)
+            .Where(x => x.requester_user_id == userId)
+            .ToListAsync();
+
+        var supportMessagesFromOtherTickets = await _context.support_ticket_messages
+            .Include(x => x.attachments)
+            .Where(x => x.sender_user_id == userId && x.ticket.requester_user_id != userId)
+            .ToListAsync();
+
+        var supportStatusHistoryFromOtherTickets = await _context.support_ticket_status_history
+            .Where(x => x.actor_user_id == userId && x.ticket.requester_user_id != userId)
+            .ToListAsync();
+
+        var recurringInvestments = await _context.recurring_investments
+            .Where(x => x.owner_id == userId)
+            .ToListAsync();
+
+        var investments = await _context.investments
+            .Include(x => x.redemptions)
+            .Where(x => EF.Property<Guid>(x, "ownerid") == userId)
+            .ToListAsync();
+
+        var moneyBoxes = await _context.money_boxes
+            .Where(x => x.owner_id == userId)
+            .ToListAsync();
+
+        var wallets = await _context.wallets
+            .Where(x => x.owner_id == userId)
+            .ToListAsync();
+
+        var investmentRedemptions = investments
+            .SelectMany(x => x.redemptions ?? [])
+            .ToList();
+
+        var supportTicketMessages = supportTickets
+            .SelectMany(x => x.messages ?? [])
+            .ToList();
+
+        var supportTicketAttachments = supportTicketMessages
+            .SelectMany(x => x.attachments ?? [])
+            .Concat(supportMessagesFromOtherTickets.SelectMany(x => x.attachments ?? []))
+            .ToList();
+
+        var supportTicketStatusHistory = supportTickets
+            .SelectMany(x => x.status_history ?? [])
+            .ToList();
+
+        var blogPostAssets = blogPosts
+            .SelectMany(x => x.assets ?? [])
+            .ToList();
+
+        var blogPostSocialPublications = blogPosts
+            .SelectMany(x => x.social_publications ?? [])
+            .ToList();
+
+        _context.support_ticket_message_attachments.RemoveRange(supportTicketAttachments);
+        _context.support_ticket_messages.RemoveRange(supportMessagesFromOtherTickets);
+        _context.support_ticket_status_history.RemoveRange(supportStatusHistoryFromOtherTickets);
+        _context.support_ticket_messages.RemoveRange(supportTicketMessages);
+        _context.support_ticket_status_history.RemoveRange(supportTicketStatusHistory);
+        _context.support_tickets.RemoveRange(supportTickets);
+
+        _context.blog_post_social_publications.RemoveRange(blogPostSocialPublications);
+        _context.blog_post_assets.RemoveRange(blogPostAssets);
+        _context.blog_posts.RemoveRange(blogPosts);
+
+        _context.redemptions.RemoveRange(investmentRedemptions);
+        _context.investments.RemoveRange(investments);
+        _context.recurring_investments.RemoveRange(recurringInvestments);
+        _context.money_boxes.RemoveRange(moneyBoxes);
+        _context.wallets.RemoveRange(wallets);
+
+        _context.subscription_charges.RemoveRange(subscriptionCharges);
+        _context.subscriptions.RemoveRange(subscriptions);
+        _context.notifications.RemoveRange(notifications);
+        _context.browser_push_subscriptions.RemoveRange(browserPushSubscriptions);
+        _context.ai_usages.RemoveRange(aiUsages);
+
+        _context.users.Remove(user);
+
+        await _context.SaveChangesAsync();
+    }
 }
 
 public record UserSettingsRequest(
@@ -749,4 +894,10 @@ public record BrowserPushUnsubscribeRequest(
 public record BrowserPushPublicKeyResponse(
     bool enabled,
     string? public_key
+);
+
+public record DeleteOwnAccountRequest(
+    bool confirm_first_step,
+    bool confirm_second_step,
+    string? confirmation_text
 );

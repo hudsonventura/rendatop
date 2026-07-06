@@ -5,7 +5,7 @@ import {
     Wallet,
     Repeat,
     LogOut,
-    CircleUser,
+    ChevronsUpDown,
     CalendarDays,
     Settings,
     Bell,
@@ -28,7 +28,17 @@ import {
     SidebarMenuItem,
     SidebarGroup,
     SidebarGroupLabel,
+    useSidebar,
 } from "@/components/ui/sidebar"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 import {
     Dialog,
@@ -71,21 +81,6 @@ const navItems = [
         icon: CalendarDays,
     },
     {
-        title: "Notificações",
-        url: "/notifications",
-        icon: Bell,
-    },
-    {
-        title: "Configurações",
-        url: "/settings",
-        icon: Settings,
-    },
-    {
-        title: "Assinatura",
-        url: "/subscription",
-        icon: CreditCard,
-    },
-    {
         title: "Atendimento",
         url: "/atendimento",
         icon: LifeBuoy,
@@ -93,6 +88,7 @@ const navItems = [
 ]
 
 export function AppSidebar({ ...props }) {
+    const { isMobile } = useSidebar()
     const location = useLocation()
     const navigate = useNavigate()
     const [userName, setUserName] = useState(() => sessionStorage.getItem('name') || 'Usuário')
@@ -154,7 +150,7 @@ export function AppSidebar({ ...props }) {
     }, [])
 
     const handleLogoutClick = (e) => {
-        e.preventDefault()
+        e?.preventDefault?.()
         setShowLogoutDialog(true)
     }
 
@@ -162,6 +158,32 @@ export function AppSidebar({ ...props }) {
         setShowLogoutDialog(false)
         navigate('/logout')
     }
+
+    const userMenuItems = [
+        {
+            title: "Assinatura",
+            url: "/subscription",
+            icon: CreditCard,
+        },
+        {
+            title: "Configurações",
+            url: "/settings",
+            icon: Settings,
+        },
+        {
+            title: "Notificações",
+            url: "/notifications",
+            icon: Bell,
+        },
+    ]
+
+    const userInitials = React.useMemo(() => {
+        const source = (userName || userEmail || "U").trim()
+        if (!source) return "U"
+
+        const parts = source.split(/\s+/).filter(Boolean)
+        return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "U"
+    }, [userEmail, userName])
 
     const items = isAdminUserType(userType)
         ? [
@@ -231,26 +253,65 @@ export function AppSidebar({ ...props }) {
                 <SidebarFooter>
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <SidebarMenuButton size="lg" className="cursor-default">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                                    <CircleUser className="size-5" />
-                                </div>
-                                <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-medium">{userName}</span>
-                                    <span className="text-muted-foreground truncate text-xs">
-                                        {userEmail}
-                                    </span>
-                                </div>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton
-                                className="cursor-pointer text-muted-foreground hover:text-destructive"
-                                onClick={handleLogoutClick}
-                            >
-                                <LogOut className="size-4" />
-                                <span>Sair</span>
-                            </SidebarMenuButton>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <SidebarMenuButton
+                                        size="lg"
+                                        className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                                    >
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                            <span className="text-xs font-semibold">{userInitials}</span>
+                                        </div>
+                                        <div className="grid flex-1 text-left text-sm leading-tight">
+                                            <span className="truncate font-medium">{userName}</span>
+                                            <span className="text-muted-foreground truncate text-xs">
+                                                {userEmail}
+                                            </span>
+                                        </div>
+                                        <ChevronsUpDown className="ml-auto size-4" />
+                                    </SidebarMenuButton>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                                    side={isMobile ? "bottom" : "right"}
+                                    align="end"
+                                    sideOffset={4}
+                                >
+                                    <DropdownMenuLabel className="p-0 font-normal">
+                                        <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                                <span className="text-xs font-semibold">{userInitials}</span>
+                                            </div>
+                                            <div className="grid flex-1 text-left text-sm leading-tight">
+                                                <span className="truncate font-medium">{userName}</span>
+                                                <span className="text-muted-foreground truncate text-xs">
+                                                    {userEmail}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuGroup>
+                                        {userMenuItems.map((item) => (
+                                            <DropdownMenuItem
+                                                key={item.url}
+                                                onSelect={() => navigate(item.url)}
+                                            >
+                                                <item.icon className="size-4" />
+                                                <span>{item.title}</span>
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuGroup>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onSelect={handleLogoutClick}
+                                    >
+                                        <LogOut className="size-4" />
+                                        <span>Sair</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarFooter>

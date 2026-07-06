@@ -82,6 +82,24 @@ public class InvestmentsControllerTests
     }
 
     [Fact]
+    public void Get_WithUnknownWalletId_FallsBackToDefaultWallet()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var investment = fixture.SeedInvestment(
+            title: "Investimento carteira padrao",
+            value: 1000m,
+            dueDate: DateTime.UtcNow.Date.AddYears(1),
+            archived: false,
+            index: IdexesType.PERCENT_YEAR,
+            indexPercent: 10m);
+
+        var result = fixture.Controller.Get(wallet_id: Guid.NewGuid());
+
+        var returnedInvestment = Assert.Single(result);
+        Assert.Equal(investment.id, returnedInvestment.id);
+    }
+
+    [Fact]
     public void Get_ArchivedInvestmentKeepsOriginalDisplayValues()
     {
         using var fixture = new InvestmentsControllerFixture();
@@ -314,6 +332,19 @@ public class InvestmentsControllerTests
     }
 
     [Fact]
+    public void Archive_AllowsArchivingWithinFiveDaysBeforeDueDate()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var investment = fixture.SeedInvestment(dueDate: DateTime.UtcNow.Date.AddDays(5));
+
+        var result = fixture.Controller.Archive(investment.id, new ArchiveInvestmentRequest { archived = true });
+
+        Assert.IsType<NoContentResult>(result);
+        using var assertionContext = fixture.CreateAssertionContext();
+        Assert.True(assertionContext.investments.Single(i => i.id == investment.id).archived);
+    }
+
+    [Fact]
     public void Delete_RemovesInvestmentFromDatabase()
     {
         using var fixture = new InvestmentsControllerFixture();
@@ -329,14 +360,57 @@ public class InvestmentsControllerTests
     public void Archive_ThrowsWhenInvestmentIsNotMatured()
     {
         using var fixture = new InvestmentsControllerFixture();
-        var investment = fixture.SeedInvestment(dueDate: DateTime.UtcNow.Date.AddDays(5));
+        var investment = fixture.SeedInvestment(dueDate: DateTime.UtcNow.Date.AddDays(6));
 
         var exception = Assert.Throws<ExpectedException>(() =>
             fixture.Controller.Archive(investment.id, new ArchiveInvestmentRequest { archived = true }));
 
-        Assert.Equal("Somente investimentos vencidos podem ser arquivados.", exception.Message);
+        Assert.Equal("Somente investimentos vencidos ou a até 5 dias corridos do vencimento podem ser arquivados.", exception.Message);
         using var assertionContext = fixture.CreateAssertionContext();
         Assert.False(assertionContext.investments.Single(i => i.id == investment.id).archived);
+    }
+
+    [Fact]
+    public void Insert_AllowsReplacementWithinFiveDaysBeforeDueDate()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var sourceInvestment = fixture.SeedInvestment(
+            title: "Investimento origem",
+            dueDate: DateTime.UtcNow.Date.AddDays(5));
+
+        var request = fixture.CreateInvestmentRequest(title: "Reinvestimento");
+        request.replacement_source_investment_id = sourceInvestment.id;
+
+        var investmentId = fixture.Controller.Insert(request);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        Assert.NotEqual(Guid.Empty, investmentId);
+        Assert.True(assertionContext.investments.Single(i => i.id == sourceInvestment.id).archived);
+    }
+
+    [Fact]
+    public void Insert_DoesNotTreatReplacementAsValidEarlierThanFiveDaysBeforeDueDate()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var sourceInvestment = fixture.SeedInvestment(
+            title: "Investimento origem",
+            dueDate: DateTime.UtcNow.Date.AddDays(6));
+        for (var index = 0; index < 14; index++)
+        {
+            fixture.SeedInvestment(
+                title: $"Investimento limite {index}",
+                dueDate: DateTime.UtcNow.Date.AddDays(30 + index));
+        }
+
+        var request = fixture.CreateInvestmentRequest(title: "Reinvestimento");
+        request.replacement_source_investment_id = sourceInvestment.id;
+
+        var exception = Assert.Throws<ExpectedException>(() => fixture.Controller.Insert(request));
+
+        Assert.Contains("Seu plano Free permite", exception.Message);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        Assert.False(assertionContext.investments.Single(i => i.id == sourceInvestment.id).archived);
     }
 
     private static FormFile BuildFormFile(string fileName, string contentType, string content)

@@ -17,7 +17,7 @@ const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-            Mobilidade
+            No app ou na web você encontra o melhor investimento
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
             Veja na web ou no celular, como preferir, o Rendatop é acessível onde você estiver. Baixe nosso aplicativo para uma experiência otimizada ou acesse diretamente pelo navegador. Estamos aqui para facilitar sua vida financeira, seja qual for a plataforma que você escolher.

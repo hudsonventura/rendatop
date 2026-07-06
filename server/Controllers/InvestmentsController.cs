@@ -13,6 +13,7 @@ namespace server.Controllers;
 [ApiController]
 public class InvestmentsController : AuthenticatedController
 {
+    private const int EarlyMaturityWindowDays = 5;
     Context _context;
     ILogger<InvestmentsController> _logger;
     private readonly List<string> _tags = new() { "InvestmentsController", "Controllers", "Investment" };
@@ -88,10 +89,18 @@ public class InvestmentsController : AuthenticatedController
         if (source is null)
             return null;
 
-        if (!source.due_date.HasValue || source.due_date.Value.Date > DateTime.UtcNow.Date)
+        if (!CanArchiveOrReinvestBeforeDueDate(source.due_date))
             return null;
 
         return source;
+    }
+
+    private static bool CanArchiveOrReinvestBeforeDueDate(DateTime? dueDate)
+    {
+        if (!dueDate.HasValue)
+            return false;
+
+        return dueDate.Value.Date <= DateTime.UtcNow.Date.AddDays(EarlyMaturityWindowDays);
     }
 
     private static string? BuildInvestmentLimitRestrictionMessage(Plan plan, int count, int limit, bool canCreate, bool isOverLimit)
@@ -452,8 +461,8 @@ public class InvestmentsController : AuthenticatedController
 
         WalletAccess.ResolveAccessibleWallet(_context, _user, investment.wallet_id);
 
-        if (request.archived && (!investment.due_date.HasValue || investment.due_date.Value.Date > DateTime.UtcNow.Date))
-            throw new ExpectedException("Somente investimentos vencidos podem ser arquivados.");
+        if (request.archived && !CanArchiveOrReinvestBeforeDueDate(investment.due_date))
+            throw new ExpectedException("Somente investimentos vencidos ou a até 5 dias corridos do vencimento podem ser arquivados.");
 
         investment.archived = request.archived;
         _context.investments.Update(investment);

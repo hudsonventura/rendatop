@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using server.Controllers;
 using server.Domain;
+using server.RequestObjects;
 using server.Utils;
 
 namespace tests;
@@ -285,6 +286,174 @@ public class UserControllerTests
         Assert.Equal("test@example.com", savedUser.email);
         Assert.Equal("google-updated@example.com", savedUser.pending_email);
         Assert.False(string.IsNullOrWhiteSpace(savedUser.pending_email_verification_secret));
+    }
+
+    [Fact]
+    public async Task DeleteOwnAccount_ThrowsWhenConfirmationIsIncomplete()
+    {
+        using var fixture = new UserControllerFixture();
+
+        var exception = await Assert.ThrowsAsync<ExpectedException>(() => fixture.Controller.DeleteOwnAccount(
+            new DeleteOwnAccountRequest(
+                confirm_first_step: true,
+                confirm_second_step: false,
+                confirmation_text: "EXCLUIR"
+            )));
+
+        Assert.Equal("Confirmação de exclusão incompleta.", exception.Message);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        Assert.Single(assertionContext.users);
+    }
+
+    [Fact]
+    public async Task DeleteOwnAccount_RemovesUserAndOwnedData()
+    {
+        using var fixture = new UserControllerFixture();
+        var bank = new Bank
+        {
+            Code = 1,
+            Name = "Banco Teste",
+            CompanyName = "Banco Teste S.A.",
+            Cnpj = "00000000000191",
+            Color = "#000000"
+        };
+        fixture.Context.banks.Add(bank);
+
+        var wallet = new Wallet
+        {
+            owner_id = fixture.User.id,
+            name = "Carteira Teste"
+        };
+        fixture.Context.wallets.Add(wallet);
+
+        var moneyBox = new MoneyBox
+        {
+            owner_id = fixture.User.id,
+            name = "Cofrinho Teste"
+        };
+        fixture.Context.money_boxes.Add(moneyBox);
+
+        var investment = new Investment(new InvestmentRequest
+        {
+            title = "CDB Teste",
+            bank_code = 1,
+            wallet_id = wallet.id,
+            money_box_id = moneyBox.id,
+            date_buy = DateTime.UtcNow.AddDays(-10),
+            date_expected_sell = DateTime.UtcNow.AddDays(30),
+            value = 1000m,
+            index = IdexesType.CDI,
+            index_percent = 100m,
+            index_value = 0m,
+            taxes = true
+        }, fixture.User, bank);
+        fixture.Context.investments.Add(investment);
+
+        var redemption = new Redemption(investment, new RedemptionRequest
+        {
+            title = "Resgate parcial",
+            date = DateTime.UtcNow,
+            value = 100m
+        });
+        fixture.Context.redemptions.Add(redemption);
+
+        var recurringInvestment = new RecurringInvestment(new RecurringInvestmentRequest
+        {
+            title = "Aporte mensal",
+            wallet_id = wallet.id,
+            bank_code = 1,
+            value = 200m,
+            index = IdexesType.CDI,
+            index_percent = 100m,
+            index_value = 0m,
+            taxes = true,
+            liquidity_daily = false,
+            duration_days = 365,
+            frequency = RecurringInvestmentFrequency.Monthly,
+            day_of_month = 10,
+            months = new List<int> { 1, 2, 3 },
+            active = true
+        }, fixture.User, bank);
+        fixture.Context.recurring_investments.Add(recurringInvestment);
+
+        var subscription = new Subscription
+        {
+            user_id = fixture.User.id,
+            plan_id = "plus",
+            status = SubscriptionStatus.Active,
+            payment_method = "credit_card",
+            current_period_start = DateTime.UtcNow.AddDays(-10),
+            current_period_end = DateTime.UtcNow.AddDays(20),
+        };
+        fixture.Context.subscriptions.Add(subscription);
+
+        var charge = new SubscriptionCharge
+        {
+            subscription = subscription,
+            subscription_id = subscription.id,
+            user = fixture.User,
+            user_id = fixture.User.id,
+            plan_id = "plus",
+            payment_method = "credit_card",
+            amount = 19.90m,
+            payer_cpf = "12345678901",
+            status = SubscriptionChargeStatus.Pending,
+            charge_kind = SubscriptionChargeKind.Renewal,
+            billing_period_start = DateTime.UtcNow,
+            billing_period_end = DateTime.UtcNow.AddMonths(1),
+            due_at = DateTime.UtcNow.AddDays(7)
+        };
+        fixture.Context.subscription_charges.Add(charge);
+
+        fixture.Context.browser_push_subscriptions.Add(new BrowserPushSubscription
+        {
+            user_id = fixture.User.id,
+            endpoint = "https://push.example.test/subscriptions/delete-me",
+            p256dh = "p256dh",
+            auth = "auth"
+        });
+
+        fixture.Context.notifications.Add(new Notification
+        {
+            user_id = fixture.User.id,
+            user = fixture.User,
+            title = "Notificação",
+            message = "Mensagem"
+        });
+
+        fixture.Context.ai_usages.Add(new AiUsage
+        {
+            user_id = fixture.User.id,
+            user = fixture.User,
+            feature = "investment_document_extraction",
+            provider = "openai"
+        });
+
+        fixture.Context.SaveChanges();
+
+        var result = await fixture.Controller.DeleteOwnAccount(new DeleteOwnAccountRequest(
+            confirm_first_step: true,
+            confirm_second_step: true,
+            confirmation_text: "EXCLUIR"
+        ));
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<GenericMessageResponse>(okResult.Value);
+        Assert.Equal("Sua conta foi excluída permanentemente.", response.message);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        Assert.Empty(assertionContext.users);
+        Assert.Empty(assertionContext.wallets);
+        Assert.Empty(assertionContext.money_boxes);
+        Assert.Empty(assertionContext.investments);
+        Assert.Empty(assertionContext.redemptions);
+        Assert.Empty(assertionContext.recurring_investments);
+        Assert.Empty(assertionContext.subscriptions);
+        Assert.Empty(assertionContext.subscription_charges);
+        Assert.Empty(assertionContext.browser_push_subscriptions);
+        Assert.Empty(assertionContext.notifications);
+        Assert.Empty(assertionContext.ai_usages);
     }
 
     private sealed class UserControllerFixture : IDisposable
