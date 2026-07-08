@@ -213,6 +213,9 @@ public partial class SettingsPage : ContentPage
             ShowEmailError);
     }
 
+    private async void OnShowTelegramGuideClicked(object? sender, EventArgs e)
+        => await Navigation.PushModalAsync(new TelegramChatIdGuidePage());
+
     private async void OnVerifyPendingEmailClicked(object? sender, EventArgs e)
     {
         if (_connectivity.IsOffline)
