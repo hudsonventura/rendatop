@@ -14,6 +14,7 @@ public partial class SettingsPage : ContentPage
     private readonly ConnectivityService _connectivity;
     private readonly NotificationTitleView _titleView;
     private UserSettingsDto? _settings;
+    private bool _isAdminUser;
 
     public SettingsPage(UserSettingsService service, SessionService session, ConnectivityService connectivity, NotificationService notifications)
     {
@@ -22,6 +23,7 @@ public partial class SettingsPage : ContentPage
         _connectivity = connectivity;
         InitializeComponent();
         _titleView = NotificationChrome.Apply(this, "Configuracoes", notifications);
+        UpdateAdminOnlyTestButtons();
     }
 
     protected override async void OnAppearing()
@@ -103,6 +105,8 @@ public partial class SettingsPage : ContentPage
         TotpSecretEntry.Text = string.Empty;
         TotpCodeEntry.Text = string.Empty;
         DisableTotpCodeEntry.Text = string.Empty;
+        _isAdminUser = IsAdminUserType(data.UserType);
+        UpdateAdminOnlyTestButtons();
 
         UpdatePasswordRequirements();
     }
@@ -686,14 +690,28 @@ public partial class SettingsPage : ContentPage
         VerifyEmailButton.IsEnabled = !offline;
         ResendEmailButton.IsEnabled = !offline;
         CancelEmailButton.IsEnabled = !offline;
-        TestWhatsAppButton.IsEnabled = !offline;
-        TestTelegramButton.IsEnabled = !offline;
-        TestEmailButton.IsEnabled = !offline;
+        TestWhatsAppButton.IsEnabled = !offline && _isAdminUser;
+        TestTelegramButton.IsEnabled = !offline && _isAdminUser;
+        TestEmailButton.IsEnabled = !offline && _isAdminUser;
         EnableTotpButton.IsEnabled = !offline;
         DisableTotpButton.IsEnabled = !offline;
         TotpCodeEntry.IsEnabled = !offline;
         DisableTotpCodeEntry.IsEnabled = !offline;
     }
+
+    private void UpdateAdminOnlyTestButtons()
+    {
+        TestWhatsAppButton.IsVisible = _isAdminUser;
+        TestTelegramButton.IsVisible = _isAdminUser;
+        TestEmailButton.IsVisible = _isAdminUser;
+        TestWhatsAppButton.Text = "Test WhatsApp";
+        TestTelegramButton.Text = "Test Telegram";
+        TestEmailButton.Text = "Test Email";
+    }
+
+    private static bool IsAdminUserType(string? userType)
+        => string.Equals(userType, "Admin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(userType, "2", StringComparison.OrdinalIgnoreCase);
 
     private static string FormatCpf(string? cpf)
     {

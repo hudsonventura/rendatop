@@ -94,6 +94,8 @@ public class UserControllerTests
     public async Task TestTelegram_UsesRequestChatIdWithoutPersistingIt()
     {
         using var fixture = new UserControllerFixture();
+        fixture.User.user_type = UserType.Admin;
+        fixture.Context.SaveChanges();
 
         var result = await fixture.Controller.TestTelegram(new NotificationTestRequest(null, "123456789"));
 
@@ -104,6 +106,19 @@ public class UserControllerTests
         using var assertionContext = fixture.CreateAssertionContext();
         var savedUser = assertionContext.users.Single(x => x.id == fixture.User.id);
         Assert.Null(savedUser.telegram_chat_id);
+    }
+
+    [Fact]
+    public async Task TestTelegram_ThrowsWhenUserIsNotAdmin()
+    {
+        using var fixture = new UserControllerFixture();
+
+        var exception = await Assert.ThrowsAsync<ExpectedException>(() =>
+            fixture.Controller.TestTelegram(new NotificationTestRequest(null, "123456789")));
+
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, exception.StatusCode);
+        Assert.Equal("Somente usuários administradores podem realizar testes de Email, WhatsApp e Telegram.", exception.Message);
+        Assert.Null(fixture.Notification.LastChatId);
     }
 
     [Fact]

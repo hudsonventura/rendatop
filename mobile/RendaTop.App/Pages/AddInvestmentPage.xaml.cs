@@ -183,6 +183,15 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
         DueDatePicker.Opacity = e.Value ? 0.45 : 1;
     }
 
+    private async void OnDatePickerDateSelected(object? sender, DateChangedEventArgs e)
+    {
+        if (sender is not DatePicker picker)
+            return;
+
+        await Task.Delay(100);
+        picker.Unfocus();
+    }
+
     private async void OnSaveClicked(object? sender, EventArgs e)
     {
         HideError();

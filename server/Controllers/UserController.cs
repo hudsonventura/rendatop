@@ -324,6 +324,7 @@ public class UserController : AuthenticatedController
         var user = _context.users.AsNoTracking().FirstOrDefault(x => x.id == _user.id);
         if (user is null)
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+        EnsureAdminNotificationTestAccess(user);
 
         var now = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
         var message = $"✅ Mensagem de teste enviada em {now}.{Environment.NewLine}Usuário: {user.name}";
@@ -358,6 +359,7 @@ public class UserController : AuthenticatedController
         var user = _context.users.AsNoTracking().FirstOrDefault(x => x.id == _user.id);
         if (user is null)
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+        EnsureAdminNotificationTestAccess(user);
 
         if (!CanUseWhatsAppNotifications(user.id))
             throw new ExpectedException("Notificações por WhatsApp exigem um plano ativo que tenha esse recurso liberado.");
@@ -395,6 +397,7 @@ public class UserController : AuthenticatedController
         var user = _context.users.AsNoTracking().FirstOrDefault(x => x.id == _user.id);
         if (user is null)
             throw new ExpectedException("Usuário não encontrado.", HttpStatusCode.NotFound);
+        EnsureAdminNotificationTestAccess(user);
 
         
         ValidateEmail(TestEmailDestination);
@@ -560,6 +563,14 @@ public class UserController : AuthenticatedController
             throw new ExpectedException("Telefone deve ter 11 dígitos no formato 99999999999.");
 
         return digits;
+    }
+
+    private static void EnsureAdminNotificationTestAccess(User user)
+    {
+        if (user.user_type != UserType.Admin)
+            throw new ExpectedException(
+                "Somente usuários administradores podem realizar testes de Email, WhatsApp e Telegram.",
+                HttpStatusCode.Forbidden);
     }
 
     private UserSettingsResponse ToResponse(User user, bool? pendingEmailVerificationSent = null)
