@@ -54,6 +54,7 @@ function App() {
                                 <Route path="/reset-totp" element={<ResetTotp />} />
                                 <Route path="/subscription" element={<SubscriptionPage />} />
                                 <Route path="/subscription/mercado-pago/return" element={<SubscriptionMercadoPagoReturnPage />} />
+                                <Route path="/subscription/webhook/mercado-pago" element={<SubscriptionMercadoPagoReturnPage />} />
                                 <Route path="/admin" element={<AdminPage />} />
                                 <Route path="/admin/blog" element={<BlogAdminPage />} />
                                 <Route path="/atendimento" element={<SupportPage />} />

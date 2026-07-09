@@ -226,6 +226,7 @@ Para o checkout hospedado com assinaturas, configure no `.env` raiz:
 ```bash
 BASE_URL_SERVER=https://api.seu-dominio.com
 BASE_URL_CLIENT=https://app.seu-dominio.com
+MERCADO_PAGO_WEBHOOK_CALLBACK=https://app.seu-dominio.com/subscription/mercado-pago/return
 MERCADO_PAGO_ACCESS_TOKEN=APP_USR-...
 MERCADO_PAGO_WEBHOOK_SECRET=...
 MERCADO_PAGO_WEBHOOK_URL=https://api.seu-dominio.com/subscription/webhook/mercado-pago
@@ -234,9 +235,11 @@ MERCADO_PAGO_STATEMENT_DESCRIPTOR=RENDATOP
 
 Observações:
 - `BASE_URL_SERVER` precisa ser a URL pública HTTPS do backend, porque o Mercado Pago chamará `POST {BASE_URL_SERVER}/subscription/webhook/mercado-pago`
-- `BASE_URL_CLIENT` precisa ser a URL pública HTTPS do frontend, porque o backend monta o retorno em `{BASE_URL_CLIENT}/subscription/mercado-pago/return`
+- `MERCADO_PAGO_WEBHOOK_CALLBACK` precisa ser a URL pública HTTPS completa de retorno do usuário, por exemplo `https://app.seu-dominio.com/subscription/mercado-pago/return`
 - `MERCADO_PAGO_WEBHOOK_URL`, quando informada, passa a ser usada explicitamente pelo backend como `notification_url`
+- `MERCADO_PAGO_WEBHOOK_URL` não deve ser usada como `back_url` do navegador; o retorno do usuário sempre deve apontar para o frontend
 - `localhost` não serve para `back_url` nem para webhook em ambiente real do Mercado Pago
+- se estiver testando localmente, exponha frontend e backend com uma URL pública temporária, como `ngrok` ou `Cloudflare Tunnel`
 - a aplicação lê essas variáveis do `.env` raiz; se `server/.env` for um link/junction para esse arquivo, continua funcionando
 
 ### Configuração no painel do Mercado Pago
@@ -256,6 +259,35 @@ Importante:
 - o sistema cria o link de assinatura dinamicamente a cada contratação; não é preciso pré-criar links por plano
 - o retorno do navegador para `/subscription/mercado-pago/return` é apenas UX; a ativação final depende do webhook
 - cancelamentos efetivos interrompem a recorrência no Mercado Pago, e estornos continuam sendo feitos sobre o `payment_id` original
+
+### Troubleshooting do Checkout Pro
+Se o backend retornar `Falha ao comunicar com o Mercado Pago ao criar o checkout hospedado. An unexpected error has occurred.`, verifique:
+
+1. `MERCADO_PAGO_WEBHOOK_CALLBACK` aponta para a URL pública completa de retorno do usuário, e não para a URL do webhook/backend.
+2. `MERCADO_PAGO_WEBHOOK_URL` aponta para o backend público, por exemplo:
+   `https://api.seu-dominio.com/api/subscription/webhook/mercado-pago`
+3. O retorno do navegador deve chegar em:
+   `https://app.seu-dominio.com/subscription/mercado-pago/return`
+   e não em `/subscription/webhook/mercado-pago`
+4. O `MERCADO_PAGO_ACCESS_TOKEN` pertence à mesma aplicação/conta usada para configurar webhook e Checkout Pro.
+5. O ambiente do token (`TEST-...` ou produção) é o mesmo ambiente da conta/aplicação que você está testando.
+6. Na conta/aplicação do Mercado Pago, os meios que você quer usar no Checkout Pro estão disponíveis para essa conta. Se Pix ou boleto não estiverem habilitados na conta, a preference pode falhar ou o checkout pode não exibir o meio esperado.
+
+### Exemplo para desenvolvimento local com túnel
+Se o frontend local roda em `http://localhost:5173` e o backend local em `http://localhost:5000`, não envie essas URLs ao Mercado Pago.
+
+Use algo assim no `.env`:
+
+```bash
+BASE_URL_SERVER=https://api-teste.seu-tunel.dev
+BASE_URL_CLIENT=https://app-teste.seu-tunel.dev
+MERCADO_PAGO_WEBHOOK_CALLBACK=https://app-teste.seu-tunel.dev/subscription/mercado-pago/return
+MERCADO_PAGO_WEBHOOK_URL=https://api-teste.seu-tunel.dev/subscription/webhook/mercado-pago
+```
+
+Depois:
+- o navegador do usuário voltará para `https://app-teste.seu-tunel.dev/subscription/mercado-pago/return`
+- o webhook do Mercado Pago chamará `https://api-teste.seu-tunel.dev/subscription/webhook/mercado-pago`
 
 ### Statement descriptor da fatura
 Configure a variável de ambiente `MERCADO_PAGO_STATEMENT_DESCRIPTOR` com o nome que deve aparecer na fatura do cartão.

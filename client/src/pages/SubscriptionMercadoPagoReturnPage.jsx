@@ -10,11 +10,11 @@ import axiosInstance from "@/utils/axiosConfig";
 function getStatusCopy(status) {
     const normalized = String(status || '').toLowerCase();
 
-    if (normalized === 'approved') {
+    if (normalized === 'approved' || normalized === 'authorized') {
         return {
             icon: Check,
             title: 'Pagamento aprovado',
-            description: 'O Mercado Pago informou que o pagamento foi aprovado. Estamos sincronizando sua assinatura.',
+            description: 'O Mercado Pago informou que o pagamento foi confirmado. Estamos sincronizando sua assinatura.',
         };
     }
 
@@ -35,25 +35,41 @@ function getStatusCopy(status) {
 
 export default function SubscriptionMercadoPagoReturnPage() {
     const [searchParams] = useSearchParams();
+    const [resolvedStatus, setResolvedStatus] = useState(searchParams.get('status') || '');
     const [syncMessage, setSyncMessage] = useState('Atualizando o status local da assinatura...');
     const status = searchParams.get('status');
     const externalReference = searchParams.get('external_reference');
     const paymentId = searchParams.get('payment_id');
-    const { icon: Icon, title, description } = getStatusCopy(status);
+    const preapprovalId = searchParams.get('preapproval_id');
+    const preferenceId = searchParams.get('preference_id');
+    const { icon: Icon, title, description } = getStatusCopy(resolvedStatus || status);
 
     useEffect(() => {
         let active = true;
 
         const sync = async () => {
             try {
-                if (paymentId) {
-                    await axiosInstance.get(`/subscription/payment-status/${paymentId}`);
-                    if (active) setSyncMessage('Status local atualizado com a resposta mais recente do Mercado Pago.');
+                const reference = paymentId || preapprovalId || preferenceId || externalReference;
+
+                if (reference) {
+                    const { data } = await axiosInstance.get(`/subscription/payment-status/${reference}`);
+                    if (active) {
+                        setResolvedStatus(String(data?.status || ''));
+                        setSyncMessage('Status local atualizado com a resposta mais recente do Mercado Pago.');
+                    }
                     return;
                 }
 
-                await axiosInstance.get('/subscription/overview');
-                if (active) setSyncMessage('Sua assinatura foi recarregada. Se o pagamento seguir pendente, aguarde a confirmação do webhook.');
+                const { data } = await axiosInstance.get('/subscription/overview');
+                if (active) {
+                    const overviewStatus = data?.pending_charge?.status === 1
+                        ? 'approved'
+                        : data?.pending_charge?.status === 2
+                            ? 'rejected'
+                            : '';
+                    if (overviewStatus) setResolvedStatus(overviewStatus);
+                    setSyncMessage('Sua assinatura foi recarregada. Se o pagamento seguir pendente, aguarde a confirmação do webhook.');
+                }
             } catch {
                 if (active) setSyncMessage('Não foi possível sincronizar agora, mas o webhook continuará tentando confirmar a cobrança.');
             }
@@ -63,7 +79,7 @@ export default function SubscriptionMercadoPagoReturnPage() {
         return () => {
             active = false;
         };
-    }, [externalReference, paymentId]);
+    }, [externalReference, paymentId, preferenceId, preapprovalId]);
 
     return (
         <>
@@ -83,9 +99,9 @@ export default function SubscriptionMercadoPagoReturnPage() {
                                 {syncMessage}
                             </div>
 
-                            {externalReference && (
+                            {(externalReference || preapprovalId || preferenceId) && (
                                 <div className="text-xs text-muted-foreground">
-                                    Referência da tentativa: {externalReference}
+                                    Referência da tentativa: {externalReference || preapprovalId || preferenceId}
                                 </div>
                             )}
 

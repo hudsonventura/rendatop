@@ -7,6 +7,7 @@ using MercadoPago.Client.AuthorizedPayment;
 using MercadoPago.Client;
 using MercadoPago.Client.Customer;
 using MercadoPago.Client.Payment;
+using MercadoPago.Client.Preference;
 using MercadoPago.Client.Preapproval;
 using MercadoPago.Config;
 using MercadoPago.Error;
@@ -28,6 +29,7 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
 {
     private readonly ILogger<MercadoPagoPaymentProvider> _logger;
     private readonly List<string> _tags = new() { "MercadoPagoPaymentProvider", "Payments", "MercadoPago" };
+    private readonly string _accessToken;
     private readonly string _statementDescriptor;
 
     public MercadoPagoPaymentProvider(ILogger<MercadoPagoPaymentProvider> logger)
@@ -40,6 +42,7 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
         // Log para debug — remover em produção
         var trimmed = accessToken.Trim();
 
+        _accessToken = trimmed;
         MercadoPagoConfig.AccessToken = trimmed;
 
         _statementDescriptor = BuildStatementDescriptor(
@@ -112,6 +115,109 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
                 checkout_url = preapproval.InitPoint ?? preapproval.SandboxInitPoint
             };
         });
+    }
+
+    public async Task<PaymentResult> CreateHostedCheckoutPreferenceAsync(HostedCheckoutPreferenceRequest request, CancellationToken cancellationToken = default)
+    {
+        return await ExecuteWithMercadoPagoHandlingAsync("criar o checkout hospedado", async () =>
+        {
+            var traceId = TraceContext.GetTraceId();
+            _logger.LogInformation(
+                "Criando preference do Checkout Pro no Mercado Pago. TraceId={TraceId} Payload={@Payload} Tags={_tags_}",
+                traceId,
+                new
+                {
+                    request.title,
+                    request.amount,
+                    request.external_reference,
+                    request.payment_method,
+                    request.success_url,
+                    request.pending_url,
+                    request.failure_url,
+                    request.notification_url,
+                    request.date_of_expiration
+                },
+                _tags);
+
+            var client = new PreferenceClient();
+            var preferenceRequest = BuildHostedCheckoutPreferenceRequest(request, includeStatementDescriptor: true);
+            global::MercadoPago.Resource.Preference.Preference preference;
+
+            try
+            {
+                preference = await client.CreateAsync(preferenceRequest, cancellationToken: cancellationToken);
+            }
+            catch (MercadoPagoException ex) when (ShouldRetryHostedCheckoutPreference(ex))
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Falha generica do SDK ao criar preference do Checkout Pro. TraceId={TraceId} PaymentMethod={PaymentMethod} ExternalReference={ExternalReference} Tentando fallback sem statement descriptor. Tags={_tags_}",
+                    traceId,
+                    request.payment_method,
+                    request.external_reference,
+                    _tags);
+
+                var fallbackRequest = BuildHostedCheckoutPreferenceRequest(request, includeStatementDescriptor: false);
+                preference = await client.CreateAsync(fallbackRequest, cancellationToken: cancellationToken);
+            }
+
+            _logger.LogInformation(
+                "Preference do Checkout Pro criada. TraceId={TraceId} PreferenceId={PreferenceId} ExternalReference={ExternalReference} Tags={_tags_}",
+                traceId,
+                preference.Id,
+                preference.ExternalReference,
+                _tags);
+
+            return new PaymentResult
+            {
+                status = "pending",
+                status_detail = "checkout_preference_created",
+                payment_id = string.Empty,
+                external_reference = preference.ExternalReference,
+                checkout_url = preference.InitPoint ?? preference.SandboxInitPoint,
+                amount = request.amount,
+                payment_method = request.payment_method,
+                preference_id = preference.Id
+            };
+        });
+    }
+
+    private PreferenceRequest BuildHostedCheckoutPreferenceRequest(
+        HostedCheckoutPreferenceRequest request,
+        bool includeStatementDescriptor)
+    {
+        return new PreferenceRequest
+        {
+            Items =
+            [
+                new PreferenceItemRequest
+                {
+                    Id = request.external_reference,
+                    Title = request.title,
+                    Description = request.description,
+                    Quantity = 1,
+                    CurrencyId = "BRL",
+                    UnitPrice = request.amount
+                }
+            ],
+            Payer = new PreferencePayerRequest
+            {
+                Email = request.payer_email
+            },
+            PaymentMethods = BuildPreferencePaymentMethods(request.payment_method),
+            BackUrls = new PreferenceBackUrlsRequest
+            {
+                Success = request.success_url,
+                Pending = request.pending_url,
+                Failure = request.failure_url
+            },
+            NotificationUrl = request.notification_url,
+            StatementDescriptor = includeStatementDescriptor ? _statementDescriptor : null,
+            ExternalReference = request.external_reference,
+            Expires = request.date_of_expiration.HasValue,
+            DateOfExpiration = UtcDateTime.EnsureUtc(request.date_of_expiration),
+            AutoReturn = "approved"
+        };
     }
 
 
@@ -488,6 +594,64 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
         });
     }
 
+    public async Task<PaymentResult?> FindPaymentByExternalReferenceAsync(string externalReference, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(externalReference))
+            return null;
+
+        var traceId = TraceContext.GetTraceId();
+        var url = $"https://api.mercadopago.com/v1/payments/search?external_reference={Uri.EscapeDataString(externalReference)}&sort=date_created&criteria=desc&limit=1";
+
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+
+        _logger.LogInformation(
+            "Consultando pagamento por external_reference no Mercado Pago. TraceId={TraceId} ExternalReference={ExternalReference} Tags={_tags_}",
+            traceId,
+            externalReference,
+            _tags);
+
+        using var response = await httpClient.GetAsync(url, cancellationToken);
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "Mercado Pago recusou a consulta por external_reference. TraceId={TraceId} ExternalReference={ExternalReference} StatusCode={StatusCode} Response={Response} Tags={_tags_}",
+                traceId,
+                externalReference,
+                (int)response.StatusCode,
+                responseBody,
+                _tags);
+            throw new ExpectedException(
+                $"Mercado Pago não conseguiu consultar o pagamento pela referência externa. status_http={(int)response.StatusCode}",
+                HttpStatusCode.BadGateway);
+        }
+
+        using var json = JsonDocument.Parse(responseBody);
+        if (!json.RootElement.TryGetProperty("results", out var results) || results.GetArrayLength() == 0)
+        {
+            _logger.LogInformation(
+                "Nenhum pagamento encontrado para external_reference no Mercado Pago. TraceId={TraceId} ExternalReference={ExternalReference} Tags={_tags_}",
+                traceId,
+                externalReference,
+                _tags);
+            return null;
+        }
+
+        var result = MapPaymentSearchResult(results[0], externalReference);
+
+        _logger.LogInformation(
+            "Pagamento localizado por external_reference. TraceId={TraceId} ExternalReference={ExternalReference} PaymentId={PaymentId} Status={Status} Tags={_tags_}",
+            traceId,
+            externalReference,
+            result.payment_id,
+            result.status,
+            _tags);
+
+        return result;
+    }
+
     public async Task<PaymentResult> GetAuthorizedPaymentStatusAsync(string authorizedPaymentId, CancellationToken cancellationToken = default)
     {
         return await ExecuteWithMercadoPagoHandlingAsync("consultar o pagamento autorizado da assinatura", async () =>
@@ -537,6 +701,36 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
                 _tags);
             return true;
         });
+    }
+
+    private PreferencePaymentMethodsRequest BuildPreferencePaymentMethods(string paymentMethod)
+    {
+        var excludedTypes = new List<PreferencePaymentTypeRequest>();
+
+        if (string.Equals(paymentMethod, "pix", StringComparison.OrdinalIgnoreCase))
+        {
+            excludedTypes.Add(new PreferencePaymentTypeRequest { Id = "ticket" });
+            excludedTypes.Add(new PreferencePaymentTypeRequest { Id = "credit_card" });
+            excludedTypes.Add(new PreferencePaymentTypeRequest { Id = "debit_card" });
+        }
+        else if (string.Equals(paymentMethod, "boleto", StringComparison.OrdinalIgnoreCase))
+        {
+            excludedTypes.Add(new PreferencePaymentTypeRequest { Id = "bank_transfer" });
+            excludedTypes.Add(new PreferencePaymentTypeRequest { Id = "credit_card" });
+            excludedTypes.Add(new PreferencePaymentTypeRequest { Id = "debit_card" });
+        }
+
+        return new PreferencePaymentMethodsRequest
+        {
+            ExcludedPaymentTypes = excludedTypes
+        };
+    }
+
+    private static bool ShouldRetryHostedCheckoutPreference(MercadoPagoException exception)
+    {
+        var message = BuildProviderExceptionMessage(exception);
+        return message.Contains("unexpected error", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("unexpected error has occurred", StringComparison.OrdinalIgnoreCase);
     }
 
 
@@ -636,6 +830,87 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
         });
     }
 
+    private static PaymentResult MapPaymentSearchResult(JsonElement payment, string externalReference)
+    {
+        return new PaymentResult
+        {
+            payment_id = ReadJsonString(payment, "id") ?? string.Empty,
+            status = ReadJsonString(payment, "status") ?? "unknown",
+            status_detail = ReadJsonString(payment, "status_detail") ?? string.Empty,
+            payment_method = ReadJsonString(payment, "payment_method_id"),
+            amount = ReadJsonDecimal(payment, "transaction_amount"),
+            approved_at = ReadJsonDateTime(payment, "date_approved"),
+            date_of_expiration = ReadJsonDateTime(payment, "date_of_expiration"),
+            external_reference = ReadJsonString(payment, "external_reference") ?? externalReference,
+            pix_qr_code = ReadNestedJsonString(payment, "point_of_interaction", "transaction_data", "qr_code"),
+            pix_qr_code_base64 = ReadNestedJsonString(payment, "point_of_interaction", "transaction_data", "qr_code_base64"),
+            boleto_barcode_content = ReadNestedJsonString(payment, "transaction_details", "barcode", "content"),
+            boleto_digitable_line = ReadNestedJsonString(payment, "transaction_details", "digitable_line"),
+            boleto_url = ReadNestedJsonString(payment, "transaction_details", "external_resource_url")
+        };
+    }
+
+    private static string? ReadJsonString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+            return null;
+
+        return property.ValueKind switch
+        {
+            JsonValueKind.String => property.GetString(),
+            JsonValueKind.Number => property.ToString(),
+            _ => null
+        };
+    }
+
+    private static decimal? ReadJsonDecimal(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+            return null;
+
+        if (property.ValueKind == JsonValueKind.Number && property.TryGetDecimal(out var decimalValue))
+            return decimalValue;
+
+        if (property.ValueKind == JsonValueKind.String &&
+            decimal.TryParse(property.GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
+        }
+
+        return null;
+    }
+
+    private static DateTime? ReadJsonDateTime(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+            return null;
+
+        return DateTime.TryParse(
+            property.GetString(),
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
+            out var parsed)
+            ? parsed
+            : null;
+    }
+
+    private static string? ReadNestedJsonString(JsonElement element, params string[] path)
+    {
+        var current = element;
+        foreach (var segment in path)
+        {
+            if (!current.TryGetProperty(segment, out current))
+                return null;
+        }
+
+        return current.ValueKind switch
+        {
+            JsonValueKind.String => current.GetString(),
+            JsonValueKind.Number => current.ToString(),
+            _ => null
+        };
+    }
+
     private static string BuildStatementDescriptor(string? rawValue)
     {
         const string fallback = "RENDATOP";
@@ -727,9 +1002,28 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
                 TraceContext.GetTraceId(),
                 _tags);
             throw new ExpectedException(
-                $"Falha ao comunicar com o Mercado Pago ao {operation}. {SanitizeProviderText(ex.Message)}",
+                $"Falha ao comunicar com o Mercado Pago ao {operation}. {BuildProviderExceptionMessage(ex)}",
                 HttpStatusCode.BadGateway);
         }
+    }
+
+    private static string BuildProviderExceptionMessage(Exception exception)
+    {
+        var parts = new List<string>();
+        var current = exception;
+
+        while (current != null)
+        {
+            var message = SanitizeProviderText(current.Message);
+            if (!string.IsNullOrWhiteSpace(message) && !parts.Contains(message, StringComparer.OrdinalIgnoreCase))
+                parts.Add(message);
+
+            current = current.InnerException!;
+        }
+
+        return parts.Count > 0
+            ? string.Join(" | ", parts)
+            : "O provedor não detalhou o motivo.";
     }
 
     private static string FormatMercadoPagoApiException(string operation, MercadoPagoApiException exception)

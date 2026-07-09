@@ -63,25 +63,27 @@ public class SubscriptionController : AuthenticatedController
     /// </summary>
     [HttpGet("subscription/overview")]
     [ProducesResponseType(typeof(SubscriptionOverviewResponse), StatusCodes.Status200OK)]
-    public SubscriptionOverviewResponse GetSubscriptionOverview()
+    public async Task<SubscriptionOverviewResponse> GetSubscriptionOverview(CancellationToken cancellationToken)
     {
-        var active = _context.subscriptions
+        await RefreshPendingChargeOnOverviewAsync(cancellationToken);
+
+        var active = await _context.subscriptions
             .Where(s => s.user_id == _user.id && s.status == SubscriptionStatus.Active)
             .OrderByDescending(s => s.created_at)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(cancellationToken);
 
-        var pending = _context.subscriptions
+        var pending = await _context.subscriptions
             .Where(s => s.user_id == _user.id && s.status == SubscriptionStatus.PendingPayment)
             .OrderByDescending(s => s.created_at)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(cancellationToken);
 
         SubscriptionCharge? pendingCharge = null;
         try
         {
-            pendingCharge = _context.subscription_charges
+            pendingCharge = await _context.subscription_charges
                 .Where(c => c.user_id == _user.id && c.status == SubscriptionChargeStatus.Pending)
                 .OrderByDescending(c => c.created_at)
-                .FirstOrDefault();
+                .FirstOrDefaultAsync(cancellationToken);
         }
         catch (PostgresException ex) when (
             ex.SqlState == PostgresErrorCodes.UndefinedColumn ||
@@ -96,6 +98,37 @@ public class SubscriptionController : AuthenticatedController
             pending_subscription = pending,
             pending_charge = pendingCharge
         };
+    }
+
+    private async Task RefreshPendingChargeOnOverviewAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var pendingCharge = await _context.subscription_charges
+                .Where(c => c.user_id == _user.id && c.status == SubscriptionChargeStatus.Pending)
+                .OrderByDescending(c => c.created_at)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (pendingCharge == null)
+                return;
+
+            await _billing.RefreshPaymentStatusAsync(_user.id, pendingCharge.id.ToString(), cancellationToken);
+        }
+        catch (PostgresException ex) when (
+            ex.SqlState == PostgresErrorCodes.UndefinedColumn ||
+            ex.SqlState == PostgresErrorCodes.UndefinedTable)
+        {
+            _logger.LogWarning(ex, "Schema de subscription_charges desatualizado. A sincronizacao automatica do pending_charge sera ignorada ate a migration ser aplicada.");
+        }
+        catch (ExpectedException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Nao foi possivel sincronizar a cobranca pendente ao carregar o overview. TraceId={TraceId} UserId={UserId} Tags={_tags_}",
+                TraceContext.GetTraceId(),
+                _user.id,
+                _tags);
+        }
     }
 
 
