@@ -83,8 +83,10 @@ public class SubscriptionBillingServiceTests
         var charge = assertionContext.subscription_charges.Single();
 
         Assert.Equal(SubscriptionStatus.PendingPayment, subscription.status);
+        Assert.Null(subscription.mp_preapproval_id);
         Assert.Equal(SubscriptionChargeStatus.Pending, charge.status);
         Assert.Equal("pref-pix-1", charge.provider_preference_id);
+        Assert.Null(charge.provider_subscription_id);
         Assert.Equal("https://checkout.mercadopago.test/pix-1", charge.provider_checkout_url);
         Assert.Null(charge.receipt_sent_at);
         Assert.Empty(fixture.Email.Messages);
@@ -142,6 +144,54 @@ public class SubscriptionBillingServiceTests
     }
 
     [Fact]
+    public async Task ProcessPendingChargesAsync_ReconcilesPendingHostedCheckoutChargeByExternalReference()
+    {
+        using var fixture = new SubscriptionBillingFixture();
+        fixture.PaymentProvider.HostedCheckoutPreferenceResult = new PaymentResult
+        {
+            preference_id = "pref-pix-reconcile",
+            status = "pending",
+            amount = 6.9m,
+            checkout_url = "https://checkout.mercadopago.test/pix-reconcile",
+            external_reference = "ext-pix-reconcile"
+        };
+
+        await fixture.Service.SavePayerCpfAsync(fixture.User.id, "12345678909");
+        await fixture.Service.CreateInitialPixSubscriptionAsync(
+            fixture.User.id,
+            Plans.GetById("plus")!,
+            "Hudson",
+            "Ventura");
+
+        string externalReference;
+        using (var createdContext = fixture.CreateAssertionContext())
+        {
+            externalReference = createdContext.subscription_charges.Single().provider_external_reference!;
+        }
+
+        fixture.PaymentProvider.PaymentByExternalReferenceResults[externalReference] = new PaymentResult
+        {
+            payment_id = "2100",
+            status = "approved",
+            status_detail = "accredited",
+            amount = 6.9m,
+            approved_at = DateTime.UtcNow,
+            payment_method = "pix",
+            external_reference = externalReference
+        };
+
+        await fixture.Service.ProcessPendingChargesAsync();
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var subscription = assertionContext.subscriptions.Single();
+        var charge = assertionContext.subscription_charges.Single();
+
+        Assert.Equal(SubscriptionStatus.Active, subscription.status);
+        Assert.Equal(SubscriptionChargeStatus.Approved, charge.status);
+        Assert.Equal("2100", charge.provider_payment_id);
+    }
+
+    [Fact]
     public async Task CreateInitialPixSubscriptionAsync_DoesNotCancelExistingActiveSubscriptionWhilePending()
     {
         using var fixture = new SubscriptionBillingFixture();
@@ -194,6 +244,7 @@ public class SubscriptionBillingServiceTests
         var renewalCharge = Assert.Single(charges, x => x.charge_kind == SubscriptionChargeKind.Renewal);
         Assert.Equal(SubscriptionChargeStatus.Pending, renewalCharge.status);
         Assert.Equal("renew-pref-pix-1", renewalCharge.provider_preference_id);
+        Assert.Null(renewalCharge.provider_subscription_id);
         Assert.Equal("https://checkout.mercadopago.test/renew-pix-1", renewalCharge.provider_checkout_url);
         Assert.NotNull(renewalCharge.reminder_sent_at);
 

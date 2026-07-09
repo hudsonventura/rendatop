@@ -309,7 +309,11 @@ public class SubscriptionBillingService
         var pendingCharges = await context.subscription_charges
             .Include(x => x.subscription)
             .Include(x => x.user)
-            .Where(x => x.status == SubscriptionChargeStatus.Pending && (x.provider_payment_id != null || x.provider_subscription_id != null))
+            .Where(x => x.status == SubscriptionChargeStatus.Pending && (
+                x.provider_payment_id != null ||
+                x.provider_subscription_id != null ||
+                x.provider_preference_id != null ||
+                x.provider_external_reference != null))
             .OrderBy(x => x.created_at)
             .ToListAsync(cancellationToken);
 
@@ -772,6 +776,8 @@ public class SubscriptionBillingService
         var billingPeriodEnd = now.AddMonths(1);
         var externalReference = BuildExternalReference("sub", userId, plan.id);
 
+        // Pix e boleto usam Checkout Pro avulso no Mercado Pago.
+        // A recorrencia e o controle de acesso permanecem no nosso backend.
         var result = await _paymentProvider.CreateHostedCheckoutPreferenceAsync(new HostedCheckoutPreferenceRequest
         {
             title = $"RendaTop - Plano {plan.name}",
@@ -1024,6 +1030,8 @@ public class SubscriptionBillingService
             externalReference,
             _tags);
 
+        // Renovacoes de Pix/boleto seguem como cobranca avulsa.
+        // Se o usuario nao pagar ate o vencimento, a assinatura local expira.
         var result = await _paymentProvider.CreateHostedCheckoutPreferenceAsync(new HostedCheckoutPreferenceRequest
         {
             title = $"RendaTop - Renovação {plan.name}",
