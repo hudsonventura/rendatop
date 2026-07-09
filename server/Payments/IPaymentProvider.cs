@@ -13,6 +13,11 @@ public interface IPaymentProvider
     Task<PaymentResult> CreateHostedSubscriptionAsync(HostedSubscriptionRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Cria um checkout hospedado do Checkout Pro para cobrança avulsa.
+    /// </summary>
+    Task<PaymentResult> CreateHostedCheckoutPreferenceAsync(HostedCheckoutPreferenceRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Cria um pagamento com cartão de crédito/débito usando token gerado no frontend
     /// </summary>
     Task<PaymentResult> CreateCardPaymentAsync(CardPaymentRequest request);
@@ -36,6 +41,11 @@ public interface IPaymentProvider
     /// Consulta o status de uma assinatura/preapproval pelo ID do provedor.
     /// </summary>
     Task<PaymentResult> GetSubscriptionStatusAsync(string preapprovalId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Consulta o pagamento mais recente vinculado a uma referência externa estável.
+    /// </summary>
+    Task<PaymentResult?> FindPaymentByExternalReferenceAsync(string externalReference, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Consulta um pagamento autorizado/recorrente originado de uma assinatura.
