@@ -21,6 +21,7 @@ import ForgotTotp from "@/pages/ForgotTotp"
 import ResetTotp from "@/pages/ResetTotp"
 import NotFound from "@/pages/NotFound"
 import SubscriptionPage from "@/pages/SubscriptionPage"
+import SubscriptionMercadoPagoReturnPage from "@/pages/SubscriptionMercadoPagoReturnPage"
 import MoneyBoxesPage from "@/pages/MoneyBoxesPage"
 import AdminPage from "@/pages/AdminPage"
 import SupportPage from "@/pages/SupportPage"
@@ -52,6 +53,7 @@ function App() {
                                 <Route path="/forgot-totp" element={<ForgotTotp />} />
                                 <Route path="/reset-totp" element={<ResetTotp />} />
                                 <Route path="/subscription" element={<SubscriptionPage />} />
+                                <Route path="/subscription/mercado-pago/return" element={<SubscriptionMercadoPagoReturnPage />} />
                                 <Route path="/admin" element={<AdminPage />} />
                                 <Route path="/admin/blog" element={<BlogAdminPage />} />
                                 <Route path="/atendimento" element={<SupportPage />} />

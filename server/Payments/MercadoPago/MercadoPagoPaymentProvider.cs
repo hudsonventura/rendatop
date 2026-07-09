@@ -1,10 +1,13 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using MercadoPago.Client.AuthorizedPayment;
 using MercadoPago.Client;
 using MercadoPago.Client.Customer;
 using MercadoPago.Client.Payment;
+using MercadoPago.Client.Preapproval;
 using MercadoPago.Config;
 using MercadoPago.Error;
 using MercadoPago.Resource.Customer;
@@ -42,6 +45,73 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
         _statementDescriptor = BuildStatementDescriptor(
             Environment.GetEnvironmentVariable("MERCADO_PAGO_STATEMENT_DESCRIPTOR"));
         _logger.LogInformation("MP statement descriptor configurado: {StatementDescriptor} {_tags_}", _statementDescriptor, _tags);
+    }
+
+    public async Task<PaymentResult> CreateHostedSubscriptionAsync(HostedSubscriptionRequest request, CancellationToken cancellationToken = default)
+    {
+        return await ExecuteWithMercadoPagoHandlingAsync("criar a assinatura hospedada", async () =>
+        {
+            var traceId = TraceContext.GetTraceId();
+            _logger.LogInformation(
+                "Criando preapproval hospedado no Mercado Pago. TraceId={TraceId} Payload={@Payload} Tags={_tags_}",
+                traceId,
+                new
+                {
+                    request.amount,
+                    request.description,
+                    request.payer_email,
+                    request.external_reference,
+                    request.back_url,
+                    request.notification_url,
+                    request.start_date,
+                    request.end_date
+                },
+                _tags);
+
+            var client = new PreapprovalClient();
+            var preapproval = await client.CreateAsync(new PreapprovalCreateRequest
+            {
+                Reason = request.description,
+                ExternalReference = request.external_reference,
+                PayerEmail = request.payer_email,
+                BackUrl = request.back_url,
+                Status = "pending",
+                AutoRecurring = new PreApprovalAutoRecurringCreateRequest
+                {
+                    Frequency = 1,
+                    FrequencyType = "months",
+                    TransactionAmount = request.amount,
+                    CurrencyId = "BRL",
+                    StartDate = UtcDateTime.EnsureUtc(request.start_date),
+                    EndDate = UtcDateTime.EnsureUtc(request.end_date)
+                }
+            }, new RequestOptions
+            {
+                CustomHeaders =
+                {
+                    { "X-Notification-URL", request.notification_url }
+                }
+            }, cancellationToken);
+
+            _logger.LogInformation(
+                "Preapproval criado no Mercado Pago. TraceId={TraceId} PreapprovalId={PreapprovalId} Status={Status} ExternalReference={ExternalReference} Tags={_tags_}",
+                traceId,
+                preapproval.Id,
+                preapproval.Status,
+                preapproval.ExternalReference,
+                _tags);
+
+            return new PaymentResult
+            {
+                status = preapproval.Status ?? "pending",
+                status_detail = preapproval.Status ?? "pending",
+                payment_method = preapproval.PaymentMethodId,
+                amount = preapproval.AutoRecurring?.TransactionAmount,
+                preapproval_id = preapproval.Id,
+                external_reference = preapproval.ExternalReference,
+                checkout_url = preapproval.InitPoint ?? preapproval.SandboxInitPoint
+            };
+        });
     }
 
 
@@ -386,6 +456,86 @@ public class MercadoPagoPaymentProvider : IPaymentProvider
                 boleto_digitable_line = payment.TransactionDetails?.DigitableLine,
                 boleto_url = payment.TransactionDetails?.ExternalResourceUrl
             };
+        });
+    }
+
+    public async Task<PaymentResult> GetSubscriptionStatusAsync(string preapprovalId, CancellationToken cancellationToken = default)
+    {
+        return await ExecuteWithMercadoPagoHandlingAsync("consultar o status da assinatura", async () =>
+        {
+            var traceId = TraceContext.GetTraceId();
+            var client = new PreapprovalClient();
+            var preapproval = await client.GetAsync(preapprovalId, cancellationToken: cancellationToken);
+
+            _logger.LogInformation(
+                "Status da assinatura consultado no Mercado Pago. TraceId={TraceId} PreapprovalId={PreapprovalId} Status={Status} ExternalReference={ExternalReference} Tags={_tags_}",
+                traceId,
+                preapproval.Id,
+                preapproval.Status,
+                preapproval.ExternalReference,
+                _tags);
+
+            return new PaymentResult
+            {
+                status = preapproval.Status ?? "unknown",
+                status_detail = preapproval.Status ?? "unknown",
+                payment_method = preapproval.PaymentMethodId,
+                amount = preapproval.AutoRecurring?.TransactionAmount,
+                preapproval_id = preapproval.Id,
+                external_reference = preapproval.ExternalReference,
+                checkout_url = preapproval.InitPoint ?? preapproval.SandboxInitPoint
+            };
+        });
+    }
+
+    public async Task<PaymentResult> GetAuthorizedPaymentStatusAsync(string authorizedPaymentId, CancellationToken cancellationToken = default)
+    {
+        return await ExecuteWithMercadoPagoHandlingAsync("consultar o pagamento autorizado da assinatura", async () =>
+        {
+            var traceId = TraceContext.GetTraceId();
+            var client = new AuthorizedPaymentClient();
+            var authorizedPayment = await client.GetAsync(long.Parse(authorizedPaymentId), cancellationToken: cancellationToken);
+
+            _logger.LogInformation(
+                "Pagamento autorizado consultado no Mercado Pago. TraceId={TraceId} AuthorizedPaymentId={AuthorizedPaymentId} PreapprovalId={PreapprovalId} Status={Status} Tags={_tags_}",
+                traceId,
+                authorizedPayment.Id,
+                authorizedPayment.PreapprovalId,
+                authorizedPayment.Status,
+                _tags);
+
+            return new PaymentResult
+            {
+                payment_id = authorizedPayment.Payment?.Id?.ToString() ?? authorizedPayment.Id.ToString(),
+                status = authorizedPayment.Payment?.Status ?? authorizedPayment.Status ?? "unknown",
+                status_detail = authorizedPayment.Payment?.StatusDetail ?? authorizedPayment.Status ?? "unknown",
+                payment_method = null,
+                amount = authorizedPayment.TransactionAmount,
+                approved_at = authorizedPayment.DebitDate?.UtcDateTime,
+                date_of_expiration = authorizedPayment.DebitDate?.UtcDateTime,
+                preapproval_id = authorizedPayment.PreapprovalId,
+                external_reference = authorizedPayment.ExternalReference
+            };
+        });
+    }
+
+    public async Task CancelSubscriptionAsync(string preapprovalId, CancellationToken cancellationToken = default)
+    {
+        await ExecuteWithMercadoPagoHandlingAsync("cancelar a assinatura hospedada", async () =>
+        {
+            var traceId = TraceContext.GetTraceId();
+            var client = new PreapprovalClient();
+            await client.UpdateAsync(preapprovalId, new PreapprovalUpdateRequest
+            {
+                Status = "cancelled"
+            }, cancellationToken: cancellationToken);
+
+            _logger.LogInformation(
+                "Assinatura hospedada cancelada no Mercado Pago. TraceId={TraceId} PreapprovalId={PreapprovalId} Tags={_tags_}",
+                traceId,
+                preapprovalId,
+                _tags);
+            return true;
         });
     }
 
