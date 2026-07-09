@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle2, MessageCircleMore, Sparkles } from "lucide-react"
+import { AlertCircle, AlertTriangle, CheckCircle2, Loader2, MessageCircleMore, Sparkles, Trash2 } from "lucide-react"
 import { UpgradePlanModal } from "@/components/upgrade-plan-modal"
 import { PasswordRequirements } from "@/components/PasswordRequirements"
 import {
@@ -24,6 +24,7 @@ import {
 import { formatCpf } from "@/utils/cpf"
 import { persistSessionUser } from "@/utils/userSession"
 import { getPasswordValidationMessage } from "@/utils/passwordPolicy"
+import { appPath } from "@/utils/appPath"
 
 const frontendBaseUrl = (import.meta.env.VITE_FRONTEND_URL || "").replace(/\/+$/, "")
 const buildFrontendAssetUrl = (relativePath) =>
@@ -62,6 +63,11 @@ const UserSettings = () => {
     const [emailError, setEmailError] = useState("")
     const [pendingEmailError, setPendingEmailError] = useState("")
     const [browserError, setBrowserError] = useState("")
+    const [deleteAccountError, setDeleteAccountError] = useState("")
+    const [deleteAccountStepOneOpen, setDeleteAccountStepOneOpen] = useState(false)
+    const [deleteAccountStepTwoOpen, setDeleteAccountStepTwoOpen] = useState(false)
+    const [deleteAccountConfirmationText, setDeleteAccountConfirmationText] = useState("")
+    const [deletingAccount, setDeletingAccount] = useState(false)
 
     const [name, setName] = useState("")
     const [email, setEmail] = useState("")
@@ -81,6 +87,7 @@ const UserSettings = () => {
     const [calendarPublicUrl, setCalendarPublicUrl] = useState("")
     const [whatsappNotificationsEnabled, setWhatsappNotificationsEnabled] = useState(false)
     const [calendarIcsEnabled, setCalendarIcsEnabled] = useState(false)
+    const [isAdminUser, setIsAdminUser] = useState(false)
     const [browserPushSupported, setBrowserPushSupported] = useState(false)
     const [browserPushAvailable, setBrowserPushAvailable] = useState(false)
     const [syncingBrowserPush, setSyncingBrowserPush] = useState(false)
@@ -114,6 +121,7 @@ const UserSettings = () => {
                 setCpf(data.cpf || "")
                 setWhatsappNotificationsEnabled(canUseWhatsAppNotifications)
                 setCalendarIcsEnabled(canUseCalendarIcs)
+                setIsAdminUser(String(data.user_type || "").trim().toLowerCase() === "admin")
                 setNotifyWhatsapp(canUseWhatsAppNotifications && Boolean(data.notify_whatsapp))
                 setNotifyTelegram(Boolean(data.notify_telegram))
                 setNotifyEmail(Boolean(data.notify_email))
@@ -347,6 +355,7 @@ const UserSettings = () => {
                 setTelegramChatId(data.telegram_chat_id || "")
                 setWhatsappNotificationsEnabled(Boolean(data.whatsapp_notifications_enabled))
                 setCalendarIcsEnabled(Boolean(data.calendar_ics_enabled))
+                setIsAdminUser(String(data.user_type || "").trim().toLowerCase() === "admin")
                 setCalendarPublicEnabled(Boolean(data.calendar_public_enabled))
                 setCalendarPublicUrl(data.calendar_public_url || "")
                 setTotpEnabled(Boolean(data.totp_enabled))
@@ -595,11 +604,46 @@ const UserSettings = () => {
             })
     }
 
+    const openDeleteAccountFlow = () => {
+        setDeleteAccountError("")
+        setDeleteAccountConfirmationText("")
+        setDeleteAccountStepOneOpen(true)
+    }
+
+    const handleDeleteAccount = () => {
+        setDeleteAccountError("")
+        setSuccess("Sua conta está sendo deletada. Depois da confirmação final, seus dados não poderão ser recuperados.")
+        setDeletingAccount(true)
+
+        axiosInstance
+            .delete("/User/Settings/DeleteAccount", {
+                data: {
+                    confirm_first_step: true,
+                    confirm_second_step: true,
+                    confirmation_text: deleteAccountConfirmationText,
+                },
+            })
+            .then(() => {
+                sessionStorage.clear()
+                window.location.href = appPath("/login")
+            })
+            .catch((err) => {
+                const message = typeof err?.response?.data === "string"
+                    ? err.response.data
+                    : "Não foi possível excluir sua conta."
+                setDeleteAccountError(message)
+                setSuccess("")
+            })
+            .finally(() => {
+                setDeletingAccount(false)
+            })
+    }
+
     return (
         <>
             <Logged />
             <BaseLayout title="Configurações" description="Atualize seus dados e preferências de notificação">
-                <div className="px-4 lg:px-6">
+                <div className="px-4 lg:px-6 space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>Dados da conta</CardTitle>
@@ -740,20 +784,24 @@ const UserSettings = () => {
                                                     onCheckedChange={handleToggleWhatsApp}
                                                 />
                                             </div>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="md:w-36 md:justify-self-end"
-                                                onClick={handleTestWhatsApp}
-                                                disabled={testingWhatsApp || !whatsappNotificationsEnabled}
-                                            >
-                                                {!whatsappNotificationsEnabled
-                                                    ? "Recurso Premium"
-                                                    : testingWhatsApp
-                                                        ? "Enviando..."
-                                                        : "Test WhatsApp"}
-                                            </Button>
+                                            {isAdminUser ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="md:w-36 md:justify-self-end"
+                                                    onClick={handleTestWhatsApp}
+                                                    disabled={testingWhatsApp || !whatsappNotificationsEnabled}
+                                                >
+                                                    {!whatsappNotificationsEnabled
+                                                        ? "Recurso Premium"
+                                                        : testingWhatsApp
+                                                            ? "Enviando..."
+                                                            : "Test WhatsApp"}
+                                                </Button>
+                                            ) : (
+                                                <div className="hidden md:block" />
+                                            )}
                                         </div>
 
                                         <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
@@ -799,16 +847,20 @@ const UserSettings = () => {
                                                     onCheckedChange={handleToggleTelegram}
                                                 />
                                             </div>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="md:w-36 md:justify-self-end"
-                                                onClick={handleTestTelegram}
-                                                disabled={testingTelegram}
-                                            >
-                                                {testingTelegram ? "Enviando..." : "Test Telegram"}
-                                            </Button>
+                                            {isAdminUser ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="md:w-36 md:justify-self-end"
+                                                    onClick={handleTestTelegram}
+                                                    disabled={testingTelegram}
+                                                >
+                                                    {testingTelegram ? "Enviando..." : "Test Telegram"}
+                                                </Button>
+                                            ) : (
+                                                <div className="hidden md:block" />
+                                            )}
                                         </div>
 
                                         <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
@@ -829,16 +881,20 @@ const UserSettings = () => {
                                                     onCheckedChange={setNotifyEmail}
                                                 />
                                             </div>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="md:w-36 md:justify-self-end"
-                                                onClick={handleTestEmail}
-                                                disabled={testingEmail}
-                                            >
-                                                {testingEmail ? "Enviando..." : "Test Email"}
-                                            </Button>
+                                            {isAdminUser ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="md:w-36 md:justify-self-end"
+                                                    onClick={handleTestEmail}
+                                                    disabled={testingEmail}
+                                                >
+                                                    {testingEmail ? "Enviando..." : "Test Email"}
+                                                </Button>
+                                            ) : (
+                                                <div className="hidden md:block" />
+                                            )}
                                         </div>
 
                                         {/* <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
@@ -1091,8 +1147,161 @@ const UserSettings = () => {
                             )}
                         </CardContent>
                     </Card>
+
+                    <Card className="border-red-200 bg-red-50/70 dark:border-red-950 dark:bg-red-950/20">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                                <AlertTriangle className="h-5 w-5" />
+                                Zona de perigo
+                            </CardTitle>
+                            <CardDescription className="text-red-700/80 dark:text-red-300/80">
+                                Exclua sua própria conta de forma permanente. Seus dados serão deletados do banco de dados e não poderão ser recuperados depois.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="rounded-md border border-red-200 bg-white/70 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/20 dark:text-red-200">
+                                Se você excluir sua conta, seu acesso será encerrado, seus dados deixarão de existir no sistema e cobranças futuras vinculadas ao seu plano não continuarão no RendaTop. Esta ação é irreversível.
+                            </div>
+
+                            {deleteAccountError && (
+                                <Alert variant="destructive">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Exclusão de conta</AlertTitle>
+                                    <AlertDescription>{deleteAccountError}</AlertDescription>
+                                </Alert>
+                            )}
+
+                            <div className="flex justify-end">
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className="gap-2"
+                                    onClick={openDeleteAccountFlow}
+                                    disabled={deletingAccount}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    Excluir minha conta
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </BaseLayout>
+
+            <Dialog
+                open={deleteAccountStepOneOpen}
+                onOpenChange={(open) => {
+                    if (deletingAccount) return
+                    setDeleteAccountStepOneOpen(open)
+                }}
+            >
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                            <AlertTriangle className="h-5 w-5" />
+                            Confirmar exclusão da conta
+                        </DialogTitle>
+                        <DialogDescription>
+                            Sua conta está sendo preparada para exclusão permanente. Se você continuar, seus dados serão deletados do banco de dados e não poderão ser recuperados depois.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/20 dark:text-red-200">
+                        Isso inclui acesso à conta, investimentos, carteiras, cofrinhos, preferências, notificações, integrações e demais dados vinculados ao seu usuário no RendaTop.
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setDeleteAccountStepOneOpen(false)}
+                            disabled={deletingAccount}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => {
+                                setDeleteAccountStepOneOpen(false)
+                                setDeleteAccountStepTwoOpen(true)
+                            }}
+                            disabled={deletingAccount}
+                        >
+                            Continuar
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={deleteAccountStepTwoOpen}
+                onOpenChange={(open) => {
+                    if (deletingAccount) return
+                    setDeleteAccountStepTwoOpen(open)
+                }}
+            >
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                            <Trash2 className="h-5 w-5" />
+                            Confirmação final
+                        </DialogTitle>
+                        <DialogDescription>
+                            Para confirmar a exclusão permanente, digite <strong>EXCLUIR</strong> no campo abaixo. Após isso, a conta será deletada e não poderá ser restaurada.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="deleteAccountConfirmationText">Digite EXCLUIR</Label>
+                        <Input
+                            id="deleteAccountConfirmationText"
+                            value={deleteAccountConfirmationText}
+                            onChange={(event) => setDeleteAccountConfirmationText(event.target.value)}
+                            placeholder="EXCLUIR"
+                            disabled={deletingAccount}
+                        />
+                    </div>
+
+                    {deleteAccountError && (
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Exclusão de conta</AlertTitle>
+                            <AlertDescription>{deleteAccountError}</AlertDescription>
+                        </Alert>
+                    )}
+
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setDeleteAccountStepTwoOpen(false)}
+                            disabled={deletingAccount}
+                        >
+                            Voltar
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            className="gap-2"
+                            onClick={handleDeleteAccount}
+                            disabled={deletingAccount || deleteAccountConfirmationText.trim().toUpperCase() !== "EXCLUIR"}
+                        >
+                            {deletingAccount ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Excluindo conta...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="h-4 w-4" />
+                                    Excluir permanentemente
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={telegramGuideOpen} onOpenChange={setTelegramGuideOpen}>
                 <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">

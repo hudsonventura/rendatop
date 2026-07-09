@@ -20,6 +20,7 @@ import {
 
 const formatCurrency = (val) =>
     val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const EARLY_DUE_WINDOW_DAYS = 5
 
 const formatDate = (dateStr) =>
     new Date(dateStr).toLocaleDateString("pt-BR")
@@ -37,23 +38,28 @@ const isDueDateTodayOrPast = (dateStr) => {
     return due <= today
 }
 
-function getDueSnapshot(investment) {
-    return investment.calculated?.[1] ?? investment.calculated?.[0]
-}
-
-function canShowReinvest(dateStr) {
+const isDueDateWithinArchiveWindow = (dateStr) => {
     if (!dateStr) return false
 
     const due = new Date(dateStr)
     due.setHours(0, 0, 0, 0)
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const threshold = new Date()
+    threshold.setHours(0, 0, 0, 0)
+    threshold.setDate(threshold.getDate() + EARLY_DUE_WINDOW_DAYS)
 
-    return due <= today
+    return due <= threshold
 }
 
-const archiveReinvestHint = "Você só poderá reinvestir o valor deste investimento ou arquivá-lo quando chegar a data de resgate"
+function getDueSnapshot(investment) {
+    return investment.calculated?.[1] ?? investment.calculated?.[0]
+}
+
+function canShowReinvest(dateStr) {
+    return isDueDateWithinArchiveWindow(dateStr)
+}
+
+const archiveReinvestHint = "Você só poderá reinvestir o valor deste investimento ou arquivá-lo a partir de 5 dias corridos antes da data de resgate"
 
 function DropdownActionItemWithHint({ disabled, onClick, children }) {
     const item = (
@@ -105,7 +111,7 @@ export default function InvestmentsDueSoon({ investments, onArchive, onReinvest 
                     {investments.map((investment) => {
                         const dueSnapshot = getDueSnapshot(investment)
                         const showReinvest = canShowReinvest(investment.due_date)
-                        const canArchive = showReinvest
+                        const canArchive = isDueDateWithinArchiveWindow(investment.due_date)
 
                         return (
                             <TableRow key={investment.id}>

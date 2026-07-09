@@ -8,6 +8,11 @@ namespace server.Payments;
 public interface IPaymentProvider
 {
     /// <summary>
+    /// Cria uma assinatura com checkout hospedado e retorna a URL para redirecionamento.
+    /// </summary>
+    Task<PaymentResult> CreateHostedSubscriptionAsync(HostedSubscriptionRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Cria um pagamento com cartão de crédito/débito usando token gerado no frontend
     /// </summary>
     Task<PaymentResult> CreateCardPaymentAsync(CardPaymentRequest request);
@@ -26,6 +31,21 @@ public interface IPaymentProvider
     /// Consulta o status de um pagamento pelo ID do provedor
     /// </summary>
     Task<PaymentResult> GetPaymentStatusAsync(string paymentId);
+
+    /// <summary>
+    /// Consulta o status de uma assinatura/preapproval pelo ID do provedor.
+    /// </summary>
+    Task<PaymentResult> GetSubscriptionStatusAsync(string preapprovalId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Consulta um pagamento autorizado/recorrente originado de uma assinatura.
+    /// </summary>
+    Task<PaymentResult> GetAuthorizedPaymentStatusAsync(string authorizedPaymentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cancela uma assinatura hospedada no provedor para interromper cobranças futuras.
+    /// </summary>
+    Task CancelSubscriptionAsync(string preapprovalId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Salva o cartão do cliente no provedor para cobranças futuras.

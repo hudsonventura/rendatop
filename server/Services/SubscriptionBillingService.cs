@@ -28,6 +28,8 @@ public class SubscriptionBillingService
     private readonly ILogger<SubscriptionBillingService> _logger;
     private readonly List<string> _tags = new() { "SubscriptionBillingService" };
     private readonly string? _clientBaseUrl;
+    private readonly string? _serverBaseUrl;
+    private readonly string? _mercadoPagoWebhookUrl;
 
     public SubscriptionBillingService(
         IDbContextFactory<Context> contextFactory,
@@ -40,6 +42,8 @@ public class SubscriptionBillingService
         _emailNotification = emailNotification;
         _logger = logger;
         _clientBaseUrl = Environment.GetEnvironmentVariable("BASE_URL_CLIENT");
+        _serverBaseUrl = Environment.GetEnvironmentVariable("BASE_URL_SERVER");
+        _mercadoPagoWebhookUrl = Environment.GetEnvironmentVariable("MERCADO_PAGO_WEBHOOK_URL");
     }
 
     public async Task<string> SavePayerCpfAsync(Guid userId, string? cpf, CancellationToken cancellationToken = default)
@@ -70,160 +74,8 @@ public class SubscriptionBillingService
         int installments,
         CancellationToken cancellationToken = default)
     {
-        var traceId = TraceContext.GetTraceId();
-        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var user = await context.users.FirstOrDefaultAsync(x => x.id == userId, cancellationToken)
-            ?? throw new ExpectedException("Usuário não encontrado.");
-
-        EnsureNoDuplicateCharge(context, userId, plan.id);
-
-        var now = DateTime.UtcNow;
-        var billingPeriodStart = now;
-        var billingPeriodEnd = now.AddMonths(1);
         var paymentMethod = paymentMethodId.Contains("debit", StringComparison.OrdinalIgnoreCase) ? "debit_card" : "credit_card";
-        var externalReference = BuildExternalReference("sub", userId, plan.id);
-
-        _logger.LogInformation(
-            "Iniciando assinatura com cartao. TraceId={TraceId} UserId={UserId} Payload={@Payload} {_tags_}",
-            traceId,
-            userId,
-            new
-            {
-                planId = plan.id,
-                planName = plan.name,
-                plan.price,
-                paymentMethod,
-                paymentMethodId,
-                cardType,
-                issuerId,
-                installments,
-                externalReference
-            },
-            _tags);
-
-        var result = await _paymentProvider.CreateCardPaymentAsync(new CardPaymentRequest
-        {
-            card_token = cardToken,
-            payment_method_id = paymentMethodId,
-            card_type = cardType,
-            issuer_id = issuerId,
-            installments = installments,
-            amount = plan.price,
-            description = $"RendaTop - Plano {plan.name}",
-            payer_email = user.email,
-            external_reference = externalReference
-        });
-
-        if (IsApproved(result.status))
-        {
-            _logger.LogInformation(
-                "Pagamento com cartao aprovado. TraceId={TraceId} UserId={UserId} PaymentId={PaymentId} Status={Status} Tags={_tags_}",
-                traceId,
-                userId,
-                result.payment_id,
-                result.status,
-                _tags);
-            string? customerId = null;
-            string? cardId = null;
-            try
-            {
-                var saved = await _paymentProvider.SaveCardAsync(cardToken, user.email);
-                customerId = saved.customerId;
-                cardId = saved.cardId;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Nao foi possivel salvar cartao para renovacao automatica. TraceId={TraceId} UserId={UserId} Tags={_tags_}", traceId, userId, _tags);
-            }
-
-            var subscription = CancelOldAndCreateSubscription(
-                context,
-                user.id,
-                plan.id,
-                SubscriptionStatus.Active,
-                paymentMethod,
-                result.payment_id,
-                customerId,
-                cardId,
-                billingPeriodStart,
-                billingPeriodEnd,
-                cancelExisting: true);
-
-            var charge = CreateCharge(
-                context,
-                subscription,
-                user.id,
-                plan.id,
-                paymentMethod,
-                plan.price,
-                user.cpf,
-                SubscriptionChargeKind.Initial,
-                SubscriptionChargeStatus.Approved,
-                billingPeriodStart,
-                billingPeriodEnd,
-                billingPeriodEnd,
-                externalReference,
-                result);
-
-            await context.SaveChangesAsync(cancellationToken);
-            await SendReceiptIfNeededAsync(context, user, charge, cancellationToken);
-            await context.SaveChangesAsync(cancellationToken);
-        }
-        else if (IsPending(result.status))
-        {
-            _logger.LogInformation(
-                "Pagamento com cartao pendente. TraceId={TraceId} UserId={UserId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
-                traceId,
-                userId,
-                result.payment_id,
-                result.status,
-                result.status_detail,
-                _tags);
-            var subscription = CancelOldAndCreateSubscription(
-                context,
-                user.id,
-                plan.id,
-                SubscriptionStatus.PendingPayment,
-                paymentMethod,
-                result.payment_id,
-                null,
-                null,
-                billingPeriodStart,
-                billingPeriodEnd,
-                cancelExisting: false);
-
-            CreateCharge(
-                context,
-                subscription,
-                user.id,
-                plan.id,
-                paymentMethod,
-                plan.price,
-                user.cpf,
-                SubscriptionChargeKind.Initial,
-                SubscriptionChargeStatus.Pending,
-                billingPeriodStart,
-                billingPeriodEnd,
-                billingPeriodEnd,
-                externalReference,
-                result);
-
-            await context.SaveChangesAsync(cancellationToken);
-        }
-
-        if (IsRejected(result.status))
-        {
-            _logger.LogWarning(
-                "Pagamento com cartao rejeitado. TraceId={TraceId} UserId={UserId} PaymentId={PaymentId} Status={Status} StatusDetail={StatusDetail} Tags={_tags_}",
-                traceId,
-                userId,
-                result.payment_id,
-                result.status,
-                result.status_detail,
-                _tags);
-        }
-
-        return result;
+        return await CreateInitialHostedSubscriptionAsync(userId, plan, paymentMethod, cancellationToken);
     }
 
     public async Task<PaymentResult> CreateInitialPixSubscriptionAsync(
@@ -233,13 +85,7 @@ public class SubscriptionBillingService
         string payerLastName,
         CancellationToken cancellationToken = default)
     {
-        return await CreateInitialOfflineSubscriptionAsync(
-            userId,
-            plan,
-            "pix",
-            payerFirstName,
-            payerLastName,
-            cancellationToken);
+        return await CreateInitialHostedSubscriptionAsync(userId, plan, "pix", cancellationToken);
     }
 
     public async Task<PaymentResult> CreateInitialBoletoSubscriptionAsync(
@@ -249,13 +95,7 @@ public class SubscriptionBillingService
         string payerLastName,
         CancellationToken cancellationToken = default)
     {
-        return await CreateInitialOfflineSubscriptionAsync(
-            userId,
-            plan,
-            "boleto",
-            payerFirstName,
-            payerLastName,
-            cancellationToken);
+        return await CreateInitialHostedSubscriptionAsync(userId, plan, "boleto", cancellationToken);
     }
 
     public async Task<PaymentResult> RefreshPaymentStatusAsync(Guid userId, string paymentId, CancellationToken cancellationToken = default)
@@ -268,15 +108,10 @@ public class SubscriptionBillingService
             paymentId,
             _tags);
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var charge = await context.subscription_charges
-            .Include(x => x.subscription)
-            .Include(x => x.user)
-            .Where(x => x.user_id == userId && x.provider_payment_id == paymentId)
-            .OrderByDescending(x => x.created_at)
-            .FirstOrDefaultAsync(cancellationToken)
+        var charge = await FindChargeForStatusRefreshAsync(context, userId, paymentId, cancellationToken)
             ?? throw new ExpectedException("Cobrança não encontrada.");
 
-        var result = await _paymentProvider.GetPaymentStatusAsync(paymentId);
+        var result = await QueryChargeStatusAsync(charge, paymentId, cancellationToken);
         if (charge.status == SubscriptionChargeStatus.Cancelled)
             return result;
 
@@ -357,6 +192,11 @@ public class SubscriptionBillingService
             if (refundAmount > 0)
             {
                 await _paymentProvider.RefundPaymentAsync(currentCharge.provider_payment_id, refundAmount, cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(subscription.mp_preapproval_id))
+            {
+                await _paymentProvider.CancelSubscriptionAsync(subscription.mp_preapproval_id, cancellationToken);
             }
 
             subscription.status = SubscriptionStatus.Cancelled;
@@ -443,7 +283,7 @@ public class SubscriptionBillingService
         var pendingCharges = await context.subscription_charges
             .Include(x => x.subscription)
             .Include(x => x.user)
-            .Where(x => x.status == SubscriptionChargeStatus.Pending && x.provider_payment_id != null)
+            .Where(x => x.status == SubscriptionChargeStatus.Pending && (x.provider_payment_id != null || x.provider_subscription_id != null))
             .OrderBy(x => x.created_at)
             .ToListAsync(cancellationToken);
 
@@ -452,7 +292,7 @@ public class SubscriptionBillingService
         {
             try
             {
-                var result = await _paymentProvider.GetPaymentStatusAsync(charge.provider_payment_id!);
+                var result = await QueryChargeStatusAsync(charge, charge.id.ToString(), cancellationToken);
                 await ApplyPaymentResultAsync(context, charge, result, cancellationToken);
             }
             catch (Exception ex)
@@ -517,6 +357,7 @@ public class SubscriptionBillingService
                 !x.cancel_at_period_end &&
                 IsCardPaymentMethod(x.payment_method) &&
                 x.current_period_end <= now &&
+                x.mp_preapproval_id == null &&
                 x.mp_customer_id != null &&
                 x.mp_card_id != null)
             .ToListAsync(cancellationToken);
@@ -682,6 +523,11 @@ public class SubscriptionBillingService
         _logger.LogInformation("Processando cancelamentos agendados. TraceId={TraceId} Count={Count} Tags={_tags_}", traceId, subscriptions.Count, _tags);
         foreach (var subscription in subscriptions)
         {
+            if (!string.IsNullOrWhiteSpace(subscription.mp_preapproval_id))
+            {
+                await _paymentProvider.CancelSubscriptionAsync(subscription.mp_preapproval_id, cancellationToken);
+            }
+
             subscription.status = SubscriptionStatus.Cancelled;
             subscription.cancel_at_period_end = false;
             subscription.updated_at = now;
@@ -703,6 +549,11 @@ public class SubscriptionBillingService
         if (sub == null)
             throw new ExpectedException("Nenhuma pendência para cancelar.");
 
+        if (!string.IsNullOrWhiteSpace(sub.mp_preapproval_id))
+        {
+            await _paymentProvider.CancelSubscriptionAsync(sub.mp_preapproval_id, cancellationToken);
+        }
+
         sub.status = SubscriptionStatus.Cancelled;
         sub.updated_at = DateTime.UtcNow;
 
@@ -718,6 +569,163 @@ public class SubscriptionBillingService
 
         await context.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("Assinatura pendente cancelada. TraceId={TraceId} UserId={UserId} SubscriptionId={SubscriptionId} Tags={_tags_}", traceId, userId, sub.id, _tags);
+    }
+
+    public async Task HandleMercadoPagoPaymentWebhookAsync(string paymentId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var result = await _paymentProvider.GetPaymentStatusAsync(paymentId);
+        var charge = await FindChargeForProviderResultAsync(context, result, cancellationToken);
+        if (charge == null)
+            return;
+
+        await ApplyPaymentResultAsync(context, charge, result, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task HandleMercadoPagoSubscriptionWebhookAsync(string preapprovalId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var result = await _paymentProvider.GetSubscriptionStatusAsync(preapprovalId, cancellationToken);
+        var charge = await context.subscription_charges
+            .Include(x => x.subscription)
+            .Include(x => x.user)
+            .Where(x => x.provider_subscription_id == preapprovalId)
+            .OrderByDescending(x => x.created_at)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (charge == null)
+            return;
+
+        UpdateChargeFromResult(charge, result);
+        charge.updated_at = DateTime.UtcNow;
+
+        if (IsRejected(result.status) && charge.status == SubscriptionChargeStatus.Pending)
+        {
+            charge.status = SubscriptionChargeStatus.Cancelled;
+            charge.subscription.status = SubscriptionStatus.Cancelled;
+            charge.subscription.updated_at = DateTime.UtcNow;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task HandleMercadoPagoAuthorizedPaymentWebhookAsync(string authorizedPaymentId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var result = await _paymentProvider.GetAuthorizedPaymentStatusAsync(authorizedPaymentId, cancellationToken);
+        var charge = await FindChargeForProviderResultAsync(context, result, cancellationToken);
+
+        if (charge == null)
+        {
+            var subscription = await context.subscriptions
+                .Include(x => x.user)
+                .Where(x => x.mp_preapproval_id == result.preapproval_id && x.status == SubscriptionStatus.Active)
+                .OrderByDescending(x => x.created_at)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (subscription == null)
+                return;
+
+            var plan = Plans.GetById(subscription.plan_id)
+                ?? throw new ExpectedException("Plano inválido.");
+
+            charge = CreateCharge(
+                context,
+                subscription,
+                subscription.user_id,
+                subscription.plan_id,
+                subscription.payment_method,
+                result.amount ?? plan.price,
+                subscription.user.cpf,
+                SubscriptionChargeKind.Renewal,
+                MapChargeStatus(result.status),
+                subscription.current_period_end,
+                subscription.current_period_end.AddMonths(1),
+                subscription.current_period_end.AddMonths(1),
+                result.external_reference ?? BuildExternalReference("renewal", subscription.user_id, subscription.plan_id),
+                result);
+        }
+
+        await ApplyPaymentResultAsync(context, charge, result, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<PaymentResult> CreateInitialHostedSubscriptionAsync(
+        Guid userId,
+        Plan plan,
+        string requestedPaymentMethod,
+        CancellationToken cancellationToken)
+    {
+        var traceId = TraceContext.GetTraceId();
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var user = await context.users.FirstOrDefaultAsync(x => x.id == userId, cancellationToken)
+            ?? throw new ExpectedException("Usuário não encontrado.");
+
+        EnsureNoDuplicateCharge(context, userId, plan.id);
+
+        var now = DateTime.UtcNow;
+        var billingPeriodStart = now;
+        var billingPeriodEnd = now.AddMonths(1);
+        var externalReference = BuildExternalReference("sub", userId, plan.id);
+
+        var result = await _paymentProvider.CreateHostedSubscriptionAsync(new HostedSubscriptionRequest
+        {
+            amount = plan.price,
+            description = $"RendaTop - Plano {plan.name}",
+            payer_email = user.email,
+            external_reference = externalReference,
+            back_url = BuildHostedCheckoutReturnUrl(),
+            notification_url = BuildMercadoPagoWebhookUrl(),
+            start_date = now,
+            end_date = now.AddYears(10)
+        }, cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(result.checkout_url) || string.IsNullOrWhiteSpace(result.preapproval_id))
+            throw new ExpectedException("O Mercado Pago não retornou a URL do checkout hospedado.");
+
+        _logger.LogInformation(
+            "Assinatura hospedada criada. TraceId={TraceId} UserId={UserId} RequestedMethod={RequestedMethod} PreapprovalId={PreapprovalId} ExternalReference={ExternalReference} Tags={_tags_}",
+            traceId,
+            userId,
+            requestedPaymentMethod,
+            result.preapproval_id,
+            externalReference,
+            _tags);
+
+        var subscription = CancelOldAndCreateSubscription(
+            context,
+            user.id,
+            plan.id,
+            SubscriptionStatus.PendingPayment,
+            requestedPaymentMethod,
+            null,
+            null,
+            null,
+            billingPeriodStart,
+            billingPeriodEnd,
+            cancelExisting: false);
+
+        subscription.mp_preapproval_id = result.preapproval_id;
+
+        CreateCharge(
+            context,
+            subscription,
+            user.id,
+            plan.id,
+            requestedPaymentMethod,
+            plan.price,
+            user.cpf,
+            SubscriptionChargeKind.Initial,
+            SubscriptionChargeStatus.Pending,
+            billingPeriodStart,
+            billingPeriodEnd,
+            billingPeriodEnd,
+            externalReference,
+            result);
+
+        await context.SaveChangesAsync(cancellationToken);
+        return result;
     }
 
     private async Task<PaymentResult> CreateInitialOfflineSubscriptionAsync(
@@ -1032,6 +1040,8 @@ public class SubscriptionBillingService
     {
         charge.subscription.status = SubscriptionStatus.Active;
         charge.subscription.mp_payment_id = charge.provider_payment_id;
+        charge.subscription.mp_preapproval_id = charge.provider_subscription_id ?? charge.subscription.mp_preapproval_id;
+        charge.subscription.payment_method = charge.payment_method;
         charge.subscription.current_period_start = charge.billing_period_start;
         charge.subscription.current_period_end = charge.billing_period_end;
         charge.subscription.updated_at = DateTime.UtcNow;
@@ -1054,6 +1064,8 @@ public class SubscriptionBillingService
     {
         charge.subscription.status = SubscriptionStatus.Active;
         charge.subscription.mp_payment_id = charge.provider_payment_id;
+        charge.subscription.mp_preapproval_id = charge.provider_subscription_id ?? charge.subscription.mp_preapproval_id;
+        charge.subscription.payment_method = charge.payment_method;
         charge.subscription.current_period_start = charge.billing_period_start;
         charge.subscription.current_period_end = charge.billing_period_end;
         charge.subscription.updated_at = DateTime.UtcNow;
@@ -1159,6 +1171,7 @@ public class SubscriptionBillingService
             mp_payment_id = paymentId,
             mp_customer_id = customerId,
             mp_card_id = cardId,
+            mp_preapproval_id = null,
             current_period_start = billingPeriodStart,
             current_period_end = billingPeriodEnd,
             cancel_at_period_end = false,
@@ -1195,7 +1208,9 @@ public class SubscriptionBillingService
             amount = amount,
             payer_cpf = payerCpf,
             provider_payment_id = string.IsNullOrWhiteSpace(result.payment_id) ? null : result.payment_id,
+            provider_subscription_id = string.IsNullOrWhiteSpace(result.preapproval_id) ? null : result.preapproval_id,
             provider_external_reference = externalReference,
+            provider_checkout_url = result.checkout_url,
             provider_status_detail = result.status_detail,
             status = status,
             charge_kind = chargeKind,
@@ -1215,9 +1230,12 @@ public class SubscriptionBillingService
     private static void UpdateChargeFromResult(SubscriptionCharge charge, PaymentResult result)
     {
         charge.provider_payment_id = string.IsNullOrWhiteSpace(result.payment_id) ? charge.provider_payment_id : result.payment_id;
+        charge.provider_subscription_id = string.IsNullOrWhiteSpace(result.preapproval_id) ? charge.provider_subscription_id : result.preapproval_id;
         charge.provider_status_detail = result.status_detail;
+        charge.provider_checkout_url = result.checkout_url ?? charge.provider_checkout_url;
         charge.amount = result.amount ?? charge.amount;
         charge.due_at = UtcDateTime.EnsureUtc(result.date_of_expiration) ?? UtcDateTime.EnsureUtc(charge.due_at)!.Value;
+        charge.payment_method = NormalizePaymentMethod(result.payment_method) ?? charge.payment_method;
         charge.pix_qr_code = result.pix_qr_code ?? charge.pix_qr_code;
         charge.pix_qr_code_base64 = result.pix_qr_code_base64 ?? charge.pix_qr_code_base64;
         charge.boleto_barcode_content = result.boleto_barcode_content ?? charge.boleto_barcode_content;
@@ -1305,6 +1323,78 @@ public class SubscriptionBillingService
         return prorated;
     }
 
+    private async Task<SubscriptionCharge?> FindChargeForStatusRefreshAsync(Context context, Guid userId, string reference, CancellationToken cancellationToken)
+    {
+        var query = context.subscription_charges
+            .Include(x => x.subscription)
+            .Include(x => x.user)
+            .Where(x => x.user_id == userId);
+
+        if (Guid.TryParse(reference, out var chargeId))
+        {
+            return await query
+                .Where(x => x.id == chargeId)
+                .OrderByDescending(x => x.created_at)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return await query
+            .Where(x => x.provider_payment_id == reference || x.provider_subscription_id == reference)
+            .OrderByDescending(x => x.created_at)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<PaymentResult> QueryChargeStatusAsync(SubscriptionCharge charge, string reference, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(charge.provider_payment_id))
+            return await _paymentProvider.GetPaymentStatusAsync(charge.provider_payment_id!);
+
+        if (!string.IsNullOrWhiteSpace(charge.provider_subscription_id))
+            return await _paymentProvider.GetSubscriptionStatusAsync(charge.provider_subscription_id!, cancellationToken);
+
+        throw new ExpectedException($"Cobrança {reference} não possui identificadores do provedor para consulta.");
+    }
+
+    private async Task<SubscriptionCharge?> FindChargeForProviderResultAsync(Context context, PaymentResult result, CancellationToken cancellationToken)
+    {
+        var query = context.subscription_charges
+            .Include(x => x.subscription)
+            .Include(x => x.user)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(result.payment_id))
+        {
+            var byPayment = await query
+                .Where(x => x.provider_payment_id == result.payment_id)
+                .OrderByDescending(x => x.created_at)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (byPayment != null)
+                return byPayment;
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.external_reference))
+        {
+            var byExternalReference = await query
+                .Where(x => x.provider_external_reference == result.external_reference)
+                .OrderByDescending(x => x.created_at)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (byExternalReference != null)
+                return byExternalReference;
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.preapproval_id))
+        {
+            return await query
+                .Where(x => x.provider_subscription_id == result.preapproval_id)
+                .OrderByDescending(x => x.created_at)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return null;
+    }
+
     private static SubscriptionChargeStatus MapChargeStatus(string providerStatus)
     {
         if (IsApproved(providerStatus)) return SubscriptionChargeStatus.Approved;
@@ -1333,10 +1423,57 @@ public class SubscriptionBillingService
     private static bool SupportsProratedRefund(string paymentMethod) =>
         IsCardPaymentMethod(paymentMethod) || IsPixPaymentMethod(paymentMethod);
 
+    private static string? NormalizePaymentMethod(string? providerPaymentMethod)
+    {
+        if (string.IsNullOrWhiteSpace(providerPaymentMethod))
+            return null;
+
+        if (string.Equals(providerPaymentMethod, "pix", StringComparison.OrdinalIgnoreCase))
+            return "pix";
+
+        if (providerPaymentMethod.StartsWith("bol", StringComparison.OrdinalIgnoreCase))
+            return "boleto";
+
+        if (providerPaymentMethod.Contains("debit", StringComparison.OrdinalIgnoreCase))
+            return "debit_card";
+
+        return "credit_card";
+    }
+
     private static string BuildExternalReference(string prefix, Guid userId, string planId)
     {
         var compactGuid = Guid.NewGuid().ToString("N")[..8];
         return $"{prefix}_{userId}_{planId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{compactGuid}";
+    }
+
+    private string BuildHostedCheckoutReturnUrl()
+    {
+        
+
+        if (string.IsNullOrWhiteSpace(_clientBaseUrl))
+            throw new ExpectedException("BASE_URL_CLIENT não configurado para retorno do checkout.");
+
+        string url = Environment.GetEnvironmentVariable("MERCADO_PAGO_WEBHOOK_URL")?.Trim() is { Length: > 0 } explicitUrl
+            ? explicitUrl
+            : $"{_clientBaseUrl.TrimEnd('/')}/subscription/checkout/return";
+            
+        return url;
+    }
+
+    private string BuildMercadoPagoWebhookUrl()
+    {
+        if (!string.IsNullOrWhiteSpace(_mercadoPagoWebhookUrl))
+        {
+            if (Uri.TryCreate(_mercadoPagoWebhookUrl.Trim(), UriKind.Absolute, out var explicitWebhookUri))
+                return explicitWebhookUri.ToString();
+
+            throw new ExpectedException("MERCADO_PAGO_WEBHOOK_URL configurada de forma inválida.");
+        }
+
+        if (string.IsNullOrWhiteSpace(_serverBaseUrl))
+            throw new ExpectedException("BASE_URL_SERVER não configurado para receber webhooks do Mercado Pago.");
+
+        return $"{_serverBaseUrl.TrimEnd('/')}/subscription/webhook/mercado-pago";
     }
 
     private static (string firstName, string lastName) SplitName(string fullName)

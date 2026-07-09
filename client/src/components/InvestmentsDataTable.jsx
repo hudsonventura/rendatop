@@ -66,6 +66,8 @@ const formatCurrency = (val) =>
 
 const VALUE_LIQUID_CURRENT_HINT = "Valor líquido atual, já descontados os impostos, considerando o resgate hoje. Não reflete o valor no vencimento para investimentos sem liquidez diária."
 const OVERDUE_INVESTMENT_HINT = "Este investimento passou da data de vencimento e provavelmente foi resgatado automaticamente pelo banco. Informe o reinvestimento, o resgate total ou arquive este item."
+const EARLY_DUE_WINDOW_DAYS = 5
+const UPCOMING_DUE_PRIORITY_DAYS = 10
 
 function getBankLogoSrc(bank) {
     const rawCode = bank?.code
@@ -142,6 +144,17 @@ const isDueDateTodayOrPast = (dateStr) => {
     return due <= today
 }
 
+const isDueDateWithinArchiveWindow = (dateStr) => {
+    if (!dateStr) return false
+    const due = parseDateValue(dateStr)
+    if (!due) return false
+
+    const threshold = getTodayStart()
+    threshold.setDate(threshold.getDate() + EARLY_DUE_WINDOW_DAYS)
+
+    return due <= threshold
+}
+
 const isDueDatePast = (dateStr) => {
     if (!dateStr) return false
     const due = parseDateValue(dateStr)
@@ -151,23 +164,24 @@ const isDueDatePast = (dateStr) => {
 }
 
 function getDueDateSortValue(dateValue) {
-    const todayTimestamp = getTodayStart().getTime()
-    const dueTimestamp = getDateSortValue(dateValue)
+    const dueDate = parseDateValue(dateValue)
+    const today = getTodayStart()
+    const todayTimestamp = today.getTime()
+    const windowEnd = new Date(today)
+    windowEnd.setDate(windowEnd.getDate() + UPCOMING_DUE_PRIORITY_DAYS)
+    const dueTimestamp = dueDate?.getTime()
 
-    if (dueTimestamp == null) return todayTimestamp
-    if (dueTimestamp <= todayTimestamp) return dueTimestamp - 1
-    return dueTimestamp
+    if (dueDate && dueDate >= today && dueDate <= windowEnd)
+        return dueTimestamp ?? 0
+
+    if (!dueDate)
+        return 1_000_000_000_000_000 + todayTimestamp
+
+    return 2_000_000_000_000_000 + dueTimestamp
 }
 
 const canShowReinvest = (dateStr) => {
-    if (!dateStr) return false
-
-    const due = parseDateValue(dateStr)
-    if (!due) return false
-
-    const today = getTodayStart()
-
-    return due <= today
+    return isDueDateWithinArchiveWindow(dateStr)
 }
 
 function getIndexLabel(investment) {
@@ -251,7 +265,7 @@ function ViewDialog({ investment, open, onOpenChange, onEdit, onRedeem, onReinve
     const calcDue = getTableCalculated(investment, 1)
     const hasDueEstimate = Boolean(investment.due_date && calcDue)
     const showReinvest = canShowReinvest(investment.due_date)
-    const canArchive = investment.archived || isDueDateTodayOrPast(investment.due_date)
+    const canArchive = investment.archived || isDueDateWithinArchiveWindow(investment.due_date)
     const logoSrc = getBankLogoSrc(investment.bank)
     const redemptions = [...(investment.redemptions ?? [])].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -551,7 +565,7 @@ function ArchiveDialog({ investment, open, onOpenChange, onConfirm }) {
     )
 }
 
-const archiveReinvestHint = "Você só poderá reinvestir o valor deste investimento ou arquivá-lo quando chegar a data de resgate"
+const archiveReinvestHint = "Você só poderá reinvestir o valor deste investimento ou arquivá-lo a partir de 5 dias corridos antes da data de resgate"
 
 function ActionMenuItemWithHint({ disabled, onClick, className, children }) {
     const item = (
@@ -586,7 +600,7 @@ function ActionsCell({ investment, onView, onEdit, onRedeem, onReinvest, onArchi
     const btnRef = React.useRef(null)
     const menuRef = React.useRef(null)
     const showReinvest = canShowReinvest(investment.due_date)
-    const canArchive = showReinvest
+    const canArchive = investment.archived || isDueDateWithinArchiveWindow(investment.due_date)
 
     // Close menu when clicking outside or scrolling
     React.useEffect(() => {
@@ -954,7 +968,7 @@ function getColumns(onView, onEdit, onRedeem, onReinvest, onArchive, onDelete) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function InvestmentsDataTable({ investments, setReload, onReinvest }) {
+export default function InvestmentsDataTable({ investments, setReload, onReinvest, onInvestmentModalOpen }) {
     const [sorting, setSorting] = useState([{ id: "due_date", desc: false }])
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 })
 
@@ -969,14 +983,18 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [archiveOpen, setArchiveOpen] = useState(false)
 
-    const openView = (inv) => { setSelectedInvestment(inv); setViewOpen(true) }
-    const openEdit = (inv) => { setSelectedInvestment(inv); setEditOpen(true) }
-    const openRedeem = (inv) => { setSelectedInvestment(inv); setRedeemOpen(true) }
-    const handleReinvest = (inv) => { onReinvest?.(inv) }
+    const notifyInvestmentModalOpen = () => {
+        onInvestmentModalOpen?.()
+    }
+
+    const openView = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setViewOpen(true) }
+    const openEdit = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setEditOpen(true) }
+    const openRedeem = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setRedeemOpen(true) }
+    const handleReinvest = (inv) => { notifyInvestmentModalOpen(); onReinvest?.(inv) }
     const openEditRedemption = (redemption) => { setSelectedRedemption(redemption); setEditRedemptionOpen(true) }
     const openDeleteRedemption = (redemption) => { setSelectedRedemption(redemption); setDeleteRedemptionOpen(true) }
-    const openDelete = (inv) => { setSelectedInvestment(inv); setDeleteOpen(true) }
-    const openArchive = (inv) => { setSelectedInvestment(inv); setArchiveOpen(true) }
+    const openDelete = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setDeleteOpen(true) }
+    const openArchive = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setArchiveOpen(true) }
 
     React.useEffect(() => {
         setPagination((current) => ({ ...current, pageIndex: 0 }))

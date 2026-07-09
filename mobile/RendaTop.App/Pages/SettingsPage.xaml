@@ -117,7 +117,7 @@
                             </Grid>
                             <Entry x:Name="PhoneEntry" Keyboard="Telephone" Placeholder="99999999999" TextChanged="OnPhoneChanged" />
                             <Label Text="Informe o numero com 11 digitos. Voce pode testar antes mesmo de salvar as configuracoes." FontSize="12" TextColor="#64748B" />
-                            <Button x:Name="TestWhatsAppButton" Text="Test WhatsApp" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnTestWhatsAppClicked" />
+                            <Button x:Name="TestWhatsAppButton" Text="Test WhatsApp" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnTestWhatsAppClicked" IsVisible="False" />
                             <Border x:Name="WhatsAppErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="10" IsVisible="False">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="10" />
@@ -139,9 +139,17 @@
                                 </VerticalStackLayout>
                                 <Switch x:Name="NotifyTelegramSwitch" Grid.Column="1" Toggled="OnNotifyTelegramToggled" />
                             </Grid>
+                            <Button Text="Veja como obter seu chatID no Telegram"
+                                    BackgroundColor="#DBEAFE"
+                                    BorderColor="#93C5FD"
+                                    BorderWidth="1"
+                                    TextColor="#1D4ED8"
+                                    HorizontalOptions="Start"
+                                    Padding="14,10"
+                                    Clicked="OnShowTelegramGuideClicked" />
                             <Entry x:Name="TelegramChatIdEntry" Placeholder="Ex.: 123456789" />
                             <Label Text="Obrigatorio apenas quando as notificacoes por Telegram estiverem ativas." FontSize="12" TextColor="#64748B" />
-                            <Button x:Name="TestTelegramButton" Text="Test Telegram" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnTestTelegramClicked" />
+                            <Button x:Name="TestTelegramButton" Text="Test Telegram" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnTestTelegramClicked" IsVisible="False" />
                             <Border x:Name="TelegramErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="10" IsVisible="False">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="10" />
@@ -163,7 +171,7 @@
                                 </VerticalStackLayout>
                                 <Switch x:Name="NotifyEmailSwitch" Grid.Column="1" />
                             </Grid>
-                            <Button x:Name="TestEmailButton" Text="Test Email" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnTestEmailClicked" />
+                            <Button x:Name="TestEmailButton" Text="Test Email" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnTestEmailClicked" IsVisible="False" />
                             <Border x:Name="EmailErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="10" IsVisible="False">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="10" />

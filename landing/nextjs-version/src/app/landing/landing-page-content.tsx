@@ -60,11 +60,13 @@ export function LandingPageContent({ backendBaseUrl }: LandingPageContentProps) 
       {/* Main Content */}
       <main>
         <HeroSection />
+        
         <LogoCarousel />
+        <FeaturesSection />
         <AppDownloadButtons />
         <StatsSection />
         <AboutSection />
-        <FeaturesSection />
+        
         <BlogSection backendBaseUrl={backendBaseUrl} />
         <PricingSection />
         {/* <CTASection /> */}

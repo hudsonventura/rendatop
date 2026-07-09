@@ -62,6 +62,11 @@ public class Subscription
     public string? mp_card_id { get; set; }
 
     /// <summary>
+    /// ID da assinatura hospedada no Mercado Pago.
+    /// </summary>
+    public string? mp_preapproval_id { get; set; }
+
+    /// <summary>
     /// Início do período de cobrança atual
     /// </summary>
     public DateTime current_period_start { get; set; } = DateTime.UtcNow;

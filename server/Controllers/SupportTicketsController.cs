@@ -315,29 +315,7 @@ public class SupportTicketsController : AuthenticatedController
             });
         }
 
-        if (!IsAdmin && ticket.status == SupportTicketStatus.AguardandoRespostaUsuario)
-        {
-            var previousStatus = ticket.status;
-            ticket.status = SupportTicketStatus.AguardandoAtendimento;
-            ticket.updated_at = now;
-            ticket.last_message_at = now;
-
-            _context.support_ticket_status_history.Add(new SupportTicketStatusHistory
-            {
-                ticket_id = ticket.id,
-                actor_user_id = _user.id,
-                actor_user_name = _user.name,
-                from_status = previousStatus,
-                to_status = ticket.status,
-                source = SupportTicketChangeSource.SystemOnUserReply,
-                created_at = now
-            });
-        }
-        else
-        {
-            ticket.updated_at = now;
-            ticket.last_message_at = now;
-        }
+        ApplyPostReplyStatus(ticket, now);
 
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -379,6 +357,19 @@ public class SupportTicketsController : AuthenticatedController
             source = SupportTicketChangeSource.AdminManual,
             created_at = now
         });
+
+        if (request.status == SupportTicketStatus.AguardandoRespostaUsuario)
+        {
+            _context.notifications.Add(new Notification
+            {
+                id = SnowflakeGuid.NewGuid(),
+                user_id = ticket.requester_user_id,
+                title = "Chamado atualizado",
+                message = $"Seu chamado \"{ticket.subject}\" está aguardando sua resposta.",
+                is_read = false,
+                created_at = now
+            });
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -476,6 +467,29 @@ public class SupportTicketsController : AuthenticatedController
 
         return ticket.requester_user_id == _user.id &&
                ticket.status == SupportTicketStatus.AguardandoRespostaUsuario;
+    }
+
+    private void ApplyPostReplyStatus(SupportTicket ticket, DateTime now)
+    {
+        ticket.updated_at = now;
+        ticket.last_message_at = now;
+
+        if (IsAdmin || ticket.status == SupportTicketStatus.AguardandoAtendimento)
+            return;
+
+        var previousStatus = ticket.status;
+        ticket.status = SupportTicketStatus.AguardandoAtendimento;
+
+        _context.support_ticket_status_history.Add(new SupportTicketStatusHistory
+        {
+            ticket_id = ticket.id,
+            actor_user_id = _user.id,
+            actor_user_name = _user.name,
+            from_status = previousStatus,
+            to_status = ticket.status,
+            source = SupportTicketChangeSource.SystemOnUserReply,
+            created_at = now
+        });
     }
 
     private static string? GetPendingFor(SupportTicketStatus status) => status switch
