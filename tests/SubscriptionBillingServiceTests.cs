@@ -59,13 +59,14 @@ public class SubscriptionBillingServiceTests
     public async Task CreateInitialPixSubscriptionAsync_DoesNotSendReceiptWhilePending()
     {
         using var fixture = new SubscriptionBillingFixture();
-        fixture.PaymentProvider.HostedSubscriptionResult = new PaymentResult
+        fixture.PaymentProvider.HostedCheckoutPreferenceResult = new PaymentResult
         {
-            preapproval_id = "preapproval-pix-1",
+            preference_id = "pref-pix-1",
             status = "pending",
             status_detail = "pending",
             amount = 6.9m,
-            checkout_url = "https://checkout.mercadopago.test/pix-1"
+            checkout_url = "https://checkout.mercadopago.test/pix-1",
+            external_reference = "ext-pix-1"
         };
 
         await fixture.Service.SavePayerCpfAsync(fixture.User.id, "12345678909");
@@ -82,8 +83,10 @@ public class SubscriptionBillingServiceTests
         var charge = assertionContext.subscription_charges.Single();
 
         Assert.Equal(SubscriptionStatus.PendingPayment, subscription.status);
+        Assert.Null(subscription.mp_preapproval_id);
         Assert.Equal(SubscriptionChargeStatus.Pending, charge.status);
-        Assert.Equal("preapproval-pix-1", charge.provider_subscription_id);
+        Assert.Equal("pref-pix-1", charge.provider_preference_id);
+        Assert.Null(charge.provider_subscription_id);
         Assert.Equal("https://checkout.mercadopago.test/pix-1", charge.provider_checkout_url);
         Assert.Null(charge.receipt_sent_at);
         Assert.Empty(fixture.Email.Messages);
@@ -93,12 +96,13 @@ public class SubscriptionBillingServiceTests
     public async Task RefreshPaymentStatusAsync_ApprovesPendingHostedChargeAndSendsReceipt()
     {
         using var fixture = new SubscriptionBillingFixture();
-        fixture.PaymentProvider.HostedSubscriptionResult = new PaymentResult
+        fixture.PaymentProvider.HostedCheckoutPreferenceResult = new PaymentResult
         {
-            preapproval_id = "preapproval-pix-2",
+            preference_id = "pref-pix-2",
             status = "pending",
             amount = 6.9m,
-            checkout_url = "https://checkout.mercadopago.test/pix-2"
+            checkout_url = "https://checkout.mercadopago.test/pix-2",
+            external_reference = "ext-pix-2"
         };
 
         await fixture.Service.SavePayerCpfAsync(fixture.User.id, "12345678909");
@@ -108,20 +112,24 @@ public class SubscriptionBillingServiceTests
             "Hudson",
             "Ventura");
 
-        using var setupContext = fixture.CreateAssertionContext();
-        var chargeId = setupContext.subscription_charges.Single().id.ToString();
-
-        fixture.PaymentProvider.SubscriptionStatusResults["preapproval-pix-2"] = new PaymentResult
+        string externalReference;
+        using (var createdContext = fixture.CreateAssertionContext())
         {
-            preapproval_id = "preapproval-pix-2",
+            externalReference = createdContext.subscription_charges.Single().provider_external_reference!;
+        }
+
+        fixture.PaymentProvider.PaymentStatusResults["2002"] = new PaymentResult
+        {
+            payment_id = "2002",
             status = "approved",
             status_detail = "accredited",
             amount = 6.9m,
             approved_at = DateTime.UtcNow,
-            payment_method = "pix"
+            payment_method = "pix",
+            external_reference = externalReference
         };
 
-        var result = await fixture.Service.RefreshPaymentStatusAsync(fixture.User.id, chargeId);
+        var result = await fixture.Service.RefreshPaymentStatusAsync(fixture.User.id, "2002");
 
         Assert.Equal("approved", result.status);
 
@@ -136,16 +144,65 @@ public class SubscriptionBillingServiceTests
     }
 
     [Fact]
+    public async Task ProcessPendingChargesAsync_ReconcilesPendingHostedCheckoutChargeByExternalReference()
+    {
+        using var fixture = new SubscriptionBillingFixture();
+        fixture.PaymentProvider.HostedCheckoutPreferenceResult = new PaymentResult
+        {
+            preference_id = "pref-pix-reconcile",
+            status = "pending",
+            amount = 6.9m,
+            checkout_url = "https://checkout.mercadopago.test/pix-reconcile",
+            external_reference = "ext-pix-reconcile"
+        };
+
+        await fixture.Service.SavePayerCpfAsync(fixture.User.id, "12345678909");
+        await fixture.Service.CreateInitialPixSubscriptionAsync(
+            fixture.User.id,
+            Plans.GetById("plus")!,
+            "Hudson",
+            "Ventura");
+
+        string externalReference;
+        using (var createdContext = fixture.CreateAssertionContext())
+        {
+            externalReference = createdContext.subscription_charges.Single().provider_external_reference!;
+        }
+
+        fixture.PaymentProvider.PaymentByExternalReferenceResults[externalReference] = new PaymentResult
+        {
+            payment_id = "2100",
+            status = "approved",
+            status_detail = "accredited",
+            amount = 6.9m,
+            approved_at = DateTime.UtcNow,
+            payment_method = "pix",
+            external_reference = externalReference
+        };
+
+        await fixture.Service.ProcessPendingChargesAsync();
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var subscription = assertionContext.subscriptions.Single();
+        var charge = assertionContext.subscription_charges.Single();
+
+        Assert.Equal(SubscriptionStatus.Active, subscription.status);
+        Assert.Equal(SubscriptionChargeStatus.Approved, charge.status);
+        Assert.Equal("2100", charge.provider_payment_id);
+    }
+
+    [Fact]
     public async Task CreateInitialPixSubscriptionAsync_DoesNotCancelExistingActiveSubscriptionWhilePending()
     {
         using var fixture = new SubscriptionBillingFixture();
         fixture.SeedActiveSubscriptionWithCharge("credit_card", DateTime.UtcNow.AddDays(10), currentCycleReminderSentAt: null);
-        fixture.PaymentProvider.PixResult = new PaymentResult
+        fixture.PaymentProvider.HostedCheckoutPreferenceResult = new PaymentResult
         {
-            payment_id = "pix-pending-keep-active",
+            preference_id = "pref-pix-keep-active",
             status = "pending",
             amount = 6.9m,
-            pix_qr_code = "pix-code"
+            checkout_url = "https://checkout.mercadopago.test/pix-keep-active",
+            external_reference = "ext-pix-keep-active"
         };
 
         await fixture.Service.SavePayerCpfAsync(fixture.User.id, "12345678909");
@@ -166,13 +223,13 @@ public class SubscriptionBillingServiceTests
     {
         using var fixture = new SubscriptionBillingFixture();
         fixture.SeedActiveSubscriptionWithCharge("pix", DateTime.UtcNow.Date.AddDays(1), currentCycleReminderSentAt: null);
-        fixture.PaymentProvider.PixResult = new PaymentResult
+        fixture.PaymentProvider.HostedCheckoutPreferenceResult = new PaymentResult
         {
-            payment_id = "renew-pix-1",
+            preference_id = "renew-pref-pix-1",
             status = "pending",
             amount = 6.9m,
-            pix_qr_code = "renew-pix-code",
-            pix_qr_code_base64 = "renew-pix-base64",
+            checkout_url = "https://checkout.mercadopago.test/renew-pix-1",
+            external_reference = "renew-ext-pix-1",
             date_of_expiration = DateTime.UtcNow.Date.AddDays(1)
         };
 
@@ -186,7 +243,9 @@ public class SubscriptionBillingServiceTests
         Assert.Equal(2, charges.Count);
         var renewalCharge = Assert.Single(charges, x => x.charge_kind == SubscriptionChargeKind.Renewal);
         Assert.Equal(SubscriptionChargeStatus.Pending, renewalCharge.status);
-        Assert.Equal("renew-pix-code", renewalCharge.pix_qr_code);
+        Assert.Equal("renew-pref-pix-1", renewalCharge.provider_preference_id);
+        Assert.Null(renewalCharge.provider_subscription_id);
+        Assert.Equal("https://checkout.mercadopago.test/renew-pix-1", renewalCharge.provider_checkout_url);
         Assert.NotNull(renewalCharge.reminder_sent_at);
 
         var email = Assert.Single(fixture.Email.Messages);
@@ -660,23 +719,36 @@ public class SubscriptionBillingServiceTests
     private sealed class FakePaymentProvider : IPaymentProvider
     {
         public PaymentResult HostedSubscriptionResult { get; set; } = new() { status = "pending", preapproval_id = "preapproval-default", checkout_url = "https://example.test/checkout", external_reference = "sub-ext-ref", amount = 6.9m };
-        public PaymentResult CardResult { get; set; } = new() { payment_id = "card-default", status = "approved", amount = 6.9m, approved_at = DateTime.UtcNow };
-        public PaymentResult PixResult { get; set; } = new() { payment_id = "pix-default", status = "pending", amount = 6.9m };
-        public PaymentResult BoletoResult { get; set; } = new() { payment_id = "boleto-default", status = "pending", amount = 6.9m };
-        public PaymentResult SavedCardPaymentResult { get; set; } = new() { payment_id = "saved-card-default", status = "approved", amount = 6.9m, approved_at = DateTime.UtcNow };
+        public PaymentResult HostedCheckoutPreferenceResult { get; set; } = new() { status = "pending", preference_id = "pref-default", checkout_url = "https://example.test/checkout-pro", external_reference = "chk-ext-ref", amount = 6.9m };
+        public PaymentResult CardResult { get; set; } = new() { payment_id = "1001", status = "approved", amount = 6.9m, approved_at = DateTime.UtcNow };
+        public PaymentResult PixResult { get; set; } = new() { payment_id = "1002", status = "pending", amount = 6.9m };
+        public PaymentResult BoletoResult { get; set; } = new() { payment_id = "1003", status = "pending", amount = 6.9m };
+        public PaymentResult SavedCardPaymentResult { get; set; } = new() { payment_id = "1004", status = "approved", amount = 6.9m, approved_at = DateTime.UtcNow };
         public (string customerId, string cardId) SavedCardResult { get; set; } = ("cust-default", "card-default");
         public Dictionary<string, PaymentResult> PaymentStatusResults { get; } = [];
+        public Dictionary<string, PaymentResult> PaymentByExternalReferenceResults { get; } = [];
         public Dictionary<string, PaymentResult> SubscriptionStatusResults { get; } = [];
         public Dictionary<string, PaymentResult> AuthorizedPaymentStatusResults { get; } = [];
         public List<RefundRequest> RefundRequests { get; } = [];
         public List<string> CancelledSubscriptionIds { get; } = [];
 
         public Task<PaymentResult> CreateHostedSubscriptionAsync(HostedSubscriptionRequest request, CancellationToken cancellationToken = default) => Task.FromResult(Clone(HostedSubscriptionResult));
+        public Task<PaymentResult> CreateHostedCheckoutPreferenceAsync(HostedCheckoutPreferenceRequest request, CancellationToken cancellationToken = default) => Task.FromResult(Clone(HostedCheckoutPreferenceResult));
         public Task<PaymentResult> CreateCardPaymentAsync(CardPaymentRequest request) => Task.FromResult(Clone(CardResult));
         public Task<PaymentResult> CreatePixPaymentAsync(PixPaymentRequest request) => Task.FromResult(Clone(PixResult));
         public Task<PaymentResult> CreateBoletoPaymentAsync(BoletoPaymentRequest request) => Task.FromResult(Clone(BoletoResult));
         public Task<PaymentResult> GetPaymentStatusAsync(string paymentId) => Task.FromResult(Clone(PaymentStatusResults[paymentId]));
         public Task<PaymentResult> GetSubscriptionStatusAsync(string preapprovalId, CancellationToken cancellationToken = default) => Task.FromResult(Clone(SubscriptionStatusResults[preapprovalId]));
+        public Task<PaymentResult?> FindPaymentByExternalReferenceAsync(string externalReference, CancellationToken cancellationToken = default)
+        {
+            if (PaymentByExternalReferenceResults.TryGetValue(externalReference, out var directMatch))
+                return Task.FromResult<PaymentResult?>(Clone(directMatch));
+
+            var fallback = PaymentStatusResults.Values.FirstOrDefault(result =>
+                string.Equals(result.external_reference, externalReference, StringComparison.Ordinal));
+
+            return Task.FromResult(fallback is null ? null : Clone(fallback));
+        }
         public Task<PaymentResult> GetAuthorizedPaymentStatusAsync(string authorizedPaymentId, CancellationToken cancellationToken = default) => Task.FromResult(Clone(AuthorizedPaymentStatusResults[authorizedPaymentId]));
         public Task<(string customerId, string cardId)> SaveCardAsync(string cardToken, string email) => Task.FromResult(SavedCardResult);
         public Task<PaymentResult> CreateSavedCardPaymentAsync(SavedCardPaymentRequest request) => Task.FromResult(Clone(SavedCardPaymentResult));
@@ -704,6 +776,7 @@ public class SubscriptionBillingServiceTests
                 status = source.status,
                 status_detail = source.status_detail,
                 payment_id = source.payment_id,
+                preference_id = source.preference_id,
                 preapproval_id = source.preapproval_id,
                 external_reference = source.external_reference,
                 checkout_url = source.checkout_url,

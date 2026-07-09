@@ -21,6 +21,11 @@ public class PaymentResult
     public string payment_id { get; set; } = string.Empty;
 
     /// <summary>
+    /// ID da preference do Checkout Pro, quando aplicável.
+    /// </summary>
+    public string? preference_id { get; set; }
+
+    /// <summary>
     /// ID da assinatura/preapproval no provedor, quando aplicável.
     /// </summary>
     public string? preapproval_id { get; set; }
@@ -120,6 +125,21 @@ public class HostedSubscriptionRequest
     public string notification_url { get; set; } = string.Empty;
     public DateTime start_date { get; set; } = DateTime.UtcNow;
     public DateTime? end_date { get; set; }
+}
+
+public class HostedCheckoutPreferenceRequest
+{
+    public string title { get; set; } = string.Empty;
+    public string description { get; set; } = string.Empty;
+    public decimal amount { get; set; }
+    public string payer_email { get; set; } = string.Empty;
+    public string external_reference { get; set; } = string.Empty;
+    public string success_url { get; set; } = string.Empty;
+    public string pending_url { get; set; } = string.Empty;
+    public string failure_url { get; set; } = string.Empty;
+    public string notification_url { get; set; } = string.Empty;
+    public string payment_method { get; set; } = string.Empty;
+    public DateTime? date_of_expiration { get; set; }
 }
 
 /// <summary>

@@ -85,7 +85,7 @@ public class SubscriptionBillingService
         string payerLastName,
         CancellationToken cancellationToken = default)
     {
-        return await CreateInitialHostedSubscriptionAsync(userId, plan, "pix", cancellationToken);
+        return await CreateInitialHostedCheckoutSubscriptionAsync(userId, plan, "pix", cancellationToken);
     }
 
     public async Task<PaymentResult> CreateInitialBoletoSubscriptionAsync(
@@ -95,7 +95,7 @@ public class SubscriptionBillingService
         string payerLastName,
         CancellationToken cancellationToken = default)
     {
-        return await CreateInitialHostedSubscriptionAsync(userId, plan, "boleto", cancellationToken);
+        return await CreateInitialHostedCheckoutSubscriptionAsync(userId, plan, "boleto", cancellationToken);
     }
 
     public async Task<PaymentResult> RefreshPaymentStatusAsync(Guid userId, string paymentId, CancellationToken cancellationToken = default)
@@ -108,8 +108,19 @@ public class SubscriptionBillingService
             paymentId,
             _tags);
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var charge = await FindChargeForStatusRefreshAsync(context, userId, paymentId, cancellationToken)
-            ?? throw new ExpectedException("Cobrança não encontrada.");
+        var charge = await FindChargeForStatusRefreshAsync(context, userId, paymentId, cancellationToken);
+
+        if (charge == null)
+        {
+            var directResult = await ResolveProviderResultByReferenceAsync(paymentId, cancellationToken);
+            charge = await FindChargeForProviderResultAsync(context, directResult, cancellationToken);
+            if (charge == null || charge.user_id != userId)
+                return directResult;
+
+            await ApplyPaymentResultAsync(context, charge, directResult, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+            return directResult;
+        }
 
         var result = await QueryChargeStatusAsync(charge, paymentId, cancellationToken);
         if (charge.status == SubscriptionChargeStatus.Cancelled)
@@ -125,6 +136,21 @@ public class SubscriptionBillingService
             result.status,
             _tags);
         return result;
+    }
+
+    private async Task<PaymentResult> ResolveProviderResultByReferenceAsync(string reference, CancellationToken cancellationToken)
+    {
+        if (IsNumericProviderPaymentId(reference))
+            return await _paymentProvider.GetPaymentStatusAsync(reference);
+
+        if (LooksLikeMercadoPagoPreapprovalId(reference))
+            return await _paymentProvider.GetSubscriptionStatusAsync(reference, cancellationToken);
+
+        var paymentByExternalReference = await _paymentProvider.FindPaymentByExternalReferenceAsync(reference, cancellationToken);
+        if (paymentByExternalReference != null)
+            return paymentByExternalReference;
+
+        throw new ExpectedException("Cobrança não encontrada.");
     }
 
     public async Task<SubscriptionCancellationResult> CancelActiveSubscriptionAsync(
@@ -283,7 +309,11 @@ public class SubscriptionBillingService
         var pendingCharges = await context.subscription_charges
             .Include(x => x.subscription)
             .Include(x => x.user)
-            .Where(x => x.status == SubscriptionChargeStatus.Pending && (x.provider_payment_id != null || x.provider_subscription_id != null))
+            .Where(x => x.status == SubscriptionChargeStatus.Pending && (
+                x.provider_payment_id != null ||
+                x.provider_subscription_id != null ||
+                x.provider_preference_id != null ||
+                x.provider_external_reference != null))
             .OrderBy(x => x.created_at)
             .ToListAsync(cancellationToken);
 
@@ -728,6 +758,86 @@ public class SubscriptionBillingService
         return result;
     }
 
+    private async Task<PaymentResult> CreateInitialHostedCheckoutSubscriptionAsync(
+        Guid userId,
+        Plan plan,
+        string requestedPaymentMethod,
+        CancellationToken cancellationToken)
+    {
+        var traceId = TraceContext.GetTraceId();
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var user = await context.users.FirstOrDefaultAsync(x => x.id == userId, cancellationToken)
+            ?? throw new ExpectedException("Usuário não encontrado.");
+
+        EnsureNoDuplicateCharge(context, userId, plan.id);
+
+        var now = DateTime.UtcNow;
+        var billingPeriodStart = now;
+        var billingPeriodEnd = now.AddMonths(1);
+        var externalReference = BuildExternalReference("sub", userId, plan.id);
+
+        // Pix e boleto usam Checkout Pro avulso no Mercado Pago.
+        // A recorrencia e o controle de acesso permanecem no nosso backend.
+        var result = await _paymentProvider.CreateHostedCheckoutPreferenceAsync(new HostedCheckoutPreferenceRequest
+        {
+            title = $"RendaTop - Plano {plan.name}",
+            description = $"Assinatura {plan.name} - pagamento inicial",
+            amount = plan.price,
+            payer_email = user.email,
+            external_reference = externalReference,
+            success_url = BuildHostedCheckoutReturnUrl(),
+            pending_url = BuildHostedCheckoutReturnUrl(),
+            failure_url = BuildHostedCheckoutReturnUrl(),
+            notification_url = BuildMercadoPagoWebhookUrl(),
+            payment_method = requestedPaymentMethod,
+            date_of_expiration = now.AddDays(2)
+        }, cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(result.checkout_url))
+            throw new ExpectedException("O Mercado Pago não retornou a URL do Checkout Pro.");
+
+        _logger.LogInformation(
+            "Checkout Pro inicial criado. TraceId={TraceId} UserId={UserId} RequestedMethod={RequestedMethod} PreferenceId={PreferenceId} ExternalReference={ExternalReference} Tags={_tags_}",
+            traceId,
+            userId,
+            requestedPaymentMethod,
+            result.preference_id,
+            externalReference,
+            _tags);
+
+        var subscription = CancelOldAndCreateSubscription(
+            context,
+            user.id,
+            plan.id,
+            SubscriptionStatus.PendingPayment,
+            requestedPaymentMethod,
+            null,
+            null,
+            null,
+            billingPeriodStart,
+            billingPeriodEnd,
+            cancelExisting: false);
+
+        CreateCharge(
+            context,
+            subscription,
+            user.id,
+            plan.id,
+            requestedPaymentMethod,
+            plan.price,
+            user.cpf,
+            SubscriptionChargeKind.Initial,
+            SubscriptionChargeStatus.Pending,
+            billingPeriodStart,
+            billingPeriodEnd,
+            result.date_of_expiration ?? now.AddDays(2),
+            externalReference,
+            result);
+
+        await context.SaveChangesAsync(cancellationToken);
+        return result;
+    }
+
     private async Task<PaymentResult> CreateInitialOfflineSubscriptionAsync(
         Guid userId,
         Plan plan,
@@ -908,7 +1018,6 @@ public class SubscriptionBillingService
         if (plan.price <= 0)
             throw new ExpectedException("O plano Free não requer renovação paga.");
 
-        var (payerFirstName, payerLastName) = SplitName(subscription.user.name);
         var billingPeriodStart = subscription.current_period_end;
         var billingPeriodEnd = subscription.current_period_end.AddMonths(1);
         var externalReference = BuildExternalReference("renewal", subscription.user_id, subscription.plan_id);
@@ -921,35 +1030,22 @@ public class SubscriptionBillingService
             externalReference,
             _tags);
 
-        PaymentResult result;
-        if (subscription.payment_method == "pix")
+        // Renovacoes de Pix/boleto seguem como cobranca avulsa.
+        // Se o usuario nao pagar ate o vencimento, a assinatura local expira.
+        var result = await _paymentProvider.CreateHostedCheckoutPreferenceAsync(new HostedCheckoutPreferenceRequest
         {
-            result = await _paymentProvider.CreatePixPaymentAsync(new PixPaymentRequest
-            {
-                amount = plan.price,
-                description = $"RendaTop - Renovação {plan.name}",
-                payer_email = subscription.user.email,
-                payer_first_name = payerFirstName,
-                payer_last_name = payerLastName,
-                payer_cpf = subscription.user.cpf,
-                external_reference = externalReference,
-                date_of_expiration = UtcDateTime.EnsureUtc(subscription.current_period_end)
-            });
-        }
-        else
-        {
-            result = await _paymentProvider.CreateBoletoPaymentAsync(new BoletoPaymentRequest
-            {
-                amount = plan.price,
-                description = $"RendaTop - Renovação {plan.name}",
-                payer_email = subscription.user.email,
-                payer_first_name = payerFirstName,
-                payer_last_name = payerLastName,
-                payer_cpf = subscription.user.cpf,
-                external_reference = externalReference,
-                date_of_expiration = UtcDateTime.EnsureUtc(subscription.current_period_end)
-            });
-        }
+            title = $"RendaTop - Renovação {plan.name}",
+            description = $"Assinatura {plan.name} - renovação manual",
+            amount = plan.price,
+            payer_email = subscription.user.email,
+            external_reference = externalReference,
+            success_url = BuildHostedCheckoutReturnUrl(),
+            pending_url = BuildHostedCheckoutReturnUrl(),
+            failure_url = BuildHostedCheckoutReturnUrl(),
+            notification_url = BuildMercadoPagoWebhookUrl(),
+            payment_method = subscription.payment_method,
+            date_of_expiration = UtcDateTime.EnsureUtc(subscription.current_period_end)
+        }, cancellationToken);
 
         var charge = CreateCharge(
             context,
@@ -1208,6 +1304,7 @@ public class SubscriptionBillingService
             amount = amount,
             payer_cpf = payerCpf,
             provider_payment_id = string.IsNullOrWhiteSpace(result.payment_id) ? null : result.payment_id,
+            provider_preference_id = string.IsNullOrWhiteSpace(result.preference_id) ? null : result.preference_id,
             provider_subscription_id = string.IsNullOrWhiteSpace(result.preapproval_id) ? null : result.preapproval_id,
             provider_external_reference = externalReference,
             provider_checkout_url = result.checkout_url,
@@ -1230,6 +1327,7 @@ public class SubscriptionBillingService
     private static void UpdateChargeFromResult(SubscriptionCharge charge, PaymentResult result)
     {
         charge.provider_payment_id = string.IsNullOrWhiteSpace(result.payment_id) ? charge.provider_payment_id : result.payment_id;
+        charge.provider_preference_id = string.IsNullOrWhiteSpace(result.preference_id) ? charge.provider_preference_id : result.preference_id;
         charge.provider_subscription_id = string.IsNullOrWhiteSpace(result.preapproval_id) ? charge.provider_subscription_id : result.preapproval_id;
         charge.provider_status_detail = result.status_detail;
         charge.provider_checkout_url = result.checkout_url ?? charge.provider_checkout_url;
@@ -1339,7 +1437,7 @@ public class SubscriptionBillingService
         }
 
         return await query
-            .Where(x => x.provider_payment_id == reference || x.provider_subscription_id == reference)
+            .Where(x => x.provider_payment_id == reference || x.provider_subscription_id == reference || x.provider_preference_id == reference)
             .OrderByDescending(x => x.created_at)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -1351,6 +1449,28 @@ public class SubscriptionBillingService
 
         if (!string.IsNullOrWhiteSpace(charge.provider_subscription_id))
             return await _paymentProvider.GetSubscriptionStatusAsync(charge.provider_subscription_id!, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(charge.provider_external_reference))
+        {
+            var paymentByExternalReference = await _paymentProvider.FindPaymentByExternalReferenceAsync(charge.provider_external_reference!, cancellationToken);
+            if (paymentByExternalReference != null)
+                return paymentByExternalReference;
+        }
+
+        if (!string.IsNullOrWhiteSpace(charge.provider_preference_id))
+        {
+            return new PaymentResult
+            {
+                status = charge.status == SubscriptionChargeStatus.Approved ? "approved" : "pending",
+                status_detail = charge.provider_status_detail,
+                checkout_url = charge.provider_checkout_url,
+                external_reference = charge.provider_external_reference,
+                preference_id = charge.provider_preference_id,
+                amount = charge.amount,
+                payment_method = charge.payment_method,
+                date_of_expiration = charge.due_at
+            };
+        }
 
         throw new ExpectedException($"Cobrança {reference} não possui identificadores do provedor para consulta.");
     }
@@ -1403,7 +1523,8 @@ public class SubscriptionBillingService
     }
 
     private static bool IsApproved(string status) =>
-        string.Equals(status, "approved", StringComparison.OrdinalIgnoreCase);
+        string.Equals(status, "approved", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(status, "authorized", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsPending(string status) =>
         string.Equals(status, "pending", StringComparison.OrdinalIgnoreCase) ||
@@ -1422,6 +1543,14 @@ public class SubscriptionBillingService
 
     private static bool SupportsProratedRefund(string paymentMethod) =>
         IsCardPaymentMethod(paymentMethod) || IsPixPaymentMethod(paymentMethod);
+
+    private static bool IsNumericProviderPaymentId(string reference) =>
+        !string.IsNullOrWhiteSpace(reference) && reference.All(char.IsDigit);
+
+    private static bool LooksLikeMercadoPagoPreapprovalId(string reference) =>
+        !string.IsNullOrWhiteSpace(reference) &&
+        reference.Length >= 20 &&
+        reference.All(char.IsLetterOrDigit);
 
     private static string? NormalizePaymentMethod(string? providerPaymentMethod)
     {
@@ -1448,16 +1577,12 @@ public class SubscriptionBillingService
 
     private string BuildHostedCheckoutReturnUrl()
     {
-        
+        var publicUrl = GetMercadoPagoPublicUrl();
+        if (!Uri.TryCreate(publicUrl.Trim(), UriKind.Absolute, out var callbackUri))
+            throw new ExpectedException("MERCADO_PAGO_WEBHOOK_CALLBACK configurada de forma inválida para retorno do checkout.");
 
-        if (string.IsNullOrWhiteSpace(_clientBaseUrl))
-            throw new ExpectedException("BASE_URL_CLIENT não configurado para retorno do checkout.");
-
-        string url = Environment.GetEnvironmentVariable("MERCADO_PAGO_WEBHOOK_URL")?.Trim() is { Length: > 0 } explicitUrl
-            ? explicitUrl
-            : $"{_clientBaseUrl.TrimEnd('/')}/subscription/checkout/return";
-            
-        return url;
+        EnsureMercadoPagoPublicUrl(callbackUri, "MERCADO_PAGO_WEBHOOK_CALLBACK");
+        return callbackUri.ToString();
     }
 
     private string BuildMercadoPagoWebhookUrl()
@@ -1465,7 +1590,10 @@ public class SubscriptionBillingService
         if (!string.IsNullOrWhiteSpace(_mercadoPagoWebhookUrl))
         {
             if (Uri.TryCreate(_mercadoPagoWebhookUrl.Trim(), UriKind.Absolute, out var explicitWebhookUri))
+            {
+                EnsureMercadoPagoPublicUrl(explicitWebhookUri, "MERCADO_PAGO_WEBHOOK_URL");
                 return explicitWebhookUri.ToString();
+            }
 
             throw new ExpectedException("MERCADO_PAGO_WEBHOOK_URL configurada de forma inválida.");
         }
@@ -1473,7 +1601,37 @@ public class SubscriptionBillingService
         if (string.IsNullOrWhiteSpace(_serverBaseUrl))
             throw new ExpectedException("BASE_URL_SERVER não configurado para receber webhooks do Mercado Pago.");
 
-        return $"{_serverBaseUrl.TrimEnd('/')}/subscription/webhook/mercado-pago";
+        var webhookUrl = $"{_serverBaseUrl.TrimEnd('/')}/subscription/webhook/mercado-pago";
+        if (!Uri.TryCreate(webhookUrl, UriKind.Absolute, out var webhookUri))
+            throw new ExpectedException("BASE_URL_SERVER configurado de forma inválida para receber webhooks do Mercado Pago.");
+
+        EnsureMercadoPagoPublicUrl(webhookUri, "BASE_URL_SERVER");
+        return webhookUri.ToString();
+    }
+
+    private static string GetMercadoPagoPublicUrl()
+    {
+        string url = Environment.GetEnvironmentVariable("MERCADO_PAGO_WEBHOOK_CALLBACK") ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(url))
+            throw new ExpectedException("Variavel de ambiente MERCADO_PAGO_WEBHOOK_CALLBACK não configurada para retorno do checkout do Mercado Pago. Informe a URL pública completa de retorno do usuário.");
+
+        return url;
+    }
+
+    private static void EnsureMercadoPagoPublicUrl(Uri uri, string envName)
+    {
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ExpectedException($"{envName} deve usar http:// ou https:// para integração com o Mercado Pago.");
+        }
+
+        var host = uri.Host.Trim().ToLowerInvariant();
+        if (host == "localhost" || host == "127.0.0.1" || host == "::1")
+        {
+            throw new ExpectedException(
+                $"{envName} está apontando para '{uri}'. O Mercado Pago não aceita localhost como back_url ou webhook. Use uma URL pública do frontend/backend, por exemplo via domínio de teste, ngrok ou Cloudflare Tunnel.");
+        }
     }
 
     private static (string firstName, string lastName) SplitName(string fullName)

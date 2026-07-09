@@ -41,6 +41,7 @@ public class SubscriptionCharge
     public string payer_cpf { get; set; } = string.Empty;
 
     public string? provider_payment_id { get; set; }
+    public string? provider_preference_id { get; set; }
     public string? provider_subscription_id { get; set; }
     public string? provider_external_reference { get; set; }
     public string? provider_checkout_url { get; set; }

@@ -15,6 +15,7 @@ public class MercadoPagoWebhookController : ControllerBase
     private readonly SubscriptionBillingService _billing;
     private readonly ILogger<MercadoPagoWebhookController> _logger;
     private readonly List<string> _tags = new() { "MercadoPagoWebhookController", "Webhook", "MercadoPago" };
+    private readonly string? _clientBaseUrl = Environment.GetEnvironmentVariable("BASE_URL_CLIENT");
 
     public MercadoPagoWebhookController(
         SubscriptionBillingService billing,
@@ -22,6 +23,26 @@ public class MercadoPagoWebhookController : ControllerBase
     {
         _billing = billing;
         _logger = logger;
+    }
+
+    [HttpGet("subscription/webhook/mercado-pago")]
+    public IActionResult ReturnFromLegacyWebhookUrl()
+    {
+        if (string.IsNullOrWhiteSpace(_clientBaseUrl))
+            throw new ExpectedException("BASE_URL_CLIENT não configurado para retorno do checkout.");
+
+        if (!Uri.TryCreate(_clientBaseUrl.Trim(), UriKind.Absolute, out var clientBaseUri))
+            throw new ExpectedException("BASE_URL_CLIENT configurado de forma inválida para retorno do checkout.");
+
+        var destination = $"{clientBaseUri.ToString().TrimEnd('/')}/subscription/mercado-pago/return{Request.QueryString}";
+
+        _logger.LogWarning(
+            "Retorno de navegador recebido na URL de webhook do Mercado Pago. TraceId={TraceId} RedirectingTo={RedirectingTo} Tags={_tags_}",
+            TraceContext.GetTraceId(),
+            destination,
+            _tags);
+
+        return Redirect(destination);
     }
 
     [HttpPost("subscription/webhook/mercado-pago")]
