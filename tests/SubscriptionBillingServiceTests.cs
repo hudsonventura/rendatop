@@ -116,9 +116,9 @@ public class SubscriptionBillingServiceTests
             externalReference = createdContext.subscription_charges.Single().provider_external_reference!;
         }
 
-        fixture.PaymentProvider.PaymentStatusResults["pix-payment-2"] = new PaymentResult
+        fixture.PaymentProvider.PaymentStatusResults["2002"] = new PaymentResult
         {
-            payment_id = "pix-payment-2",
+            payment_id = "2002",
             status = "approved",
             status_detail = "accredited",
             amount = 6.9m,
@@ -127,7 +127,7 @@ public class SubscriptionBillingServiceTests
             external_reference = externalReference
         };
 
-        var result = await fixture.Service.RefreshPaymentStatusAsync(fixture.User.id, "pix-payment-2");
+        var result = await fixture.Service.RefreshPaymentStatusAsync(fixture.User.id, "2002");
 
         Assert.Equal("approved", result.status);
 
@@ -669,12 +669,13 @@ public class SubscriptionBillingServiceTests
     {
         public PaymentResult HostedSubscriptionResult { get; set; } = new() { status = "pending", preapproval_id = "preapproval-default", checkout_url = "https://example.test/checkout", external_reference = "sub-ext-ref", amount = 6.9m };
         public PaymentResult HostedCheckoutPreferenceResult { get; set; } = new() { status = "pending", preference_id = "pref-default", checkout_url = "https://example.test/checkout-pro", external_reference = "chk-ext-ref", amount = 6.9m };
-        public PaymentResult CardResult { get; set; } = new() { payment_id = "card-default", status = "approved", amount = 6.9m, approved_at = DateTime.UtcNow };
-        public PaymentResult PixResult { get; set; } = new() { payment_id = "pix-default", status = "pending", amount = 6.9m };
-        public PaymentResult BoletoResult { get; set; } = new() { payment_id = "boleto-default", status = "pending", amount = 6.9m };
-        public PaymentResult SavedCardPaymentResult { get; set; } = new() { payment_id = "saved-card-default", status = "approved", amount = 6.9m, approved_at = DateTime.UtcNow };
+        public PaymentResult CardResult { get; set; } = new() { payment_id = "1001", status = "approved", amount = 6.9m, approved_at = DateTime.UtcNow };
+        public PaymentResult PixResult { get; set; } = new() { payment_id = "1002", status = "pending", amount = 6.9m };
+        public PaymentResult BoletoResult { get; set; } = new() { payment_id = "1003", status = "pending", amount = 6.9m };
+        public PaymentResult SavedCardPaymentResult { get; set; } = new() { payment_id = "1004", status = "approved", amount = 6.9m, approved_at = DateTime.UtcNow };
         public (string customerId, string cardId) SavedCardResult { get; set; } = ("cust-default", "card-default");
         public Dictionary<string, PaymentResult> PaymentStatusResults { get; } = [];
+        public Dictionary<string, PaymentResult> PaymentByExternalReferenceResults { get; } = [];
         public Dictionary<string, PaymentResult> SubscriptionStatusResults { get; } = [];
         public Dictionary<string, PaymentResult> AuthorizedPaymentStatusResults { get; } = [];
         public List<RefundRequest> RefundRequests { get; } = [];
@@ -687,6 +688,16 @@ public class SubscriptionBillingServiceTests
         public Task<PaymentResult> CreateBoletoPaymentAsync(BoletoPaymentRequest request) => Task.FromResult(Clone(BoletoResult));
         public Task<PaymentResult> GetPaymentStatusAsync(string paymentId) => Task.FromResult(Clone(PaymentStatusResults[paymentId]));
         public Task<PaymentResult> GetSubscriptionStatusAsync(string preapprovalId, CancellationToken cancellationToken = default) => Task.FromResult(Clone(SubscriptionStatusResults[preapprovalId]));
+        public Task<PaymentResult?> FindPaymentByExternalReferenceAsync(string externalReference, CancellationToken cancellationToken = default)
+        {
+            if (PaymentByExternalReferenceResults.TryGetValue(externalReference, out var directMatch))
+                return Task.FromResult<PaymentResult?>(Clone(directMatch));
+
+            var fallback = PaymentStatusResults.Values.FirstOrDefault(result =>
+                string.Equals(result.external_reference, externalReference, StringComparison.Ordinal));
+
+            return Task.FromResult(fallback is null ? null : Clone(fallback));
+        }
         public Task<PaymentResult> GetAuthorizedPaymentStatusAsync(string authorizedPaymentId, CancellationToken cancellationToken = default) => Task.FromResult(Clone(AuthorizedPaymentStatusResults[authorizedPaymentId]));
         public Task<(string customerId, string cardId)> SaveCardAsync(string cardToken, string email) => Task.FromResult(SavedCardResult);
         public Task<PaymentResult> CreateSavedCardPaymentAsync(SavedCardPaymentRequest request) => Task.FromResult(Clone(SavedCardPaymentResult));
