@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RendaTop.App.Pages.TelegramChatIdGuidePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Chat ID do Telegram"
+    BackgroundColor="#0F172A">
+    <Grid RowDefinitions="Auto,*">
+        <Grid Padding="18,18,18,12" ColumnDefinitions="*,Auto">
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Como obter seu chatID no Telegram"
+                       FontSize="22"
+                       FontAttributes="Bold"
+                       TextColor="White" />
+                <Label Text="Siga estes passos no Telegram. Depois copie o chatID informado pelo bot e cole no campo do perfil."
+                       FontSize="13"
+                       TextColor="#CBD5E1" />
+            </VerticalStackLayout>
+
+            <Button Grid.Column="1"
+                    Text="Fechar"
+                    BackgroundColor="#1E293B"
+                    BorderColor="#334155"
+                    BorderWidth="1"
+                    TextColor="White"
+                    VerticalOptions="Start"
+                    Clicked="OnCloseClicked" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="18,0,18,24" Spacing="16">
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <HorizontalStackLayout Spacing="12">
+                            <Border WidthRequest="34" HeightRequest="34" BackgroundColor="#DBEAFE" StrokeThickness="0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="17" />
+                                </Border.StrokeShape>
+                                <Label Text="1"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"
+                                       FontAttributes="Bold"
+                                       TextColor="#1D4ED8" />
+                            </Border>
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Abra seu Telegram e busque pelo app RendaTop"
+                                       FontAttributes="Bold"
+                                       TextColor="#111827" />
+                                <Label Text="Abra o aplicativo do Telegram no celular ou no computador. Na busca do Telegram, procure por 'rendatop_bot', abra a conversa com o bot e clique no botao Iniciar/Start."
+                                       FontSize="13"
+                                       TextColor="#475569" />
+                            </VerticalStackLayout>
+                        </HorizontalStackLayout>
+
+                        <Border BackgroundColor="#F8FAFC" Stroke="#CBD5E1" Padding="6">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14" />
+                            </Border.StrokeShape>
+                            <Image Source="telegram_chatid_step1.png"
+                                   Aspect="AspectFit"
+                                   HeightRequest="260" />
+                        </Border>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="14">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="12">
+                        <HorizontalStackLayout Spacing="12">
+                            <Border WidthRequest="34" HeightRequest="34" BackgroundColor="#DBEAFE" StrokeThickness="0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="17" />
+                                </Border.StrokeShape>
+                                <Label Text="2"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"
+                                       FontAttributes="Bold"
+                                       TextColor="#1D4ED8" />
+                            </Border>
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Copie seu chatID"
+                                       FontAttributes="Bold"
+                                       TextColor="#111827" />
+                                <Label Text="O bot respondera com o seu chatID. Copie esse numero e cole no campo Chat ID do Telegram."
+                                       FontSize="13"
+                                       TextColor="#475569" />
+                            </VerticalStackLayout>
+                        </HorizontalStackLayout>
+
+                        <Border BackgroundColor="#F8FAFC" Stroke="#CBD5E1" Padding="6">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14" />
+                            </Border.StrokeShape>
+                            <Image Source="telegram_chatid_step2.png"
+                                   Aspect="AspectFit"
+                                   HeightRequest="260" />
+                        </Border>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

@@ -87,6 +87,7 @@ const UserSettings = () => {
     const [calendarPublicUrl, setCalendarPublicUrl] = useState("")
     const [whatsappNotificationsEnabled, setWhatsappNotificationsEnabled] = useState(false)
     const [calendarIcsEnabled, setCalendarIcsEnabled] = useState(false)
+    const [isAdminUser, setIsAdminUser] = useState(false)
     const [browserPushSupported, setBrowserPushSupported] = useState(false)
     const [browserPushAvailable, setBrowserPushAvailable] = useState(false)
     const [syncingBrowserPush, setSyncingBrowserPush] = useState(false)
@@ -120,6 +121,7 @@ const UserSettings = () => {
                 setCpf(data.cpf || "")
                 setWhatsappNotificationsEnabled(canUseWhatsAppNotifications)
                 setCalendarIcsEnabled(canUseCalendarIcs)
+                setIsAdminUser(String(data.user_type || "").trim().toLowerCase() === "admin")
                 setNotifyWhatsapp(canUseWhatsAppNotifications && Boolean(data.notify_whatsapp))
                 setNotifyTelegram(Boolean(data.notify_telegram))
                 setNotifyEmail(Boolean(data.notify_email))
@@ -353,6 +355,7 @@ const UserSettings = () => {
                 setTelegramChatId(data.telegram_chat_id || "")
                 setWhatsappNotificationsEnabled(Boolean(data.whatsapp_notifications_enabled))
                 setCalendarIcsEnabled(Boolean(data.calendar_ics_enabled))
+                setIsAdminUser(String(data.user_type || "").trim().toLowerCase() === "admin")
                 setCalendarPublicEnabled(Boolean(data.calendar_public_enabled))
                 setCalendarPublicUrl(data.calendar_public_url || "")
                 setTotpEnabled(Boolean(data.totp_enabled))
@@ -781,20 +784,24 @@ const UserSettings = () => {
                                                     onCheckedChange={handleToggleWhatsApp}
                                                 />
                                             </div>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="md:w-36 md:justify-self-end"
-                                                onClick={handleTestWhatsApp}
-                                                disabled={testingWhatsApp || !whatsappNotificationsEnabled}
-                                            >
-                                                {!whatsappNotificationsEnabled
-                                                    ? "Recurso Premium"
-                                                    : testingWhatsApp
-                                                        ? "Enviando..."
-                                                        : "Test WhatsApp"}
-                                            </Button>
+                                            {isAdminUser ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="md:w-36 md:justify-self-end"
+                                                    onClick={handleTestWhatsApp}
+                                                    disabled={testingWhatsApp || !whatsappNotificationsEnabled}
+                                                >
+                                                    {!whatsappNotificationsEnabled
+                                                        ? "Recurso Premium"
+                                                        : testingWhatsApp
+                                                            ? "Enviando..."
+                                                            : "Test WhatsApp"}
+                                                </Button>
+                                            ) : (
+                                                <div className="hidden md:block" />
+                                            )}
                                         </div>
 
                                         <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
@@ -840,16 +847,20 @@ const UserSettings = () => {
                                                     onCheckedChange={handleToggleTelegram}
                                                 />
                                             </div>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="md:w-36 md:justify-self-end"
-                                                onClick={handleTestTelegram}
-                                                disabled={testingTelegram}
-                                            >
-                                                {testingTelegram ? "Enviando..." : "Test Telegram"}
-                                            </Button>
+                                            {isAdminUser ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="md:w-36 md:justify-self-end"
+                                                    onClick={handleTestTelegram}
+                                                    disabled={testingTelegram}
+                                                >
+                                                    {testingTelegram ? "Enviando..." : "Test Telegram"}
+                                                </Button>
+                                            ) : (
+                                                <div className="hidden md:block" />
+                                            )}
                                         </div>
 
                                         <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
@@ -870,16 +881,20 @@ const UserSettings = () => {
                                                     onCheckedChange={setNotifyEmail}
                                                 />
                                             </div>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="md:w-36 md:justify-self-end"
-                                                onClick={handleTestEmail}
-                                                disabled={testingEmail}
-                                            >
-                                                {testingEmail ? "Enviando..." : "Test Email"}
-                                            </Button>
+                                            {isAdminUser ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="md:w-36 md:justify-self-end"
+                                                    onClick={handleTestEmail}
+                                                    disabled={testingEmail}
+                                                >
+                                                    {testingEmail ? "Enviando..." : "Test Email"}
+                                                </Button>
+                                            ) : (
+                                                <div className="hidden md:block" />
+                                            )}
                                         </div>
 
                                         {/* <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">

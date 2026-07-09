@@ -46,11 +46,11 @@
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Data de compra" FontAttributes="Bold" TextColor="#334155" />
-                            <DatePicker x:Name="BuyDatePicker" TextColor="#111827" />
+                            <DatePicker x:Name="BuyDatePicker" TextColor="#111827" DateSelected="OnDatePickerDateSelected" />
                         </VerticalStackLayout>
                         <VerticalStackLayout Grid.Column="1" Spacing="6">
                             <Label Text="Vencimento" FontAttributes="Bold" TextColor="#334155" />
-                            <DatePicker x:Name="DueDatePicker" TextColor="#111827" />
+                            <DatePicker x:Name="DueDatePicker" TextColor="#111827" DateSelected="OnDatePickerDateSelected" />
                         </VerticalStackLayout>
                     </Grid>
 
