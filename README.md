@@ -220,6 +220,43 @@ O envio de mensagens usa o endpoint `POST /client/sendMessage/:sessionId` do pr�
 ### Create app and Generate Tokens
 https://www.mercadopago.com.br/developers/panel/app/8241518968298990
 
+### Variáveis de ambiente
+Para o checkout hospedado com assinaturas, configure no `.env` raiz:
+
+```bash
+BASE_URL_SERVER=https://api.seu-dominio.com
+BASE_URL_CLIENT=https://app.seu-dominio.com
+MERCADO_PAGO_ACCESS_TOKEN=APP_USR-...
+MERCADO_PAGO_WEBHOOK_SECRET=...
+MERCADO_PAGO_WEBHOOK_URL=https://api.seu-dominio.com/subscription/webhook/mercado-pago
+MERCADO_PAGO_STATEMENT_DESCRIPTOR=RENDATOP
+```
+
+Observações:
+- `BASE_URL_SERVER` precisa ser a URL pública HTTPS do backend, porque o Mercado Pago chamará `POST {BASE_URL_SERVER}/subscription/webhook/mercado-pago`
+- `BASE_URL_CLIENT` precisa ser a URL pública HTTPS do frontend, porque o backend monta o retorno em `{BASE_URL_CLIENT}/subscription/mercado-pago/return`
+- `MERCADO_PAGO_WEBHOOK_URL`, quando informada, passa a ser usada explicitamente pelo backend como `notification_url`
+- `localhost` não serve para `back_url` nem para webhook em ambiente real do Mercado Pago
+- a aplicação lê essas variáveis do `.env` raiz; se `server/.env` for um link/junction para esse arquivo, continua funcionando
+
+### Configuração no painel do Mercado Pago
+Em `Suas integrações`:
+
+1. Gere ou copie o `Access Token` da aplicação e preencha `MERCADO_PAGO_ACCESS_TOKEN`.
+2. Abra `Webhooks` da mesma aplicação.
+3. Cadastre a URL pública do backend:
+   `https://rendatop.com.br/api/subscription/webhook/mercado-pago`
+4. Ative pelo menos estes tópicos:
+   - `payment`
+   - `subscription_preapproval`
+   - `subscription_authorized_payment`
+5. Revele a assinatura secreta gerada pelo Mercado Pago e preencha `MERCADO_PAGO_WEBHOOK_SECRET`.
+
+Importante:
+- o sistema cria o link de assinatura dinamicamente a cada contratação; não é preciso pré-criar links por plano
+- o retorno do navegador para `/subscription/mercado-pago/return` é apenas UX; a ativação final depende do webhook
+- cancelamentos efetivos interrompem a recorrência no Mercado Pago, e estornos continuam sendo feitos sobre o `payment_id` original
+
 ### Statement descriptor da fatura
 Configure a variável de ambiente `MERCADO_PAGO_STATEMENT_DESCRIPTOR` com o nome que deve aparecer na fatura do cartão.
 
@@ -229,7 +266,7 @@ MERCADO_PAGO_STATEMENT_DESCRIPTOR=RENDATOP
 ```
 
 Observações:
-- o backend envia esse valor no campo `statement_descriptor` ao criar pagamentos com cartão
+- o backend envia esse valor ao Mercado Pago quando a cobrança direta por cartão ainda for usada internamente
 - o texto é normalizado para remover acentos e caracteres especiais
 - o valor é truncado para no máximo 22 caracteres
 

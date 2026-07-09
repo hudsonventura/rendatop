@@ -21,6 +21,21 @@ public class PaymentResult
     public string payment_id { get; set; } = string.Empty;
 
     /// <summary>
+    /// ID da assinatura/preapproval no provedor, quando aplicável.
+    /// </summary>
+    public string? preapproval_id { get; set; }
+
+    /// <summary>
+    /// Referência externa estável da cobrança/assinatura.
+    /// </summary>
+    public string? external_reference { get; set; }
+
+    /// <summary>
+    /// URL do checkout hospedado para o cliente concluir o pagamento.
+    /// </summary>
+    public string? checkout_url { get; set; }
+
+    /// <summary>
     /// Método de pagamento retornado pelo provedor
     /// </summary>
     public string? payment_method { get; set; }
@@ -93,6 +108,18 @@ public class PaymentRefundResult
     public string status { get; set; } = string.Empty;
     public decimal? amount { get; set; }
     public DateTime? created_at { get; set; }
+}
+
+public class HostedSubscriptionRequest
+{
+    public decimal amount { get; set; }
+    public string description { get; set; } = string.Empty;
+    public string payer_email { get; set; } = string.Empty;
+    public string external_reference { get; set; } = string.Empty;
+    public string back_url { get; set; } = string.Empty;
+    public string notification_url { get; set; } = string.Empty;
+    public DateTime start_date { get; set; } = DateTime.UtcNow;
+    public DateTime? end_date { get; set; }
 }
 
 /// <summary>

@@ -11,18 +11,18 @@ namespace tests;
 public class SubscriptionBillingServiceTests
 {
     [Fact]
-    public async Task CreateInitialCardSubscriptionAsync_SendsReceiptAndCreatesApprovedCharge()
+    public async Task CreateInitialCardSubscriptionAsync_CreatesPendingHostedCheckoutCharge()
     {
         using var fixture = new SubscriptionBillingFixture();
-        fixture.PaymentProvider.CardResult = new PaymentResult
+        fixture.PaymentProvider.HostedSubscriptionResult = new PaymentResult
         {
-            payment_id = "card-approved-1",
-            status = "approved",
-            status_detail = "accredited",
+            preapproval_id = "preapproval-card-1",
+            status = "pending",
+            status_detail = "pending",
             amount = 6.9m,
-            approved_at = DateTime.UtcNow
+            checkout_url = "https://checkout.mercadopago.test/card-1",
+            external_reference = "ext-card-1"
         };
-        fixture.PaymentProvider.SavedCardResult = ("cust-1", "saved-card-1");
 
         await fixture.Service.SavePayerCpfAsync(fixture.User.id, "12345678909");
         var result = await fixture.Service.CreateInitialCardSubscriptionAsync(
@@ -34,43 +34,38 @@ public class SubscriptionBillingServiceTests
             "",
             1);
 
-        Assert.Equal("approved", result.status);
+        Assert.Equal("pending", result.status);
+        Assert.Equal("preapproval-card-1", result.preapproval_id);
+        Assert.Equal("https://checkout.mercadopago.test/card-1", result.checkout_url);
 
         using var assertionContext = fixture.CreateAssertionContext();
         var subscription = assertionContext.subscriptions.Single();
         var charge = assertionContext.subscription_charges.Single();
 
-        Assert.Equal(SubscriptionStatus.Active, subscription.status);
+        Assert.Equal(SubscriptionStatus.PendingPayment, subscription.status);
         Assert.Equal("credit_card", subscription.payment_method);
-        Assert.Equal("card-approved-1", subscription.mp_payment_id);
-        Assert.Equal("cust-1", subscription.mp_customer_id);
-        Assert.Equal("saved-card-1", subscription.mp_card_id);
+        Assert.Equal("preapproval-card-1", subscription.mp_preapproval_id);
 
-        Assert.Equal(SubscriptionChargeStatus.Approved, charge.status);
+        Assert.Equal(SubscriptionChargeStatus.Pending, charge.status);
         Assert.Equal(SubscriptionChargeKind.Initial, charge.charge_kind);
         Assert.Equal("12345678909", charge.payer_cpf);
-        Assert.NotNull(charge.receipt_sent_at);
-
-        var email = Assert.Single(fixture.Email.Messages);
-        Assert.True(email.IsHtml);
-        Assert.Contains("<html", email.Message);
-        Assert.Contains("icon.png", email.Message);
-        Assert.Contains("12345678909", email.Message);
-        Assert.Contains("nova cobrança automática", email.Message);
+        Assert.Equal("preapproval-card-1", charge.provider_subscription_id);
+        Assert.Equal("https://checkout.mercadopago.test/card-1", charge.provider_checkout_url);
+        Assert.Null(charge.receipt_sent_at);
+        Assert.Empty(fixture.Email.Messages);
     }
 
     [Fact]
     public async Task CreateInitialPixSubscriptionAsync_DoesNotSendReceiptWhilePending()
     {
         using var fixture = new SubscriptionBillingFixture();
-        fixture.PaymentProvider.PixResult = new PaymentResult
+        fixture.PaymentProvider.HostedSubscriptionResult = new PaymentResult
         {
-            payment_id = "pix-pending-1",
+            preapproval_id = "preapproval-pix-1",
             status = "pending",
-            status_detail = "pending_waiting_transfer",
+            status_detail = "pending",
             amount = 6.9m,
-            pix_qr_code = "pix-code",
-            pix_qr_code_base64 = "base64"
+            checkout_url = "https://checkout.mercadopago.test/pix-1"
         };
 
         await fixture.Service.SavePayerCpfAsync(fixture.User.id, "12345678909");
@@ -88,21 +83,22 @@ public class SubscriptionBillingServiceTests
 
         Assert.Equal(SubscriptionStatus.PendingPayment, subscription.status);
         Assert.Equal(SubscriptionChargeStatus.Pending, charge.status);
-        Assert.Equal("pix-code", charge.pix_qr_code);
+        Assert.Equal("preapproval-pix-1", charge.provider_subscription_id);
+        Assert.Equal("https://checkout.mercadopago.test/pix-1", charge.provider_checkout_url);
         Assert.Null(charge.receipt_sent_at);
         Assert.Empty(fixture.Email.Messages);
     }
 
     [Fact]
-    public async Task RefreshPaymentStatusAsync_ApprovesPendingPixAndSendsReceipt()
+    public async Task RefreshPaymentStatusAsync_ApprovesPendingHostedChargeAndSendsReceipt()
     {
         using var fixture = new SubscriptionBillingFixture();
-        fixture.PaymentProvider.PixResult = new PaymentResult
+        fixture.PaymentProvider.HostedSubscriptionResult = new PaymentResult
         {
-            payment_id = "pix-pending-2",
+            preapproval_id = "preapproval-pix-2",
             status = "pending",
             amount = 6.9m,
-            pix_qr_code = "pix-code"
+            checkout_url = "https://checkout.mercadopago.test/pix-2"
         };
 
         await fixture.Service.SavePayerCpfAsync(fixture.User.id, "12345678909");
@@ -112,16 +108,20 @@ public class SubscriptionBillingServiceTests
             "Hudson",
             "Ventura");
 
-        fixture.PaymentProvider.PaymentStatusResults["pix-pending-2"] = new PaymentResult
+        using var setupContext = fixture.CreateAssertionContext();
+        var chargeId = setupContext.subscription_charges.Single().id.ToString();
+
+        fixture.PaymentProvider.SubscriptionStatusResults["preapproval-pix-2"] = new PaymentResult
         {
-            payment_id = "pix-pending-2",
+            preapproval_id = "preapproval-pix-2",
             status = "approved",
             status_detail = "accredited",
             amount = 6.9m,
-            approved_at = DateTime.UtcNow
+            approved_at = DateTime.UtcNow,
+            payment_method = "pix"
         };
 
-        var result = await fixture.Service.RefreshPaymentStatusAsync(fixture.User.id, "pix-pending-2");
+        var result = await fixture.Service.RefreshPaymentStatusAsync(fixture.User.id, chargeId);
 
         Assert.Equal("approved", result.status);
 
@@ -659,20 +659,32 @@ public class SubscriptionBillingServiceTests
 
     private sealed class FakePaymentProvider : IPaymentProvider
     {
+        public PaymentResult HostedSubscriptionResult { get; set; } = new() { status = "pending", preapproval_id = "preapproval-default", checkout_url = "https://example.test/checkout", external_reference = "sub-ext-ref", amount = 6.9m };
         public PaymentResult CardResult { get; set; } = new() { payment_id = "card-default", status = "approved", amount = 6.9m, approved_at = DateTime.UtcNow };
         public PaymentResult PixResult { get; set; } = new() { payment_id = "pix-default", status = "pending", amount = 6.9m };
         public PaymentResult BoletoResult { get; set; } = new() { payment_id = "boleto-default", status = "pending", amount = 6.9m };
         public PaymentResult SavedCardPaymentResult { get; set; } = new() { payment_id = "saved-card-default", status = "approved", amount = 6.9m, approved_at = DateTime.UtcNow };
         public (string customerId, string cardId) SavedCardResult { get; set; } = ("cust-default", "card-default");
         public Dictionary<string, PaymentResult> PaymentStatusResults { get; } = [];
+        public Dictionary<string, PaymentResult> SubscriptionStatusResults { get; } = [];
+        public Dictionary<string, PaymentResult> AuthorizedPaymentStatusResults { get; } = [];
         public List<RefundRequest> RefundRequests { get; } = [];
+        public List<string> CancelledSubscriptionIds { get; } = [];
 
+        public Task<PaymentResult> CreateHostedSubscriptionAsync(HostedSubscriptionRequest request, CancellationToken cancellationToken = default) => Task.FromResult(Clone(HostedSubscriptionResult));
         public Task<PaymentResult> CreateCardPaymentAsync(CardPaymentRequest request) => Task.FromResult(Clone(CardResult));
         public Task<PaymentResult> CreatePixPaymentAsync(PixPaymentRequest request) => Task.FromResult(Clone(PixResult));
         public Task<PaymentResult> CreateBoletoPaymentAsync(BoletoPaymentRequest request) => Task.FromResult(Clone(BoletoResult));
         public Task<PaymentResult> GetPaymentStatusAsync(string paymentId) => Task.FromResult(Clone(PaymentStatusResults[paymentId]));
+        public Task<PaymentResult> GetSubscriptionStatusAsync(string preapprovalId, CancellationToken cancellationToken = default) => Task.FromResult(Clone(SubscriptionStatusResults[preapprovalId]));
+        public Task<PaymentResult> GetAuthorizedPaymentStatusAsync(string authorizedPaymentId, CancellationToken cancellationToken = default) => Task.FromResult(Clone(AuthorizedPaymentStatusResults[authorizedPaymentId]));
         public Task<(string customerId, string cardId)> SaveCardAsync(string cardToken, string email) => Task.FromResult(SavedCardResult);
         public Task<PaymentResult> CreateSavedCardPaymentAsync(SavedCardPaymentRequest request) => Task.FromResult(Clone(SavedCardPaymentResult));
+        public Task CancelSubscriptionAsync(string preapprovalId, CancellationToken cancellationToken = default)
+        {
+            CancelledSubscriptionIds.Add(preapprovalId);
+            return Task.CompletedTask;
+        }
         public Task<PaymentRefundResult> RefundPaymentAsync(string paymentId, decimal? amount = null, CancellationToken cancellationToken = default)
         {
             RefundRequests.Add(new RefundRequest(paymentId, amount));
@@ -692,6 +704,9 @@ public class SubscriptionBillingServiceTests
                 status = source.status,
                 status_detail = source.status_detail,
                 payment_id = source.payment_id,
+                preapproval_id = source.preapproval_id,
+                external_reference = source.external_reference,
+                checkout_url = source.checkout_url,
                 payment_method = source.payment_method,
                 amount = source.amount,
                 approved_at = source.approved_at,

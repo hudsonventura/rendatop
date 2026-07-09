@@ -567,12 +567,12 @@ const PendingChargeCard = ({ charge, planName, onRefresh }) => {
     }, [charge]);
 
     useEffect(() => {
-        if (!chargeState?.provider_payment_id) return;
+        if (!chargeState?.id) return;
         if (String(chargeState.status).toLowerCase() !== 'pending') return;
 
         const interval = setInterval(async () => {
             try {
-                const res = await axiosInstance.get(`/subscription/payment-status/${chargeState.provider_payment_id}`);
+                const res = await axiosInstance.get(`/subscription/payment-status/${chargeState.id}`);
                 const nextStatus = String(res.data?.status || '').toLowerCase();
                 if (nextStatus === 'approved') {
                     await onRefresh();
@@ -580,10 +580,10 @@ const PendingChargeCard = ({ charge, planName, onRefresh }) => {
             } catch {
                 // ignore transient polling errors
             }
-        }, chargeState.payment_method === 'boleto' ? 10000 : 5000);
+        }, 5000);
 
         return () => clearInterval(interval);
-    }, [chargeState?.provider_payment_id, chargeState?.status, chargeState?.payment_method, onRefresh]);
+    }, [chargeState?.id, chargeState?.status, onRefresh]);
 
     const handleCopy = (value) => {
         navigator.clipboard.writeText(value || '');
@@ -692,6 +692,16 @@ const PendingChargeCard = ({ charge, planName, onRefresh }) => {
                     </Button>
                 )}
 
+                {chargeState?.provider_checkout_url && (
+                    <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => window.open(chargeState.provider_checkout_url, '_self')}
+                    >
+                        <ExternalLink className="h-4 w-4 mr-2" /> Continuar no Mercado Pago
+                    </Button>
+                )}
+
                 {String(chargeState?.status).toLowerCase() === 'pending' && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -737,34 +747,115 @@ const PaymentDialog = ({ open, onOpenChange, plan, onSuccess, payerFullName, pay
                     </TabsList>
 
                     <TabsContent value="card">
-                        <CardPaymentForm
+                        <HostedCheckoutPaymentForm
                             plan={plan}
+                            paymentMethod="card"
                             onSuccess={onSuccess}
                             onClose={() => onOpenChange(false)}
                             payerCpf={payerCpf}
                         />
                     </TabsContent>
                     <TabsContent value="pix">
-                        <PixPaymentForm
+                        <HostedCheckoutPaymentForm
                             plan={plan}
+                            paymentMethod="pix"
                             onSuccess={onSuccess}
                             onClose={() => onOpenChange(false)}
-                            payerFullName={payerFullName}
                             payerCpf={payerCpf}
                         />
                     </TabsContent>
                     <TabsContent value="boleto">
-                        <BoletoPaymentForm
+                        <HostedCheckoutPaymentForm
                             plan={plan}
+                            paymentMethod="boleto"
                             onSuccess={onSuccess}
                             onClose={() => onOpenChange(false)}
-                            payerFullName={payerFullName}
                             payerCpf={payerCpf}
                         />
                     </TabsContent>
                 </Tabs>
             </DialogContent>
         </Dialog>
+    );
+};
+
+const HostedCheckoutPaymentForm = ({ plan, paymentMethod, onSuccess, payerCpf }) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [documentCpf, setDocumentCpf] = useState("");
+
+    useEffect(() => {
+        setDocumentCpf(formatCpf(sanitizeCpf(payerCpf)));
+    }, [payerCpf]);
+
+    const endpoint = paymentMethod === 'pix'
+        ? '/subscription/pix'
+        : paymentMethod === 'boleto'
+            ? '/subscription/boleto'
+            : '/subscription/card';
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+
+        const cpf = sanitizeCpf(documentCpf);
+        if (!isValidCpf(cpf)) {
+            setError('CPF inválido. Verifique os 11 dígitos antes de continuar.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const payload = { plan_id: plan.id, payer_cpf: cpf };
+            if (paymentMethod !== 'card') {
+                const { firstName, lastName } = splitFullName(sessionStorage.getItem('name') || 'Cliente RendaTop');
+                payload.payer_first_name = firstName;
+                payload.payer_last_name = lastName;
+            }
+
+            const result = await axiosInstance.post(endpoint, payload, PAYMENT_REQUEST_CONFIG);
+            await onSuccess();
+
+            if (result.data?.checkout_url) {
+                window.location.href = result.data.checkout_url;
+                return;
+            }
+
+            setError('O Mercado Pago não retornou a URL do checkout hospedado.');
+        } catch (err) {
+            setError(extractErrorMessage(err, 'Erro ao iniciar o checkout do Mercado Pago.'));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+            <div className="space-y-2">
+                <Label htmlFor={`cpf-${paymentMethod}`}>CPF do pagador</Label>
+                <Input
+                    id={`cpf-${paymentMethod}`}
+                    value={documentCpf}
+                    onChange={(event) => setDocumentCpf(formatCpf(event.target.value))}
+                    maxLength={14}
+                    placeholder="000.000.000-00"
+                />
+            </div>
+
+            <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                Você será redirecionado para o checkout hospedado do Mercado Pago. A confirmação final da assinatura depende do webhook, mesmo que o navegador retorne antes.
+            </div>
+
+            {error && (
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                    {error}
+                </div>
+            )}
+
+            <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Redirecionando...' : 'Ir para o Mercado Pago'}
+            </Button>
+        </form>
     );
 };
 
