@@ -106,10 +106,14 @@ public class LoginControllerTests
             emailVerificationSecret: TotpUtility.GenerateBase32Secret(),
             emailVerificationSentAt: DateTime.UtcNow);
 
-        var exception = Assert.Throws<ExpectedException>(() =>
-            fixture.Controller.Login(new LoginRecord("pending@example.com", "secret123")));
+        var result = fixture.Controller.Login(new LoginRecord("pending@example.com", "secret123"));
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        var response = Assert.IsType<LoginEmailVerificationRequiredResponse>(objectResult.Value);
 
-        Assert.Equal("Sua conta ainda não foi ativada. Verifique o código enviado para seu email antes de entrar.", exception.Message);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
+        Assert.Equal("pending@example.com", response.email);
+        Assert.True(response.requires_email_verification);
+        Assert.Equal("Sua conta ainda não foi ativada. Verifique o código enviado para seu email antes de entrar.", response.message);
     }
 
     [Fact]

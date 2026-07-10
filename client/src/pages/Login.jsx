@@ -12,6 +12,49 @@ import { persistSessionUser } from "@/utils/userSession";
 
 const apiBaseUrl = (import.meta.env.VITE_API_URL).replace(/\/+$/, "");
 
+function getErrorMessage(error, fallback) {
+    const data = error?.response?.data;
+
+    if (typeof data === "string" && data.trim()) {
+        return data.trim();
+    }
+
+    if (typeof data?.message === "string" && data.message.trim()) {
+        return data.message.trim();
+    }
+
+    if (typeof data?.Message === "string" && data.Message.trim()) {
+        return data.Message.trim();
+    }
+
+    return fallback;
+}
+
+function getEmailVerificationPayload(error) {
+    const data = error?.response?.data;
+
+    if (data && typeof data === "object" && data.requires_email_verification === true) {
+        return {
+            email: typeof data.email === "string" ? data.email.trim() : "",
+            message: typeof data.message === "string" ? data.message.trim() : "",
+        };
+    }
+
+    return null;
+}
+
+function requiresEmailVerification(error, message) {
+    if (error?.response?.status !== 403) {
+        return false;
+    }
+
+    if (getEmailVerificationPayload(error)) {
+        return true;
+    }
+
+    return /conta.*(?:ainda.*ativada|n[ãa]o.*verificada)/i.test(message || "");
+}
+
 const Login = () => {
 
     const [erro, setErro] = useState(false);
@@ -122,12 +165,11 @@ const Login = () => {
                 window.location.href = appPath('/home');
             })
             .catch((error) => {
-                const message = typeof error?.response?.data === "string"
-                    ? error.response.data
-                    : "Email ou senha inválidos. Tente novamente.";
+                const message = getErrorMessage(error, "Email ou senha inválidos. Tente novamente.");
+                const verificationPayload = getEmailVerificationPayload(error);
 
-                if ((message || "").toLowerCase().includes("ainda não foi ativada")) {
-                    redirectToSignupVerification(email, message);
+                if (requiresEmailVerification(error, message)) {
+                    redirectToSignupVerification(verificationPayload?.email || email, verificationPayload?.message || message);
                     return;
                 }
 

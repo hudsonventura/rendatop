@@ -47,7 +47,10 @@ function compareCalendarDate(left, right) {
 }
 
 const Calendario = ({ field, disabled = false, minDate, maxDate }) => {
-	const dateValue = toCalendarDate(field.value)
+	// CalendarDate is an object. Recreating it on every render makes the effect
+	// below reset HeroUI's focused month immediately after month navigation.
+	// Keep the controlled value stable until the form value actually changes.
+	const dateValue = useMemo(() => toCalendarDate(field.value), [field.value])
 	const minValue = useMemo(() => toCalendarDate(minDate), [minDate])
 	const maxValue = useMemo(() => toCalendarDate(maxDate), [maxDate])
 	const wrapperRef = useRef(null)
