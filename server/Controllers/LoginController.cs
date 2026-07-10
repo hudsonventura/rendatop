@@ -48,6 +48,7 @@ public class LoginController : ControllerBase
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(LoginStartResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LoginEmailVerificationRequiredResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     public IActionResult Login([FromBody] LoginRecord credentials)
@@ -59,7 +60,10 @@ public class LoginController : ControllerBase
             throw new ExpectedException("Usuário nao encontrado ou senha incorreta", HttpStatusCode.Unauthorized);
 
         if (!user.email_verified)
-            throw new ExpectedException("Sua conta ainda não foi ativada. Verifique o código enviado para seu email antes de entrar.", HttpStatusCode.Forbidden);
+            return StatusCode(StatusCodes.Status403Forbidden, new LoginEmailVerificationRequiredResponse(
+                "Sua conta ainda não foi ativada. Verifique o código enviado para seu email antes de entrar.",
+                user.email,
+                true));
 
         if (user.totp_enabled)
         {
@@ -1098,6 +1102,7 @@ Se você não solicitou essa alteração, ignore este email.";
 
 public record LoginResponse(string name, string email, UserType user_type);
 public record LoginStartResponse(bool requires_totp, string? challenge_id, string? name, string? email, UserType? user_type);
+public record LoginEmailVerificationRequiredResponse(string message, string email, bool requires_email_verification);
 public record TotpLoginRequest(string challenge_id, string code);
 public record SignUpRequest(string name, string email, string password);
 public record SignupPendingResponse(string message, string email, bool email_sent);
