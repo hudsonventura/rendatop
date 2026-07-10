@@ -674,7 +674,7 @@ public class UserController : AuthenticatedController
         var enabled = currentUsage < plan.ai_monthly_limit;
         var restrictionMessage = enabled
             ? null
-            : $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por mês. Faça upgrade para continuar usando este recurso.";
+            : $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por mês. Faça upgrade para usar este recurso.";
 
         return new AiDocumentExtractionAccessResponse(
             enabled,
