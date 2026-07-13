@@ -299,11 +299,11 @@ public class InvestmentsController : AuthenticatedController
         var calculators = new Dictionary<IdexesType, ICalculator>();
         var result = new List<MonthlyTaxProjectionResponse>();
 
-        // Do mês atual voltamos 11 meses; depois projetamos os 12 meses seguintes.
-        for (var monthOffset = -11; monthOffset <= 12; monthOffset++)
+        // Exibe os 12 meses concluídos e projeta 12 meses, começando pelo mês atual.
+        for (var monthOffset = -12; monthOffset <= 11; monthOffset++)
         {
             var monthStart = currentMonth.AddMonths(monthOffset);
-            var cutoff = monthOffset == 0 ? now : monthStart.AddMonths(1).AddTicks(-1);
+            var cutoff = monthStart.AddMonths(1).AddTicks(-1);
             decimal liquidEarnings = 0m;
             decimal irValue = 0m;
             decimal iofValue = 0m;
@@ -356,7 +356,7 @@ public class InvestmentsController : AuthenticatedController
                 roundedIrValue,
                 roundedIofValue,
                 roundedIrValue + roundedIofValue,
-                monthOffset > 0));
+                monthOffset >= 0));
         }
 
         return result;
