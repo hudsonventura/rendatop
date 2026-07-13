@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react'
 import { Check, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { API_CONFIG } from '@/config/api'
+import { APP_CONFIG } from '@/config/app'
 
 interface Plan {
   id: string
@@ -46,10 +46,10 @@ export function PricingSection() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
 
-  const clientBaseUrl = API_CONFIG.BASE_URL;
+  const clientBaseUrl = APP_CONFIG.BASE_URL;
 
   useEffect(() => {
-    const baseUrl = API_CONFIG.BASE_URL;
+    const baseUrl = APP_CONFIG.BASE_URL;
 
     
 
