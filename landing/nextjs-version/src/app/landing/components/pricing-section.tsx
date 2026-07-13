@@ -6,6 +6,7 @@ import { Check, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { APP_CONFIG } from '@/config/app'
+import { API_CONFIG } from '@/config/api'
 
 interface Plan {
   id: string
@@ -47,15 +48,14 @@ export function PricingSection() {
   const [loading, setLoading] = useState(true)
 
   const clientBaseUrl = APP_CONFIG.BASE_URL;
+  const serverBaseUrl = API_CONFIG.BASE_URL;
 
   useEffect(() => {
-    const baseUrl = APP_CONFIG.BASE_URL;
 
-    
 
     const fetchPlans = async () => {
       try {
-        const response = await fetch(`${baseUrl}/public/subscription/plans`)
+        const response = await fetch(`${serverBaseUrl}/public/subscription/plans`)
         if (!response.ok) throw new Error('Falha ao carregar planos')
         const data = await response.json()
         setPlans(data)
