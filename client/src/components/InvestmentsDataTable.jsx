@@ -990,8 +990,8 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
         onInvestmentModalOpen?.()
     }
 
-    const openView = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setViewOpen(true) }
-    const openEdit = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setEditOpen(true) }
+    const openView = (inv) => { setSelectedInvestment(inv); setViewOpen(true) }
+    const openEdit = (inv) => { setSelectedInvestment(inv); setEditOpen(true) }
     const openRedeem = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setRedeemOpen(true) }
     const handleReinvest = (inv) => { notifyInvestmentModalOpen(); onReinvest?.(inv) }
     const openEditRedemption = (redemption) => { setSelectedRedemption(redemption); setEditRedemptionOpen(true) }

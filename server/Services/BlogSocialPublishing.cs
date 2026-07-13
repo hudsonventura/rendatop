@@ -356,8 +356,9 @@ public sealed class LinkedInPostPublisher : ISocialPostPublisher
                 imageUrn = await UploadLinkedInImageAsync(client, authorUrn, accessToken, apiVersion, firstImage, cancellationToken);
 
             var payload = BuildLinkedInPostPayload(authorUrn, request, imageUrn);
-            using var postRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.linkedin.com/v2/ugcPosts");
+            using var postRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.linkedin.com/rest/posts");
             postRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            postRequest.Headers.Add("LinkedIn-Version", apiVersion);
             postRequest.Headers.Add("X-Restli-Protocol-Version", "2.0.0");
             postRequest.Content = new StringContent(payload, Encoding.UTF8, "application/json");
 
@@ -435,62 +436,47 @@ public sealed class LinkedInPostPublisher : ISocialPostPublisher
 
     private static string BuildLinkedInPostPayload(string authorUrn, SocialPublishRequest request, string? imageUrn)
     {
-        var body = imageUrn is null
-            ? new
+        var commentary = BuildSocialText(request, 3000);
+        if (imageUrn is null)
+        {
+            return JsonSerializer.Serialize(new
             {
                 author = authorUrn,
-                lifecycleState = "PUBLISHED",
-                specificContent = new Dictionary<string, object>
+                commentary,
+                visibility = "PUBLIC",
+                distribution = new
                 {
-                    ["com.linkedin.ugc.ShareContent"] = new
-                    {
-                        shareCommentary = new
-                        {
-                            text = BuildSocialText(request, 3000)
-                        },
-                        shareMediaCategory = "NONE",
-                        media = Array.Empty<object>()
-                    }
+                    feedDistribution = "MAIN_FEED",
+                    targetEntities = Array.Empty<object>(),
+                    thirdPartyDistributionChannels = Array.Empty<object>()
                 },
-                visibility = new Dictionary<string, string>
-                {
-                    ["com.linkedin.ugc.MemberNetworkVisibility"] = "PUBLIC"
-                }
-            }
-            : new
-            {
-                author = authorUrn,
                 lifecycleState = "PUBLISHED",
-                specificContent = new Dictionary<string, object>
-                {
-                    ["com.linkedin.ugc.ShareContent"] = new
-                    {
-                        shareCommentary = new
-                        {
-                            text = BuildSocialText(request, 3000)
-                        },
-                        shareMediaCategory = "IMAGE",
-                        media = new[]
-                        {
-                            new
-                            {
-                                status = "READY",
-                                media = imageUrn,
-                                title = new
-                                {
-                                    text = request.title
-                                }
-                            }
-                        }
-                    }
-                },
-                visibility = new Dictionary<string, string>
-                {
-                    ["com.linkedin.ugc.MemberNetworkVisibility"] = "PUBLIC"
-                }
-            };
+                isReshareDisabledByAuthor = false
+            });
+        }
 
-        return JsonSerializer.Serialize(body);
+        return JsonSerializer.Serialize(new
+        {
+            author = authorUrn,
+            commentary,
+            visibility = "PUBLIC",
+            distribution = new
+            {
+                feedDistribution = "MAIN_FEED",
+                targetEntities = Array.Empty<object>(),
+                thirdPartyDistributionChannels = Array.Empty<object>()
+            },
+            content = new
+            {
+                media = new
+                {
+                    title = request.title,
+                    id = imageUrn
+                }
+            },
+            lifecycleState = "PUBLISHED",
+            isReshareDisabledByAuthor = false
+        });
     }
 
     private static string? BuildLinkedInPostUrl(string? remoteId)

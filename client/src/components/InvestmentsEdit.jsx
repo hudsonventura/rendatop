@@ -423,6 +423,93 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                     </FormItem>
                                 )}
                             />
+                            {/* Value */}
+                            <FormField
+                                control={form.control}
+                                name="value"
+                                render={({ field }) => (
+                                    <FormItem className="w-35">
+                                        <FormLabel>Valor investido</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Ex.: 3.999,99"
+                                                {...field}
+                                                onChange={handleInputChangeDecimal}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            
+
+                            {/* Index */}
+                            <FormField
+                                control={form.control}
+                                name="index"
+                                render={({ field }) => (
+                                    <FormItem className="w-56">
+                                        <FormLabel>Indexador (CDI, IPCA+, %a.a.)</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                                            <FormControl className="w-56">
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione o index" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="0">CDI</SelectItem>
+                                                <SelectItem value="1">IPCA+</SelectItem>
+                                                <SelectItem value="2">%a.a.</SelectItem>
+                                                <SelectItem value="3">CDI + %a.a.</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Index percent */}
+                            <FormField
+                                control={form.control}
+                                name="index_percent"
+                                render={({ field }) => (
+                                    <FormItem className="w-27">
+                                        <FormLabel>Valor indexador</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Ex.: 108% ou 13,11%"
+                                                {...field}
+                                                onChange={handleInputChangeDecimal}
+                                                className="text-sm"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="taxes"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col justify-end space-y-2">
+                                        <div className="flex items-center">
+                                            <FormControl>
+                                                <Checkbox
+                                                    checked={field.value ?? true}
+                                                    onCheckedChange={field.onChange}
+                                                    className="bg-background rounded border border-input"
+                                                />
+                                            </FormControl>
+                                            <span className="ml-2 text-sm">Possui incidência de impostos</span>
+                                        </div>
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap gap-4">
                             <FormField
                                 control={form.control}
                                 name="money_box_id"
@@ -455,93 +542,8 @@ const InvestmentsEdit = ({ investment, setReload, externalOpen, onExternalClose 
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        
+
                                         <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Value */}
-                            <FormField
-                                control={form.control}
-                                name="value"
-                                render={({ field }) => (
-                                    <FormItem className="w-35">
-                                        <FormLabel>Valor investido</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Ex.: 3.999,99"
-                                                {...field}
-                                                onChange={handleInputChangeDecimal}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            
-
-                            {/* Index */}
-                            <FormField
-                                control={form.control}
-                                name="index"
-                                render={({ field }) => (
-                                    <FormItem className="w-50">
-                                        <FormLabel>Indexador (CDI, IPCA+, %a.a.)</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
-                                            <FormControl className="w-50">
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Selecione o index" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="0">CDI</SelectItem>
-                                                <SelectItem value="1">IPCA+</SelectItem>
-                                                <SelectItem value="2">%a.a.</SelectItem>
-                                                <SelectItem value="3">CDI + %a.a.</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Index percent */}
-                            <FormField
-                                control={form.control}
-                                name="index_percent"
-                                render={({ field }) => (
-                                    <FormItem className="w-27">
-                                        <FormLabel>% indexador</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Ex.: 108% ou 13,11%"
-                                                {...field}
-                                                onChange={handleInputChangeDecimal}
-                                                className="text-sm"
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="taxes"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-col justify-end space-y-2">
-                                        <div className="flex items-center">
-                                            <FormControl>
-                                                <Checkbox
-                                                    checked={field.value ?? true}
-                                                    onCheckedChange={field.onChange}
-                                                    className="bg-background rounded border border-input"
-                                                />
-                                            </FormControl>
-                                            <span className="ml-2 text-sm">Possui incidência de impostos</span>
-                                        </div>
                                     </FormItem>
                                 )}
                             />

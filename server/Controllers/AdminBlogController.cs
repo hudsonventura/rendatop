@@ -12,6 +12,7 @@ namespace server.Controllers;
 [ApiController]
 public class AdminBlogController : AuthenticatedController
 {
+    private const int BlogExcerptMaxLength = 2200;
     private readonly Context _context;
     private readonly IBlogSocialPublisher _socialPublisher;
     private readonly ITemporarySocialAssetService _temporarySocialAssetService;
@@ -234,9 +235,9 @@ public class AdminBlogController : AuthenticatedController
 
         var excerpt = StripHtml(request.excerpt);
         if (string.IsNullOrWhiteSpace(excerpt))
-            excerpt = Truncate(bodyText, 240);
-        else if (excerpt.Length > 320)
-            excerpt = excerpt[..320].TrimEnd();
+            excerpt = Truncate(bodyText, BlogExcerptMaxLength);
+        else if (excerpt.Length > BlogExcerptMaxLength)
+            excerpt = excerpt[..BlogExcerptMaxLength].TrimEnd();
 
         var normalizedCoverImageDataUrl = BlogRichTextSanitizer.NormalizeDataImageUrl(request.cover_image_data_url);
 
