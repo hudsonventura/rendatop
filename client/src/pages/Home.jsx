@@ -7,6 +7,7 @@ import InvestmentsAdd from "@/components/InvestmentsAdd";
 import InvestmentsDueSoon from "@/components/InvestmentsDueSoon";
 import BanksPieChart from "@/components/BanksPieChart";
 import PortfolioTimelineChart from "@/components/PortfolioTimelineChart";
+import MonthlyNetTaxChart from "@/components/MonthlyNetTaxChart";
 import Logged from "@/components/Logged";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ const Home = () => {
 
     const [investments, setInvestments] = useState([]);
     const [loadingInvestments, setLoadingInvestments] = useState(true);
+    const [monthlyTaxProjection, setMonthlyTaxProjection] = useState([]);
     const [reload, setReload] = useState(0);
     const [reinvestOpen, setReinvestOpen] = useState(false);
     const [reinvestInitialValues, setReinvestInitialValues] = useState(null);
@@ -65,16 +67,26 @@ const Home = () => {
         let cancelled = false;
         setLoadingInvestments(true);
 
-        axiosInstance
-            .get("/Investments", { params: walletParams(activeWalletId) })
-            .then((response) => {
+        Promise.allSettled([
+            axiosInstance.get("/Investments", { params: walletParams(activeWalletId) }),
+            axiosInstance.get("/Investments/monthly-tax-projection", { params: walletParams(activeWalletId) }),
+        ])
+            .then(([investmentsResult, projectionResult]) => {
                 if (cancelled) return;
-                setInvestments(response.data ?? []);
-            })
-            .catch((err) => {
-                console.error("Erro ao buscar investimentos:", err);
-                if (cancelled) return;
-                setInvestments([]);
+
+                if (investmentsResult.status === "fulfilled") {
+                    setInvestments(investmentsResult.value.data ?? []);
+                } else {
+                    console.error("Erro ao buscar investimentos:", investmentsResult.reason);
+                    setInvestments([]);
+                }
+
+                if (projectionResult.status === "fulfilled") {
+                    setMonthlyTaxProjection(projectionResult.value.data ?? []);
+                } else {
+                    console.error("Erro ao buscar projeção mensal:", projectionResult.reason);
+                    setMonthlyTaxProjection([]);
+                }
             })
             .finally(() => {
                 if (cancelled) return;
@@ -161,6 +173,7 @@ const Home = () => {
                     </div>
                 </div>
                 <BanksPieChart investments={loadingInvestments ? null : investments} />
+                <MonthlyNetTaxChart data={loadingInvestments ? null : monthlyTaxProjection} />
                 <PortfolioTimelineChart investments={loadingInvestments ? null : investments} />
             </BaseLayout>
             <Dialog

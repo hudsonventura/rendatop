@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { Check } from 'lucide-react'
+import type { CSSProperties } from 'react'
+import { Check, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { API_CONFIG } from '@/config/api'
+import { APP_CONFIG } from '@/config/app'
 
 interface Plan {
   id: string
@@ -20,21 +21,22 @@ interface Plan {
   features: Record<string, string>
 }
 
-const planDescriptions: Record<string, { description: string; cta: string; popular?: boolean; includesPrevious?: string }> = {
+type PlanGridStyle = CSSProperties & {
+  '--plan-count': number
+}
+
+const planDescriptions: Record<string, { description: string; popular?: boolean; includesPrevious?: string }> = {
   free: {
     description: 'Para comecar a organizar a carteira e acompanhar vencimentos.',
-    cta: 'Comecar',
     popular: false,
   },
   plus: {
     description: 'Para quem quer ampliar notificacoes e integrar o calendario ao dia-a-dia.',
-    cta: 'Escolher Plus',
     popular: true,
     includesPrevious: 'Tudo do Free, mais',
   },
   pro: {
     description: 'Para uso mais frequente, com limites maiores e mais margem para evolucao.',
-    cta: 'Escolher Pro',
     popular: false,
     includesPrevious: 'Tudo do Plus, mais',
   },
@@ -44,10 +46,10 @@ export function PricingSection() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
 
-  const clientBaseUrl = API_CONFIG.BASE_URL;
+  const clientBaseUrl = APP_CONFIG.BASE_URL;
 
   useEffect(() => {
-    const baseUrl = API_CONFIG.BASE_URL;
+    const baseUrl = APP_CONFIG.BASE_URL;
 
     
 
@@ -75,31 +77,49 @@ export function PricingSection() {
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
             Escolha o plano que faz sentido para a sua rotina
           </h2>
-          <p className="text-lg text-muted-foreground mb-8">
-            Os valores e beneficios abaixo refletem a estrutura atual do produto, com foco em notificacoes, calendario e leitura automática de comprovantes.
-          </p>
+
+          <div className="mb-6 rounded-xl border border-primary/20 bg-background p-5 shadow-sm">
+            <div className="flex items-start gap-3 text-left">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Sparkles className="size-5" />
+              </div>
+              <div>
+                <p className="font-semibold">Comece com 30 dias gratuitos do plano Pro</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Ao criar sua conta, você recebe o plano Pro gratuitamente por 30 dias para desfrutar de todos os recursos do sistema. A degustação termina automaticamente, sem cobrança.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Button size="lg" className="cursor-pointer" asChild>
+            <a href={clientBaseUrl+'/signup'}>Crie sua conta gratuita</a>
+          </Button>
         </div>
 
         {loading ? (
-          <div className="mx-auto max-w-6xl text-center py-12">
+          <div className="w-full text-center py-12">
             <p className="text-muted-foreground">Carregando planos...</p>
           </div>
         ) : plans.length === 0 ? (
-          <div className="mx-auto max-w-6xl text-center py-12">
+          <div className="w-full text-center py-12">
             <p className="text-muted-foreground">Planos não disponíveis no momento</p>
           </div>
         ) : (
-          <div className="mx-auto max-w-6xl">
+          <div className="w-full">
             <div className="rounded-xl border">
-              <div className="grid lg:grid-cols-3">
-                {plans.map((plan, index) => {
-                  const metadata = planDescriptions[plan.id.toLowerCase()] || { description: '', cta: 'Escolher' }
+              <div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(var(--plan-count),minmax(0,1fr))]"
+                style={{ '--plan-count': plans.length } as PlanGridStyle}
+              >
+                {plans.map((plan) => {
+                  const metadata = planDescriptions[plan.id.toLowerCase()] || { description: '' }
                   const isPopular = metadata.popular || false
 
                   return (
                     <div
                       key={plan.id}
-                      className={`p-8 grid grid-rows-subgrid row-span-4 gap-6 ${
+                      className={`p-8 grid grid-rows-subgrid row-span-3 gap-6 ${
                         isPopular
                           ? 'my-2 mx-4 rounded-xl bg-card border-transparent shadow-xl ring-1 ring-foreground/10 backdrop-blur'
                           : ''
@@ -119,20 +139,6 @@ export function PricingSection() {
                         <div className="text-muted-foreground text-sm">
                           Por mes
                         </div>
-                      </div>
-
-                      <div>
-                        <Button
-                          className={`w-full cursor-pointer my-2 ${
-                            isPopular
-                              ? 'shadow-md border-[0.5px] border-white/25 shadow-black/20 bg-primary ring-1 ring-primary/15 text-primary-foreground hover:bg-primary/90'
-                              : 'shadow-sm shadow-black/15 border border-transparent bg-background ring-1 ring-foreground/10 hover:bg-muted/50'
-                          }`}
-                          variant={isPopular ? 'default' : 'secondary'}
-                          asChild
-                        >
-                          <a href={clientBaseUrl+'/login'}>{metadata.cta}</a>
-                        </Button>
                       </div>
 
                       <div>

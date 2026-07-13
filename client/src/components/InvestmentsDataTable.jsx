@@ -67,7 +67,7 @@ const formatCurrency = (val) =>
 const VALUE_LIQUID_CURRENT_HINT = "Valor líquido atual, já descontados os impostos, considerando o resgate hoje. Não reflete o valor no vencimento para investimentos sem liquidez diária."
 const OVERDUE_INVESTMENT_HINT = "Este investimento passou da data de vencimento e provavelmente foi resgatado automaticamente pelo banco. Informe o reinvestimento, o resgate total ou arquive este item."
 const EARLY_DUE_WINDOW_DAYS = 5
-const UPCOMING_DUE_PRIORITY_DAYS = 10
+const UPCOMING_DUE_PRIORITY_DAYS = 30
 
 function getBankLogoSrc(bank) {
     const rawCode = bank?.code
@@ -171,13 +171,16 @@ function getDueDateSortValue(dateValue) {
     windowEnd.setDate(windowEnd.getDate() + UPCOMING_DUE_PRIORITY_DAYS)
     const dueTimestamp = dueDate?.getTime()
 
-    if (dueDate && dueDate >= today && dueDate <= windowEnd)
+    if (dueDate && dueDate < today)
         return dueTimestamp ?? 0
 
-    if (!dueDate)
-        return 1_000_000_000_000_000 + todayTimestamp
+    if (dueDate && dueDate >= today && dueDate <= windowEnd)
+        return 1_000_000_000_000_000 + (dueTimestamp ?? 0)
 
-    return 2_000_000_000_000_000 + dueTimestamp
+    if (!dueDate)
+        return 2_000_000_000_000_000 + todayTimestamp
+
+    return 3_000_000_000_000_000 + dueTimestamp
 }
 
 const canShowReinvest = (dateStr) => {
@@ -987,8 +990,8 @@ export default function InvestmentsDataTable({ investments, setReload, onReinves
         onInvestmentModalOpen?.()
     }
 
-    const openView = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setViewOpen(true) }
-    const openEdit = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setEditOpen(true) }
+    const openView = (inv) => { setSelectedInvestment(inv); setViewOpen(true) }
+    const openEdit = (inv) => { setSelectedInvestment(inv); setEditOpen(true) }
     const openRedeem = (inv) => { notifyInvestmentModalOpen(); setSelectedInvestment(inv); setRedeemOpen(true) }
     const handleReinvest = (inv) => { notifyInvestmentModalOpen(); onReinvest?.(inv) }
     const openEditRedemption = (redemption) => { setSelectedRedemption(redemption); setEditRedemptionOpen(true) }

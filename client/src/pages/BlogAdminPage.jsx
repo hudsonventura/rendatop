@@ -575,9 +575,9 @@ export default function BlogAdminPage() {
                                                         <textarea
                                                             value={form.excerpt}
                                                             onChange={(event) => setForm((current) => ({ ...current, excerpt: event.target.value }))}
-                                                            maxLength={320}
+                                                            maxLength={2200}
                                                             rows={5}
-                                                            placeholder="Resumo curto para cards, SEO e redes sociais"
+                                                            placeholder="Resumo para cards, SEO e publicação em redes sociais"
                                                             className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-32 rounded-xl border px-3 py-2 text-sm outline-none focus-visible:ring-2"
                                                         />
                                                     </div>

@@ -1068,43 +1068,6 @@ const InvestmentsAdd = ({
 							/>
 							<FormField
 								control={form.control}
-								name="money_box_id"
-								render={({ field }) => (
-									<FormItem
-										className="w-48"
-										onPointerDownCapture={() => {
-											if (!moneyBoxesOverview.selection_enabled) {
-												openUpgradePrompt(moneyBoxesOverview.restriction_message || "Apenas usuarios de planos pagos podem vincular investimentos a cofrinhos e acessar limites extendidos.");
-											}
-										}}
-									>
-										<FormLabel>Cofrinho</FormLabel>
-										<Select
-											onValueChange={field.onChange}
-											value={field.value || MONEY_BOX_NONE}
-											disabled={!moneyBoxesOverview.selection_enabled}
-										>
-											<FormControl>
-												<SelectTrigger>
-													<SelectValue placeholder="Opcional" />
-												</SelectTrigger>
-											</FormControl>
-											<SelectContent>
-												<SelectItem value={MONEY_BOX_NONE}>Sem cofrinho</SelectItem>
-												{moneyBoxesOverview.items.map((item) => (
-													<SelectItem key={item.id} value={item.id}>
-														{item.name}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<FormField
-								control={form.control}
 								name="value"
 								render={({ field }) => (
 									<FormItem className="w-35">
@@ -1129,10 +1092,10 @@ const InvestmentsAdd = ({
 								control={form.control}
 								name="index"
 								render={({ field }) => (
-									<FormItem className="w-50">
+									<FormItem className="w-56">
 										<FormLabel>Indexador (CDI, IPCA+, %a.a.)</FormLabel>
 										<Select onValueChange={field.onChange} value={field.value}>
-											<FormControl className="w-50">
+											<FormControl className="w-56">
 												<SelectTrigger>
 													<SelectValue placeholder="Selecione o indexador" />
 												</SelectTrigger>
@@ -1154,7 +1117,7 @@ const InvestmentsAdd = ({
 								name="index_percent"
 								render={({ field }) => (
 									<FormItem className="w-27">
-										<FormLabel>% indexador</FormLabel>
+										<FormLabel>Valor do indexador</FormLabel>
 										<FormControl>
 											<Input
 												placeholder="14,99"
@@ -1183,6 +1146,46 @@ const InvestmentsAdd = ({
 											</FormControl>
 											<span className="ml-2 text-sm">Possui incidência de impostos</span>
 										</div>
+									</FormItem>
+								)}
+							/>
+						</div>
+
+						<div className="flex flex-wrap gap-4">
+							<FormField
+								control={form.control}
+								name="money_box_id"
+								render={({ field }) => (
+									<FormItem
+										className="w-48"
+										onPointerDownCapture={() => {
+											if (!moneyBoxesOverview.selection_enabled) {
+												openUpgradePrompt(moneyBoxesOverview.restriction_message || "Apenas usuarios de planos pagos podem vincular investimentos a cofrinhos e acessar limites extendidos.");
+											}
+										}}
+									>
+										<FormLabel>Cofrinho</FormLabel>
+										<Select
+											onValueChange={field.onChange}
+											value={field.value || MONEY_BOX_NONE}
+											disabled={!moneyBoxesOverview.selection_enabled}
+										>
+											<FormControl className="w-48">
+												<SelectTrigger>
+													<SelectValue placeholder="Opcional" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value={MONEY_BOX_NONE}>Sem cofrinho</SelectItem>
+												{moneyBoxesOverview.items.map((item) => (
+													<SelectItem key={item.id} value={item.id}>
+														{item.name}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+
+										<FormMessage />
 									</FormItem>
 								)}
 							/>

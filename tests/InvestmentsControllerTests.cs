@@ -413,6 +413,40 @@ public class InvestmentsControllerTests
         Assert.False(assertionContext.investments.Single(i => i.id == sourceInvestment.id).archived);
     }
 
+    [Fact]
+    public void GetMonthlyTaxProjection_ReturnsHistoricalAndEstimatedValuesWithRegressiveTaxes()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var now = DateTime.UtcNow;
+        var investment = fixture.SeedInvestment(
+            value: 1000m,
+            dueDate: now.Date.AddMonths(2),
+            index: IdexesType.PERCENT_YEAR,
+            indexPercent: 12m);
+        investment.date_buy = now.Date.AddDays(-10);
+        fixture.Context.SaveChanges();
+
+        var result = fixture.Controller.GetMonthlyTaxProjection();
+
+        Assert.Equal(24, result.Count);
+        Assert.Equal(now.Date.AddMonths(-11).ToString("yyyy-MM"), result.First().month);
+        Assert.Equal(now.Date.AddMonths(12).ToString("yyyy-MM"), result.Last().month);
+        Assert.Equal(12, result.Count(point => !point.estimated));
+        Assert.Equal(12, result.Count(point => point.estimated));
+
+        var currentMonth = Assert.Single(result, point => point.month == now.ToString("yyyy-MM"));
+        Assert.True(currentMonth.liquid_value > 0m);
+        Assert.True(currentMonth.liquid_value < 100m);
+        Assert.True(currentMonth.ir_value > 0m);
+        Assert.True(currentMonth.iof_value > 0m);
+        Assert.Equal(currentMonth.ir_value + currentMonth.iof_value, currentMonth.taxes_value);
+
+        var afterMaturity = Assert.Single(result, point =>
+            point.month == now.Date.AddMonths(3).ToString("yyyy-MM"));
+        Assert.Equal(0m, afterMaturity.liquid_value);
+        Assert.Equal(0m, afterMaturity.taxes_value);
+    }
+
     private static FormFile BuildFormFile(string fileName, string contentType, string content)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(content);

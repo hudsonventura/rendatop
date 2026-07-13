@@ -275,6 +275,198 @@ public class InvestmentsController : AuthenticatedController
         return investments;
     }
 
+    /// <summary>
+    /// Retorna os rendimentos líquidos e os impostos gerados pela carteira em cada mês.
+    /// Os 12 meses futuros são estimados com as taxas disponíveis atualmente.
+    /// </summary>
+    [HttpGet("Investments/monthly-tax-projection")]
+    [ProducesResponseType(typeof(List<MonthlyTaxProjectionResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public List<MonthlyTaxProjectionResponse> GetMonthlyTaxProjection([FromQuery] Guid? wallet_id = null)
+    {
+        var wallet = WalletAccess.ResolveAccessibleWallet(_context, _user, wallet_id);
+        var investments = _context.investments
+            .AsNoTracking()
+            .Include(investment => investment.bank)
+            .Include(investment => investment.redemptions)
+            .Where(investment =>
+                investment.owner.id == _user.id &&
+                (investment.wallet_id == wallet.id || investment.wallet_id == null))
+            .ToList();
+
+        var now = DateTime.UtcNow;
+        var currentMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var calculators = new Dictionary<IdexesType, ICalculator>();
+        var result = new List<MonthlyTaxProjectionResponse>();
+
+        // Do mês atual voltamos 11 meses; depois projetamos os 12 meses seguintes.
+        for (var monthOffset = -11; monthOffset <= 12; monthOffset++)
+        {
+            var monthStart = currentMonth.AddMonths(monthOffset);
+            var cutoff = monthOffset == 0 ? now : monthStart.AddMonths(1).AddTicks(-1);
+            decimal liquidEarnings = 0m;
+            decimal irValue = 0m;
+            decimal iofValue = 0m;
+
+            foreach (var investment in investments)
+            {
+                if (investment.date_buy > cutoff)
+                    continue;
+
+                var periodStart = investment.date_buy > monthStart
+                    ? investment.date_buy
+                    : monthStart;
+                var periodEnd = investment.due_date.HasValue && investment.due_date.Value < cutoff
+                    ? investment.due_date.Value
+                    : cutoff;
+
+                if (periodEnd <= periodStart)
+                    continue;
+
+                if (!calculators.TryGetValue(investment.index, out var calculator))
+                {
+                    var calculatorType = typeof(ICalculator).Assembly.GetType(
+                        $"server.Domain.Calculator_{investment.index}");
+
+                    if (calculatorType == null)
+                        throw new ExpectedException($"Tipo de calculo nao encontrado: Calculator_{investment.index}");
+
+                    calculator = (ICalculator)Activator.CreateInstance(calculatorType, _context)!;
+                    calculators[investment.index] = calculator;
+                }
+
+                var monthlyValues = CalculateMonthlyEarnings(
+                    investment,
+                    periodStart,
+                    periodEnd,
+                    calculator);
+
+                liquidEarnings += monthlyValues.LiquidEarnings;
+                irValue += monthlyValues.IrValue;
+                iofValue += monthlyValues.IofValue;
+            }
+
+            var roundedLiquidValue = Math.Round(liquidEarnings, 2);
+            var roundedIrValue = Math.Round(irValue, 2);
+            var roundedIofValue = Math.Round(iofValue, 2);
+
+            result.Add(new MonthlyTaxProjectionResponse(
+                monthStart.ToString("yyyy-MM"),
+                roundedLiquidValue,
+                roundedIrValue,
+                roundedIofValue,
+                roundedIrValue + roundedIofValue,
+                monthOffset > 0));
+        }
+
+        return result;
+    }
+
+    private static MonthlyEarnings CalculateMonthlyEarnings(
+        Investment investment,
+        DateTime periodStart,
+        DateTime periodEnd,
+        ICalculator calculator)
+    {
+        var liquidEarnings = 0m;
+        var irValue = 0m;
+        var iofValue = 0m;
+        var segmentStart = periodStart;
+        var remainingShare = GetRemainingShareAtDate(investment, periodStart, calculator);
+
+        foreach (var redemption in investment.redemptions
+            .Where(redemption => redemption.value > 0m && redemption.date > periodStart && redemption.date <= periodEnd)
+            .OrderBy(redemption => redemption.date))
+        {
+            AddEarningsSegment(
+                investment,
+                segmentStart,
+                redemption.date,
+                remainingShare,
+                calculator,
+                ref liquidEarnings,
+                ref irValue,
+                ref iofValue);
+
+            remainingShare = GetRemainingShareAtDate(investment, redemption.date, calculator);
+            segmentStart = redemption.date;
+        }
+
+        AddEarningsSegment(
+            investment,
+            segmentStart,
+            periodEnd,
+            remainingShare,
+            calculator,
+            ref liquidEarnings,
+            ref irValue,
+            ref iofValue);
+
+        return new MonthlyEarnings(liquidEarnings, irValue, iofValue);
+    }
+
+    private static void AddEarningsSegment(
+        Investment investment,
+        DateTime segmentStart,
+        DateTime segmentEnd,
+        decimal remainingShare,
+        ICalculator calculator,
+        ref decimal liquidEarnings,
+        ref decimal irValue,
+        ref decimal iofValue)
+    {
+        if (segmentEnd <= segmentStart || remainingShare <= 0m)
+            return;
+
+        var request = investment.ToRequest();
+        var startProfit = segmentStart <= investment.date_buy
+            ? 0m
+            : calculator.Generate(request, segmentStart).profit_brute;
+        var endCalculated = calculator.Generate(request, segmentEnd);
+        var grossEarnings = Math.Max(0m, endCalculated.profit_brute - startProfit) * remainingShare;
+
+        if (grossEarnings <= 0m)
+            return;
+
+        var segmentIof = grossEarnings * Math.Clamp(endCalculated.IOF / 100m, 0m, 1m);
+        var segmentIr = (grossEarnings - segmentIof) * Math.Clamp(endCalculated.IR / 100m, 0m, 1m);
+
+        iofValue += segmentIof;
+        irValue += segmentIr;
+        liquidEarnings += grossEarnings - segmentIof - segmentIr;
+    }
+
+    private static decimal GetRemainingShareAtDate(
+        Investment investment,
+        DateTime cutoff,
+        ICalculator calculator)
+    {
+        var remainingShare = 1m;
+        var request = investment.ToRequest();
+
+        foreach (var redemption in investment.redemptions
+            .Where(redemption => redemption.value > 0m && redemption.date <= cutoff)
+            .OrderBy(redemption => redemption.date))
+        {
+            if (redemption.date < investment.date_buy)
+                continue;
+
+            var redemptionDate = investment.due_date.HasValue && redemption.date > investment.due_date.Value
+                ? investment.due_date.Value
+                : redemption.date;
+            var valueBeforeRedemption = Math.Max(0m, calculator.Generate(request, redemptionDate).value_liq)
+                * remainingShare;
+
+            if (valueBeforeRedemption <= 0m)
+                continue;
+
+            var redeemedShare = Math.Clamp(redemption.value / valueBeforeRedemption, 0m, 1m);
+            remainingShare *= 1m - redeemedShare;
+        }
+
+        return remainingShare;
+    }
+
     [HttpGet("Investments/limits")]
     [ProducesResponseType(typeof(InvestmentLimitOverviewResponse), StatusCodes.Status200OK)]
     public InvestmentLimitOverviewResponse GetInvestmentLimits() => BuildInvestmentLimitOverview();
@@ -331,7 +523,7 @@ public class InvestmentsController : AuthenticatedController
 
             if (aiUsageCount >= plan.ai_monthly_limit)
                 throw new ExpectedException(
-                    $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por mês. Faça upgrade para continuar usando este recurso.",
+                    $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por mês. Faça upgrade para usar este recurso.",
                     System.Net.HttpStatusCode.Forbidden);
         }
 
@@ -395,7 +587,7 @@ public class InvestmentsController : AuthenticatedController
 
         if (aiUsageCount >= plan.ai_monthly_limit)
             throw new ExpectedException(
-                $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por mês. Faça upgrade para continuar usando este recurso.",
+                $"Seu plano {plan.name} permite {plan.ai_monthly_limit} leituras de comprovantes por mês. Faça upgrade para usar este recurso.",
                 System.Net.HttpStatusCode.Forbidden);
 
         var banks = _context.banks
@@ -589,4 +781,19 @@ public record InvestmentLimitOverviewResponse(
     string active_plan_id,
     string active_plan_name,
     string? restriction_message
+);
+
+public record MonthlyTaxProjectionResponse(
+    string month,
+    decimal liquid_value,
+    decimal ir_value,
+    decimal iof_value,
+    decimal taxes_value,
+    bool estimated
+);
+
+internal record MonthlyEarnings(
+    decimal LiquidEarnings,
+    decimal IrValue,
+    decimal IofValue
 );

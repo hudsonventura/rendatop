@@ -1,4 +1,5 @@
 
+using Microsoft.EntityFrameworkCore;
 using server.RequestObjects;
 
 namespace server.Domain;
@@ -6,6 +7,8 @@ namespace server.Domain;
 public abstract class Calculator
 {
     private Context _context;
+    private List<Selic>? _selicHistory;
+    private List<IPCA>? _ipcaHistory;
 
     public Calculator(Context context)
     {
@@ -18,8 +21,10 @@ public abstract class Calculator
 
     protected decimal GetSelic(DateTime start, DateTime? finish)
     {
+        _selicHistory ??= _context.selics.AsNoTracking().ToList();
+
         // Try to get the average Selic rate for the investment period
-        decimal? avg = _context.selics
+        decimal? avg = _selicHistory
             .Where(x => x.date > DateOnly.FromDateTime(start.AddDays(1)) && x.date < DateOnly.FromDateTime((DateTime)finish))
             .Average(x => (decimal?)x.value);
 
@@ -28,7 +33,7 @@ public abstract class Calculator
 
         // Fallback: if no data exists for the date range (e.g. DB still seeding),
         // use the most recent known Selic rate so results are non-zero and meaningful
-        decimal? latest = _context.selics
+        decimal? latest = _selicHistory
             .OrderByDescending(x => x.date)
             .Select(x => (decimal?)x.value)
             .FirstOrDefault();
@@ -38,14 +43,16 @@ public abstract class Calculator
 
     protected decimal GetIpca(DateTime start, DateTime? finish)
     {
+        _ipcaHistory ??= _context.ipcas.AsNoTracking().ToList();
+
         // IPCA records are monthly percentages. Convert average monthly IPCA to an annualized rate.
-        decimal? avgMonthly = _context.ipcas
+        decimal? avgMonthly = _ipcaHistory
             .Where(x => x.date > DateOnly.FromDateTime(start.AddDays(1)) && x.date < DateOnly.FromDateTime((DateTime)finish))
             .Average(x => (decimal?)x.value);
 
         if (avgMonthly is null)
         {
-            avgMonthly = _context.ipcas
+            avgMonthly = _ipcaHistory
                 .OrderByDescending(x => x.date)
                 .Select(x => (decimal?)x.value)
                 .FirstOrDefault();
