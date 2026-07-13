@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Check, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +19,10 @@ interface Plan {
   recurring_investments: boolean
   money_boxes_limit: number
   features: Record<string, string>
+}
+
+type PlanGridStyle = CSSProperties & {
+  '--plan-count': number
 }
 
 const planDescriptions: Record<string, { description: string; popular?: boolean; includesPrevious?: string }> = {
@@ -93,17 +98,20 @@ export function PricingSection() {
         </div>
 
         {loading ? (
-          <div className="mx-auto max-w-6xl text-center py-12">
+          <div className="w-full text-center py-12">
             <p className="text-muted-foreground">Carregando planos...</p>
           </div>
         ) : plans.length === 0 ? (
-          <div className="mx-auto max-w-6xl text-center py-12">
+          <div className="w-full text-center py-12">
             <p className="text-muted-foreground">Planos não disponíveis no momento</p>
           </div>
         ) : (
-          <div className="mx-auto max-w-6xl">
+          <div className="w-full">
             <div className="rounded-xl border">
-              <div className="grid lg:grid-cols-3">
+              <div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(var(--plan-count),minmax(0,1fr))]"
+                style={{ '--plan-count': plans.length } as PlanGridStyle}
+              >
                 {plans.map((plan) => {
                   const metadata = planDescriptions[plan.id.toLowerCase()] || { description: '' }
                   const isPopular = metadata.popular || false
