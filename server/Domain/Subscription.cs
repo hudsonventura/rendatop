@@ -97,6 +97,11 @@ public class Subscription
     public DateTime updated_at { get; set; } = DateTime.UtcNow;
 
     /// <summary>
+    /// Indica que o usuário ainda deve ser informado sobre a degustação concedida no cadastro.
+    /// </summary>
+    public bool trial_welcome_pending { get; set; }
+
+    /// <summary>
     /// Referência não-mapeada ao plano (preenchido manualmente via Plans.GetById)
     /// </summary>
     [NotMapped]

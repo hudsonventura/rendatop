@@ -58,6 +58,62 @@ public class SubscriptionController : AuthenticatedController
     }
 
     /// <summary>
+    /// Retorna a degustação concedida no cadastro enquanto o aviso ainda não foi confirmado.
+    /// </summary>
+    [HttpGet("subscription/trial-welcome")]
+    [ProducesResponseType(typeof(TrialWelcomeResponse), StatusCodes.Status200OK)]
+    public TrialWelcomeResponse GetTrialWelcome()
+    {
+        var subscription = _context.subscriptions
+            .AsNoTracking()
+            .Where(item =>
+                item.user_id == _user.id &&
+                item.status == SubscriptionStatus.Active &&
+                item.payment_method == "trial" &&
+                item.current_period_end > DateTime.UtcNow &&
+                item.trial_welcome_pending)
+            .OrderByDescending(item => item.created_at)
+            .FirstOrDefault();
+
+        if (subscription is null)
+            return new TrialWelcomeResponse(false, null, null, null, null);
+
+        var plan = Plans.GetById(subscription.plan_id);
+        return new TrialWelcomeResponse(
+            true,
+            subscription.id,
+            subscription.plan_id,
+            plan?.name ?? subscription.plan_id,
+            subscription.current_period_end);
+    }
+
+    /// <summary>
+    /// Confirma que o usuário visualizou o aviso da degustação concedida no cadastro.
+    /// </summary>
+    [HttpPost("subscription/trial-welcome/acknowledge")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public IActionResult AcknowledgeTrialWelcome()
+    {
+        var subscriptions = _context.subscriptions
+            .Where(item =>
+                item.user_id == _user.id &&
+                item.payment_method == "trial" &&
+                item.trial_welcome_pending)
+            .ToList();
+
+        foreach (var subscription in subscriptions)
+        {
+            subscription.trial_welcome_pending = false;
+            subscription.updated_at = DateTime.UtcNow;
+        }
+
+        if (subscriptions.Count > 0)
+            _context.SaveChanges();
+
+        return NoContent();
+    }
+
+    /// <summary>
     /// Retorna o resumo das assinaturas do usuário.
     /// Permite exibir a assinatura ativa e a assinatura a ativar ao mesmo tempo.
     /// </summary>
@@ -350,6 +406,13 @@ public class SubscriptionOverviewResponse
     public Subscription? pending_subscription { get; set; }
     public SubscriptionCharge? pending_charge { get; set; }
 }
+
+public record TrialWelcomeResponse(
+    bool show,
+    Guid? subscription_id,
+    string? plan_id,
+    string? plan_name,
+    DateTime? expires_at);
 
 public class CancelActiveSubscriptionRequest
 {

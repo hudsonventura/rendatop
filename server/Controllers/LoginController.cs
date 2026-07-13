@@ -225,6 +225,7 @@ public class LoginController : ControllerBase
         user.email_verified = true;
         user.email_verification_secret = null;
         user.email_verification_sent_at = null;
+        GrantSignupTrial(user);
         _context.SaveChanges();
 
         return CreateSession(user);
@@ -621,11 +622,13 @@ Se você não solicitou essa alteração, ignore este email.";
                 email_verified = true
             };
             _context.users.Add(user);
+            GrantSignupTrial(user);
             _context.SaveChanges();
         }
         else
         {
             var changed = false;
+            var activatedNow = !user.email_verified;
 
             if (user.auth_provider != authProvider)
             {
@@ -641,11 +644,38 @@ Se você não solicitou essa alteração, ignore este email.";
                 changed = true;
             }
 
+            if (activatedNow)
+            {
+                GrantSignupTrial(user);
+                changed = true;
+            }
+
             if (changed)
                 _context.SaveChanges();
         }
 
         return user;
+    }
+
+    private void GrantSignupTrial(User user)
+    {
+        var alreadyHasSubscription = _context.subscriptions
+            .Any(subscription =>
+                subscription.user_id == user.id &&
+                (subscription.status == SubscriptionStatus.Active ||
+                 subscription.status == SubscriptionStatus.PendingPayment));
+
+        if (alreadyHasSubscription)
+            return;
+
+        var plan = SubscriptionTrials.GetHighestPricedPlan();
+        var subscription = SubscriptionTrials.Create(
+            user.id,
+            plan,
+            DateTime.UtcNow,
+            showWelcome: true);
+
+        _context.subscriptions.Add(subscription);
     }
 
     private LoginResponse SetSession(User user)

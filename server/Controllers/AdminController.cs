@@ -200,20 +200,7 @@ public class AdminController : AuthenticatedController
         if (!userExists)
             throw new ExpectedException("Usuário não encontrado.", System.Net.HttpStatusCode.NotFound);
 
-        var now = DateTime.UtcNow;
-        var subscription = new Subscription
-        {
-            user_id = userId,
-            plan_id = plan.id,
-            status = SubscriptionStatus.Active,
-            payment_method = "trial",
-            current_period_start = now,
-            current_period_end = now.AddDays(30),
-            cancel_at_period_end = true,
-            cancellation_requested_at = now,
-            created_at = now,
-            updated_at = now
-        };
+        var subscription = SubscriptionTrials.Create(userId, plan, DateTime.UtcNow);
 
         _context.subscriptions.Add(subscription);
         _context.SaveChanges();
