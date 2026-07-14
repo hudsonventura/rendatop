@@ -184,6 +184,11 @@ export const fourthFeatures = [
     title: 'Comparação',
     description: 'A comparação permitirá analisar se o seu investimento é de fato interessante ou se pode ser melhor investido em outro banco.',
   },
+  {
+    icon: ChartNoAxesGantt,
+    title: 'Comprovante',
+    description: 'Importe seu comprovante de investimento e deixe o RendaTop preencher os dados para você.',
+  }
 ]
 
 
