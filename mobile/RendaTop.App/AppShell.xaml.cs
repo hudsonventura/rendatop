@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui.Controls.Shapes;
 using RendaTop.App.Services;
 
 namespace RendaTop.App;
@@ -158,9 +159,26 @@ public partial class AppShell : Shell
 							FontSize = 13,
 							TextColor = Color.FromArgb("#CBD5E1")
 						},
-						_walletPicker
+						CreateWalletPickerContainer()
 					}
 				}
+			}
+		};
+	}
+
+	private View CreateWalletPickerContainer()
+	{
+		return new Border
+		{
+			BackgroundColor = Color.FromArgb("#1E293B"),
+			Stroke = Color.FromArgb("#334155"),
+			StrokeThickness = 1,
+			Margin = new Thickness(0, 4, 0, 0),
+			Padding = new Thickness(10, 2),
+			Content = _walletPicker,
+			StrokeShape = new RoundRectangle
+			{
+				CornerRadius = 12
 			}
 		};
 	}
@@ -172,9 +190,10 @@ public partial class AppShell : Shell
 			Title = "Carteira",
 			HeightRequest = 42,
 			FontSize = 14,
-			TextColor = Color.FromArgb("#111827"),
-			BackgroundColor = Colors.White,
-			Margin = new Thickness(0, 4, 0, 0),
+			TextColor = Colors.White,
+			TitleColor = Color.FromArgb("#CBD5E1"),
+			BackgroundColor = Colors.Transparent,
+			Margin = new Thickness(0),
 			HorizontalOptions = LayoutOptions.Fill,
 			ItemDisplayBinding = new Binding(nameof(ShellWalletItem.Name)),
 			IsVisible = false
