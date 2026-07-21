@@ -15,6 +15,7 @@ import { ContactSection } from './components/contact-section'
 import { FaqSection } from './components/faq-section'
 import { LandingFooter } from './components/footer'
 import { AboutSection } from './components/about-section'
+import { ScrollReveal } from './components/scroll-reveal'
 
 type LandingPageContentProps = {
   backendBaseUrl: string
@@ -59,23 +60,21 @@ export function LandingPageContent({ backendBaseUrl }: LandingPageContentProps) 
 
       {/* Main Content */}
       <main>
-        <HeroSection />
-        
-        <LogoCarousel />
-        <FeaturesSection />
-        <AppDownloadButtons />
-        <StatsSection />
-        <AboutSection />
-        
-        <BlogSection backendBaseUrl={backendBaseUrl} />
-        <PricingSection />
+        <ScrollReveal><HeroSection /></ScrollReveal>
+        <ScrollReveal><LogoCarousel /></ScrollReveal>
+        <ScrollReveal><FeaturesSection /></ScrollReveal>
+        <ScrollReveal><AppDownloadButtons /></ScrollReveal>
+        <ScrollReveal><StatsSection /></ScrollReveal>
+        <ScrollReveal><AboutSection /></ScrollReveal>
+        <ScrollReveal><BlogSection backendBaseUrl={backendBaseUrl} /></ScrollReveal>
+        <ScrollReveal><PricingSection /></ScrollReveal>
         {/* <CTASection /> */}
-        <FaqSection />
-        <ContactSection />
+        <ScrollReveal><FaqSection /></ScrollReveal>
+        <ScrollReveal><ContactSection /></ScrollReveal>
       </main>
 
       {/* Footer */}
-      <LandingFooter />
+      <ScrollReveal><LandingFooter /></ScrollReveal>
     </div>
   )
 }
