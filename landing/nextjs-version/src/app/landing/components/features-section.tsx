@@ -243,7 +243,7 @@ export function FeaturesSection() {
     <>
       <section id="features" className="py-24 sm:py-32 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center mb-16">
+          <div data-scroll-reveal-item className="mx-auto max-w-2xl text-center mb-16">
             <Badge variant="outline" className="mb-4">Principais Recursos</Badge>
             <h2 className="text-3xl font-bold tracking-tight sm:text-5xl mb-4">
               Tudo o que você precisa para acompanhar seus investimentos no dia-a-dia
@@ -256,13 +256,15 @@ export function FeaturesSection() {
           </div>
 
           <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16 mb-24">
+            <div data-scroll-reveal-item>
             <ScreenshotCarousel
               images={dashboardScreenshots}
               activeIndex={dashboardImageIndex}
               onActiveIndexChange={setDashboardImageIndex}
               onOpen={() => setDashboardGalleryOpen(true)}
             />
-            <div className="space-y-6">
+            </div>
+            <div data-scroll-reveal-item className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                   Acompanhamento claro desde a primeira tela
@@ -292,7 +294,7 @@ export function FeaturesSection() {
           </div>
 
           <div id="calendario"className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16">
-            <div className="space-y-6 order-2 lg:order-1">
+            <div data-scroll-reveal-item className="space-y-6 order-2 lg:order-1">
               <div className="space-y-4">
                 <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                   Operação da carteira com mais previsibilidade
@@ -320,6 +322,7 @@ export function FeaturesSection() {
              
             </div>
             <img 
+              data-scroll-reveal-item
               className="w-full h-auto max-w-2xl rounded-xl shadow-xl border border-neutral-800 order-1 lg:order-2 cursor-pointer hover:shadow-2xl transition-shadow duration-300" 
               src="calendar1.png" 
               alt="App screenshot" 
@@ -330,12 +333,13 @@ export function FeaturesSection() {
 
           <div id="controle" className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16 mb-24">
             <img 
+              data-scroll-reveal-item
               className="w-full h-auto max-w-2xl rounded-xl shadow-xl border border-neutral-800 cursor-pointer hover:shadow-2xl transition-shadow duration-300" 
               src="investments1.png" 
               alt="App screenshot" 
               onClick={() => setSelectedImage('investments1.png')}
             />
-            <div className="space-y-6">
+            <div data-scroll-reveal-item className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                   Acompanhe os rendimentos e descontos de cada investimento
@@ -365,7 +369,7 @@ export function FeaturesSection() {
 
 
           <div id="simulacao" className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16">
-            <div className="space-y-6 order-2 lg:order-1">
+            <div data-scroll-reveal-item className="space-y-6 order-2 lg:order-1">
               <div className="space-y-4">
                 <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                   Simulação e comparação de investimentos
@@ -393,6 +397,7 @@ export function FeaturesSection() {
              
             </div>
             <img 
+              data-scroll-reveal-item
               className="w-full h-auto max-w-2xl rounded-xl shadow-xl border border-neutral-800 order-1 lg:order-2 cursor-pointer hover:shadow-2xl transition-shadow duration-300" 
               src="new-investment1.png" 
               alt="App screenshot" 

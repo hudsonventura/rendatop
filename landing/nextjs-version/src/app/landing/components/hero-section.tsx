@@ -15,7 +15,7 @@ export function HeroSection() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="mx-auto max-w-4xl text-center">
+        <div data-scroll-reveal-item className="mx-auto max-w-4xl text-center">
           <Badge variant="outline" className="mb-6">
             Gestao de investimentos em um so lugar
           </Badge>
@@ -34,7 +34,7 @@ export function HeroSection() {
 
         </div>
 
-        <div className="">
+        <div data-scroll-reveal-item className="">
             <img className='rounded-lg' src="landing.png"/>
         </div>
       </div>

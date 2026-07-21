@@ -15,7 +15,7 @@ const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL
     <div id="downloads" className="flex flex-col sm:flex-row gap-4 items-center justify-center p-6 bg-background">
         <section id="about" className="py-24 sm:py-32">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl text-center mb-16">
+        <div data-scroll-reveal-item className="mx-auto max-w-4xl text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
             No app ou na web você encontra o melhor investimento
           </h2>
@@ -28,6 +28,7 @@ const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL
             
             
                 <a
+                    data-scroll-reveal-item
                     href={googlePlayUrl}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -102,6 +103,7 @@ const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL
             
             {/* Apple App Store Button */}
             <a
+                data-scroll-reveal-item
                 href={appStoreUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -131,6 +133,7 @@ const appStoreActive = !!process.env.NEXT_PUBLIC_APPS_APP_STORE_URL
 
             {/* Web Interface Button */}
             <a
+                data-scroll-reveal-item
                 href={clientBaseUrl+'/login'}
                 className="inline-flex items-center gap-3 bg-black text-white px-5 py-2.5 rounded-xl border border-neutral-800 hover:bg-neutral-900 transition-colors duration-200 min-w-[200px] select-none shadow-sm"
             >

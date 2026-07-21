@@ -19,7 +19,7 @@ export function LogoCarousel() {
         <section className="pb-12 sm:pb-16 lg:pb-20 pt-12">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center">
-                    <div className="relative">
+                    <div data-scroll-reveal-item className="relative">
                         <div className="overflow-hidden">
                             <div className="flex animate-logo-scroll space-x-8 sm:space-x-12">
                                 {productHighlights.map((item, index) => (
