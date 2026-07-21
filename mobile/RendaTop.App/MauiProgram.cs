@@ -24,7 +24,6 @@ public static class MauiProgram
 #endif
 
 		builder.Services.AddSingleton<AppConfig>();
-		builder.Services.AddSingleton<AppPlatformService>();
 		builder.Services.AddSingleton<ConnectivityService>();
 		builder.Services.AddSingleton<ApiClient>();
 		builder.Services.AddSingleton<LocalSnapshotStore>();
@@ -39,7 +38,6 @@ public static class MauiProgram
 		builder.Services.AddSingleton<MoneyBoxService>();
 		builder.Services.AddSingleton<UserSettingsService>();
 		builder.Services.AddSingleton<SubscriptionService>();
-		builder.Services.AddSingleton<StoreBillingService>();
 		builder.Services.AddSingleton<SupportTicketService>();
 		builder.Services.AddSingleton<AppShell>();
 		builder.Services.AddTransient<SplashPage>();
@@ -58,7 +56,6 @@ public static class MauiProgram
 		builder.Services.AddTransient<SettingsPage>();
 		builder.Services.AddTransient<SubscriptionPage>();
 		builder.Services.AddTransient<SubscriptionCheckoutPage>();
-		builder.Services.AddTransient<StoreSubscriptionCheckoutPage>();
 		builder.Services.AddTransient<SupportPage>();
 		builder.Services.AddTransient<CreateSupportTicketPage>();
 		builder.Services.AddTransient<SupportTicketDetailsPage>();

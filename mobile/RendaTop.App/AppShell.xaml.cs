@@ -9,6 +9,7 @@ public partial class AppShell : Shell
 	private readonly IServiceProvider _services;
 	private readonly WalletService _wallets;
 	private readonly Picker _walletPicker;
+	private readonly Button _createWalletButton;
 	private bool _walletPickerUpdating;
 
 	public AppShell(IServiceProvider services)
@@ -16,6 +17,7 @@ public partial class AppShell : Shell
 		_services = services;
 		_wallets = services.GetRequiredService<WalletService>();
 		_walletPicker = CreateWalletPicker();
+		_createWalletButton = CreateWalletButton();
 		InitializeComponent();
 
 		FlyoutHeader = CreateFlyoutHeader();
@@ -39,7 +41,6 @@ public partial class AppShell : Shell
 		Items.Add(CreateShellContent<Pages.CalendarDayEventsPage>("calendar-day-events", "Eventos do Dia", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.CalendarEventDetailsPage>("calendar-event-details", "Detalhes do Evento", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.SubscriptionCheckoutPage>("subscription-checkout", "Pagamento", showInFlyout: false));
-		Items.Add(CreateShellContent<Pages.StoreSubscriptionCheckoutPage>("store-subscription-checkout", "Pagamento na Loja", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.CreateSupportTicketPage>("create-support-ticket", "Novo Chamado", showInFlyout: false));
 		Items.Add(CreateShellContent<Pages.SupportTicketDetailsPage>("support-ticket-details", "Detalhes do Chamado", showInFlyout: false));
 		Items.Add(CreateFlyoutItem<Pages.DashboardPage>("dashboard", "Dashboard"));
@@ -64,7 +65,6 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute(nameof(Pages.CalendarDayEventsPage), typeof(Pages.CalendarDayEventsPage));
 		Routing.RegisterRoute(nameof(Pages.CalendarEventDetailsPage), typeof(Pages.CalendarEventDetailsPage));
 		Routing.RegisterRoute(nameof(Pages.SubscriptionCheckoutPage), typeof(Pages.SubscriptionCheckoutPage));
-		Routing.RegisterRoute(nameof(Pages.StoreSubscriptionCheckoutPage), typeof(Pages.StoreSubscriptionCheckoutPage));
 		Routing.RegisterRoute(nameof(Pages.CreateSupportTicketPage), typeof(Pages.CreateSupportTicketPage));
 		Routing.RegisterRoute(nameof(Pages.SupportTicketDetailsPage), typeof(Pages.SupportTicketDetailsPage));
 	}
@@ -174,8 +174,20 @@ public partial class AppShell : Shell
 			Stroke = Color.FromArgb("#334155"),
 			StrokeThickness = 1,
 			Margin = new Thickness(0, 4, 0, 0),
-			Padding = new Thickness(10, 2),
-			Content = _walletPicker,
+			Padding = new Thickness(10, 2, 4, 2),
+			Content = new Grid
+			{
+				ColumnDefinitions =
+				{
+					new ColumnDefinition(GridLength.Star),
+					new ColumnDefinition(GridLength.Auto)
+				},
+				Children =
+				{
+					_walletPicker,
+					_createWalletButton
+				}
+			},
 			StrokeShape = new RoundRectangle
 			{
 				CornerRadius = 12
@@ -201,6 +213,30 @@ public partial class AppShell : Shell
 
 		picker.SelectedIndexChanged += OnWalletSelected;
 		return picker;
+	}
+
+	private Button CreateWalletButton()
+	{
+		var button = new Button
+		{
+			Text = "+",
+			FontSize = 24,
+			FontAttributes = FontAttributes.Bold,
+			TextColor = Colors.White,
+			BackgroundColor = Color.FromArgb("#334155"),
+			WidthRequest = 38,
+			HeightRequest = 38,
+			Padding = 0,
+			CornerRadius = 8,
+			Margin = new Thickness(4, 0, 0, 0),
+			VerticalOptions = LayoutOptions.Center,
+			HorizontalOptions = LayoutOptions.End
+		};
+
+		Grid.SetColumn(button, 1);
+		SemanticProperties.SetDescription(button, "Nova carteira");
+		button.Clicked += OnCreateWalletClicked;
+		return button;
 	}
 
 	private async Task LoadWalletsAsync()
@@ -239,6 +275,81 @@ public partial class AppShell : Shell
 			return;
 
 		_wallets.SetActiveWallet(item.Id);
+	}
+
+	private async void OnCreateWalletClicked(object? sender, EventArgs e)
+		=> await CreateWalletAsync();
+
+	private async Task CreateWalletAsync()
+	{
+		_createWalletButton.IsEnabled = false;
+
+		try
+		{
+			var overview = await _wallets.GetOverviewAsync();
+			if (!overview.CanCreate)
+			{
+				await ShowWalletUpgradeAsync(overview.RestrictionMessage);
+				return;
+			}
+
+			var name = await DisplayPromptAsync(
+				"Nova carteira",
+				"Informe um nome para sua nova carteira.",
+				"Criar",
+				"Cancelar",
+				placeholder: "Ex.: Reserva de emergencia",
+				maxLength: 80);
+
+			if (name is null)
+				return;
+
+			if (string.IsNullOrWhiteSpace(name))
+			{
+				await DisplayAlertAsync("Nome obrigatorio", "Informe um nome para a carteira.", "OK");
+				return;
+			}
+
+			var wallet = await _wallets.CreateAsync(name);
+			_wallets.SetActiveWallet(wallet.Id);
+			await LoadWalletsAsync();
+			FlyoutIsPresented = false;
+		}
+		catch (ApiException ex) when (ex.StatusCode == 403)
+		{
+			await ShowWalletUpgradeAsync(ex.Message);
+		}
+		catch (ApiException ex)
+		{
+			await DisplayAlertAsync("Nao foi possivel criar a carteira", ex.Message, "OK");
+		}
+		catch
+		{
+			await DisplayAlertAsync("Nao foi possivel criar a carteira", "Verifique sua conexao e tente novamente.", "OK");
+		}
+		finally
+		{
+			_createWalletButton.IsEnabled = true;
+		}
+	}
+
+	private async Task ShowWalletUpgradeAsync(string? restrictionMessage)
+	{
+		var message = string.IsNullOrWhiteSpace(restrictionMessage)
+			? "Apenas usuarios de planos pagos podem criar mais carteiras e acessar limites estendidos."
+			: restrictionMessage;
+
+		var openSubscription = await DisplayAlertAsync(
+			"Limite do plano",
+			message,
+			"Ver planos",
+			"Agora nao");
+
+		if (openSubscription)
+		{
+			FlyoutIsPresented = false;
+			await GoToAsync("//subscription");
+		}
 	}
 
 	private View CreateFlyoutFooter()

@@ -189,6 +189,31 @@ public class SubscriptionController : AuthenticatedController
 
 
     /// <summary>
+    /// Cria o checkout hospedado da assinatura no Mercado Pago.
+    /// </summary>
+    [HttpPost("subscription/checkout")]
+    [ProducesResponseType(typeof(PaymentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    public async Task<PaymentResult> StartHostedCheckout([FromBody] HostedSubscriptionCheckoutRequest request)
+    {
+        var plan = Plans.GetById(request.plan_id)
+            ?? throw new ExpectedException("Plano inválido.");
+
+        if (plan.price <= 0)
+            throw new ExpectedException("O plano Free não requer pagamento.");
+
+        _logger.LogInformation(
+            "Checkout hospedado do Mercado Pago iniciado. TraceId={TraceId} UserId={UserId} PlanId={PlanId} Tags={_tags_}",
+            TraceContext.GetTraceId(),
+            _user.id,
+            plan.id,
+            _tags);
+
+        return await _billing.CreateHostedSubscriptionCheckoutAsync(_user.id, plan);
+    }
+
+
+    /// <summary>
     /// Cria/atualiza assinatura com pagamento via cartão
     /// </summary>
     [HttpPost("subscription/card")]
@@ -372,6 +397,11 @@ public class SubscriptionController : AuthenticatedController
 
 
 // ======================== REQUEST OBJECTS ========================
+
+public class HostedSubscriptionCheckoutRequest
+{
+    public string plan_id { get; set; } = string.Empty;
+}
 
 public class CardSubscriptionRequest
 {
