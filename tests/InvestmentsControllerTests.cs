@@ -429,12 +429,13 @@ public class InvestmentsControllerTests
         var result = fixture.Controller.GetMonthlyTaxProjection();
 
         Assert.Equal(24, result.Count);
-        Assert.Equal(now.Date.AddMonths(-11).ToString("yyyy-MM"), result.First().month);
-        Assert.Equal(now.Date.AddMonths(12).ToString("yyyy-MM"), result.Last().month);
+        Assert.Equal(now.Date.AddMonths(-12).ToString("yyyy-MM"), result.First().month);
+        Assert.Equal(now.Date.AddMonths(11).ToString("yyyy-MM"), result.Last().month);
         Assert.Equal(12, result.Count(point => !point.estimated));
         Assert.Equal(12, result.Count(point => point.estimated));
 
         var currentMonth = Assert.Single(result, point => point.month == now.ToString("yyyy-MM"));
+        Assert.True(currentMonth.estimated);
         Assert.True(currentMonth.liquid_value > 0m);
         Assert.True(currentMonth.liquid_value < 100m);
         Assert.True(currentMonth.ir_value > 0m);

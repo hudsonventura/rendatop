@@ -96,8 +96,7 @@ function ChartSkeleton() {
 
 export default function MonthlyNetTaxChart({ data }) {
     const currentMonth = React.useMemo(
-        () => data?.findLast?.((point) => !point.estimated)?.month
-            ?? [...(data ?? [])].reverse().find((point) => !point.estimated)?.month,
+        () => data?.find((point) => point.estimated)?.month,
         [data]
     )
 

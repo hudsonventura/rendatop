@@ -11,6 +11,41 @@ namespace tests;
 public class SubscriptionBillingServiceTests
 {
     [Fact]
+    public async Task CreateHostedSubscriptionCheckoutAsync_CreatesMercadoPagoCheckout()
+    {
+        using var fixture = new SubscriptionBillingFixture();
+        fixture.PaymentProvider.HostedSubscriptionResult = new PaymentResult
+        {
+            preapproval_id = "preapproval-mobile-1",
+            status = "pending",
+            status_detail = "pending",
+            amount = 6.9m,
+            checkout_url = "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mobile-1",
+            external_reference = "ext-mobile-1"
+        };
+
+        var result = await fixture.Service.CreateHostedSubscriptionCheckoutAsync(
+            fixture.User.id,
+            Plans.GetById("plus")!);
+
+        Assert.Equal("preapproval-mobile-1", result.preapproval_id);
+        Assert.Equal(
+            "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mobile-1",
+            result.checkout_url);
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var subscription = assertionContext.subscriptions.Single();
+        var charge = assertionContext.subscription_charges.Single();
+
+        Assert.Equal(SubscriptionStatus.PendingPayment, subscription.status);
+        Assert.Equal("mercado_pago", subscription.payment_method);
+        Assert.Equal("preapproval-mobile-1", subscription.mp_preapproval_id);
+        Assert.Equal(SubscriptionChargeStatus.Pending, charge.status);
+        Assert.Equal("mercado_pago", charge.payment_method);
+        Assert.Equal(result.checkout_url, charge.provider_checkout_url);
+    }
+
+    [Fact]
     public async Task CreateInitialCardSubscriptionAsync_CreatesPendingHostedCheckoutCharge()
     {
         using var fixture = new SubscriptionBillingFixture();
