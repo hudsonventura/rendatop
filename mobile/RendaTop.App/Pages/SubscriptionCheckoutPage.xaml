@@ -7,17 +7,6 @@
     BackgroundColor="#F8FAFC">
     <ScrollView>
         <VerticalStackLayout Padding="18,16,18,24" Spacing="16">
-            <Button
-                Text="Voltar"
-                ImageSource="icon_back_dark.svg"
-                ContentLayout="Left,10"
-                BackgroundColor="White"
-                BorderColor="#CBD5E1"
-                BorderWidth="1"
-                TextColor="#111827"
-                HorizontalOptions="Start"
-                Padding="14,10"
-                Clicked="OnBackClicked" />
 
             <VerticalStackLayout Spacing="4">
                 <Label x:Name="HeadingLabel" Text="Preparando pagamento" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
@@ -64,9 +53,25 @@
                 </VerticalStackLayout>
             </Border>
 
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Button x:Name="CardButton" Text="Cartao" BackgroundColor="#111827" TextColor="White" Clicked="OnCardClicked" />
+                <Button x:Name="PixButton" Grid.Column="1" Text="PIX" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnPixClicked" />
+                <Button x:Name="BoletoButton" Grid.Column="2" Text="Boleto" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnBoletoClicked" />
+            </Grid>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="CPF do pagador" FontSize="13" TextColor="#475569" />
+                <Entry
+                    x:Name="CpfEntry"
+                    Keyboard="Numeric"
+                    Placeholder="000.000.000-00"
+                    MaxLength="14"
+                    TextChanged="OnCpfChanged" />
+            </VerticalStackLayout>
+
             <Button
                 x:Name="ContinueButton"
-                Text="Continuar no Mercado Pago"
+                Text="Ir para o Mercado Pago"
                 BackgroundColor="#111827"
                 TextColor="White"
                 HeightRequest="48"

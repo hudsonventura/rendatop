@@ -158,8 +158,21 @@ public sealed record PaymentResultDto
     public string? CardId { get; init; }
 }
 
-public sealed record HostedSubscriptionCheckoutRequestDto(
-    [property: JsonPropertyName("plan_id")] string PlanId);
+public sealed record CardHostedCheckoutRequestDto(
+    [property: JsonPropertyName("plan_id")] string PlanId,
+    [property: JsonPropertyName("payer_cpf")] string PayerCpf);
+
+public sealed record PixHostedCheckoutRequestDto(
+    [property: JsonPropertyName("plan_id")] string PlanId,
+    [property: JsonPropertyName("payer_first_name")] string PayerFirstName,
+    [property: JsonPropertyName("payer_last_name")] string PayerLastName,
+    [property: JsonPropertyName("payer_cpf")] string PayerCpf);
+
+public sealed record BoletoHostedCheckoutRequestDto(
+    [property: JsonPropertyName("plan_id")] string PlanId,
+    [property: JsonPropertyName("payer_first_name")] string PayerFirstName,
+    [property: JsonPropertyName("payer_last_name")] string PayerLastName,
+    [property: JsonPropertyName("payer_cpf")] string PayerCpf);
 
 public sealed record CancelSubscriptionRequestDto(
     [property: JsonPropertyName("confirm")] bool Confirm,

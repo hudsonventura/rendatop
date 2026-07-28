@@ -10,17 +10,6 @@
         <RefreshView x:Name="Refresh" Refreshing="OnRefresh">
             <ScrollView>
                 <VerticalStackLayout Padding="18,16,18,112" Spacing="16">
-                    <!-- <Button
-                        Text="Voltar"
-                        ImageSource="icon_back_dark.svg"
-                        ContentLayout="Left,10"
-                        BackgroundColor="White"
-                        BorderColor="#CBD5E1"
-                        BorderWidth="1"
-                        TextColor="#111827"
-                        HorizontalOptions="Start"
-                        Padding="14,10"
-                        Clicked="OnBackClicked" /> -->
 
                     <VerticalStackLayout Spacing="4">
                         <Label x:Name="TitleLabel" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
