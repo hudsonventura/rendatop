@@ -31,15 +31,20 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
     ];
 
     private readonly InvestmentService _investmentService;
+    private readonly SharedInvestmentDocumentService _sharedDocuments;
     private Guid? _editingInvestmentId;
     private Guid? _loadedInvestmentId;
     private Guid? _reinvestSourceInvestmentId;
     private bool _isReinvesting;
     private bool _wasAiExtracted;
 
-    public AddInvestmentPage(InvestmentService investmentService)
+    private Guid? _sharedDocumentId;
+    private Guid? _processedSharedDocumentId;
+
+    public AddInvestmentPage(InvestmentService investmentService, SharedInvestmentDocumentService sharedDocuments)
     {
         _investmentService = investmentService;
+		_sharedDocuments = sharedDocuments;
         InitializeComponent();
         TypePicker.ItemsSource = TypeOptions;
         TypePicker.SelectedIndex = 0;
@@ -67,6 +72,11 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
             _reinvestSourceInvestmentId = reinvestSourceId;
             _isReinvesting = true;
         }
+
+        _sharedDocumentId = query.TryGetValue("sharedDocumentId", out var rawSharedDocumentId)
+            && Guid.TryParse(rawSharedDocumentId?.ToString(), out var sharedDocumentId)
+            ? sharedDocumentId
+            : null;
     }
 
     protected override async void OnAppearing()
@@ -75,6 +85,7 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
         await LoadBanksAsync();
         await LoadInvestmentForEditionAsync();
         await LoadInvestmentForReinvestmentAsync();
+        await ProcessSharedDocumentAsync();
     }
 
     protected override bool OnBackButtonPressed()
@@ -283,9 +294,50 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
                 return;
             }
 
-            ExtractDocumentButton.IsEnabled = false;
-            ExtractDocumentButton.Text = "Lendo...";
+            await ExtractDocumentAsync(file);
+        }
+        catch (ApiException ex)
+        {
+            ShowError(ex.Message);
+        }
+        catch
+        {
+            ShowError("Nao foi possivel ler o arquivo. Tente novamente.");
+        }
+    }
 
+    private async Task ProcessSharedDocumentAsync()
+    {
+        if (!_sharedDocumentId.HasValue || _processedSharedDocumentId == _sharedDocumentId)
+            return;
+
+        _processedSharedDocumentId = _sharedDocumentId;
+        if (!_sharedDocuments.TryTake(_sharedDocumentId.Value, out var document) || document is null)
+            return;
+
+        try
+        {
+            if (!IsSupportedDocument(document.FileName))
+            {
+                ShowError("Formato compartilhado nao suportado. Envie txt, html, PDF ou imagem.");
+                return;
+            }
+
+            await ExtractDocumentAsync(new FileResult(document.FilePath, document.ContentType ?? "application/octet-stream"));
+        }
+        finally
+        {
+            _sharedDocuments.DeleteCachedFile(document);
+        }
+    }
+
+    private async Task ExtractDocumentAsync(FileResult file)
+    {
+        ExtractDocumentButton.IsEnabled = false;
+        ExtractDocumentButton.Text = "Lendo...";
+
+        try
+        {
             var extracted = await _investmentService.ExtractInvestmentFromDocumentAsync(file);
             ApplyExtractedValues(extracted);
             _wasAiExtracted = true;
