@@ -23,6 +23,28 @@
             <Label x:Name="HeadingLabel" Text="Adicionar investimento" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
             <Label x:Name="DescriptionLabel" Text="Cadastre um investimento de renda fixa na sua carteira." TextColor="#64748B" />
 
+            <Border BackgroundColor="#F0FDF4" Stroke="#86EFAC" Padding="14">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="14" />
+                </Border.StrokeShape>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Spacing="3">
+                        <Label Text="Importar comprovante" FontAttributes="Bold" TextColor="#166534" />
+                        <Label Text="Envie txt, html, PDF ou imagem para preencher os campos automaticamente." FontSize="12" TextColor="#3F6212" />
+                        <Label Text="O arquivo e usado somente para a leitura e nao fica armazenado." FontSize="12" TextColor="#3F6212" />
+                    </VerticalStackLayout>
+                    <Button
+                        x:Name="ExtractDocumentButton"
+                        Grid.Column="1"
+                        Text="Ler arquivo"
+                        BackgroundColor="#166534"
+                        TextColor="White"
+                        FontAttributes="Bold"
+                        VerticalOptions="Center"
+                        Clicked="OnExtractDocumentClicked" />
+                </Grid>
+            </Border>
+
             <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="18" />

@@ -35,6 +35,7 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
     private Guid? _loadedInvestmentId;
     private Guid? _reinvestSourceInvestmentId;
     private bool _isReinvesting;
+    private bool _wasAiExtracted;
 
     public AddInvestmentPage(InvestmentService investmentService)
     {
@@ -262,6 +263,55 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
     private async void OnBackClicked(object? sender, EventArgs e)
         => await NavigateBackAsync();
 
+    private async void OnExtractDocumentClicked(object? sender, EventArgs e)
+    {
+        HideError();
+
+        try
+        {
+            var file = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "Selecione o comprovante do investimento"
+            });
+
+            if (file is null)
+                return;
+
+            if (!IsSupportedDocument(file.FileName))
+            {
+                ShowError("Formato nao suportado. Envie txt, html, PDF ou imagem.");
+                return;
+            }
+
+            ExtractDocumentButton.IsEnabled = false;
+            ExtractDocumentButton.Text = "Lendo...";
+
+            var extracted = await _investmentService.ExtractInvestmentFromDocumentAsync(file);
+            ApplyExtractedValues(extracted);
+            _wasAiExtracted = true;
+
+            await DisplayAlertAsync(
+                "Campos preenchidos",
+                string.IsNullOrWhiteSpace(extracted.Notes)
+                    ? "A IA preencheu os campos encontrados no comprovante. Revise-os antes de salvar."
+                    : extracted.Notes,
+                "Ok");
+        }
+        catch (ApiException ex)
+        {
+            ShowError(ex.Message);
+        }
+        catch
+        {
+            ShowError("Nao foi possivel ler o arquivo. Tente novamente.");
+        }
+        finally
+        {
+            ExtractDocumentButton.IsEnabled = true;
+            ExtractDocumentButton.Text = "Ler arquivo";
+        }
+    }
+
     private bool TryBuildRequest(out InvestmentRequestDto? request, out string error)
     {
         request = null;
@@ -314,10 +364,81 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
             IndexValue = 0m,
             Taxes = TaxesSwitch.IsToggled,
             Archived = false,
-            AiExtracted = false
+            AiExtracted = _wasAiExtracted && !_editingInvestmentId.HasValue
         };
         return true;
     }
+
+    private void ApplyExtractedValues(InvestmentDocumentExtractionDto extracted)
+    {
+        if (!string.IsNullOrWhiteSpace(extracted.Title))
+            TitleEntry.Text = extracted.Title;
+
+        if (extracted.DateBuy.HasValue)
+            BuyDatePicker.Date = extracted.DateBuy.Value.ToLocalTime();
+
+        if (extracted.DueDate.HasValue)
+            DueDatePicker.Date = extracted.DueDate.Value.ToLocalTime();
+
+        if (extracted.DailyLiquidity.HasValue)
+            DailyLiquiditySwitch.IsToggled = extracted.DailyLiquidity.Value;
+
+        if (extracted.Taxes.HasValue)
+            TaxesSwitch.IsToggled = extracted.Taxes.Value;
+
+        if (extracted.Value.HasValue)
+            ValueEntry.Text = extracted.Value.Value.ToString("N2", new CultureInfo("pt-BR"));
+
+        if (extracted.IndexPercent.HasValue)
+            IndexPercentEntry.Text = extracted.IndexPercent.Value.ToString("N2", new CultureInfo("pt-BR"));
+
+        if (extracted.InvestmentType.HasValue)
+            SelectType(MapInvestmentType(extracted.InvestmentType.Value));
+
+        if (extracted.Index.HasValue)
+            SelectIndex(MapIndex(extracted.Index.Value));
+
+        if (extracted.BankCode.HasValue)
+            SelectBank(extracted.BankCode.Value);
+    }
+
+    private static bool IsSupportedDocument(string? fileName)
+    {
+        var extension = Path.GetExtension(fileName ?? string.Empty);
+        return extension.Equals(".txt", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".html", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".htm", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".png", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? MapInvestmentType(int value) => value switch
+    {
+        0 => "CDB",
+        1 => "LCI",
+        2 => "LCA",
+        3 => "RCI",
+        4 => "RCA",
+        5 => "Tesouro",
+        6 => "Debentures",
+        7 => "TitulosPublicos",
+        8 => "CRI",
+        9 => "CRA",
+        10 => "RDB",
+        _ => null
+    };
+
+    private static string? MapIndex(int value) => value switch
+    {
+        0 => "CDI",
+        1 => "IPCA_MAIS",
+        2 => "PERCENT_YEAR",
+        3 => "CDI_MAIS",
+        _ => null
+    };
 
     private static bool TryParseDecimal(string? input, out decimal value)
     {
@@ -344,6 +465,7 @@ public partial class AddInvestmentPage : ContentPage, IQueryAttributable
 
     private void ResetForm()
     {
+        _wasAiExtracted = false;
         TitleEntry.Text = string.Empty;
         ValueEntry.Text = string.Empty;
         IndexPercentEntry.Text = string.Empty;
