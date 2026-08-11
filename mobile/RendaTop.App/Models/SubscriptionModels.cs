@@ -112,6 +112,15 @@ public sealed record PaymentResultDto
     [JsonPropertyName("payment_id")]
     public string PaymentId { get; init; } = string.Empty;
 
+    [JsonPropertyName("checkout_url")]
+    public string? CheckoutUrl { get; init; }
+
+    [JsonPropertyName("preference_id")]
+    public string? PreferenceId { get; init; }
+
+    [JsonPropertyName("preapproval_id")]
+    public string? PreapprovalId { get; init; }
+
     [JsonPropertyName("payment_method")]
     public string? PaymentMethod { get; init; }
 
@@ -149,22 +158,17 @@ public sealed record PaymentResultDto
     public string? CardId { get; init; }
 }
 
-public sealed record CardSubscriptionRequestDto(
+public sealed record CardHostedCheckoutRequestDto(
     [property: JsonPropertyName("plan_id")] string PlanId,
-    [property: JsonPropertyName("card_token")] string CardToken,
-    [property: JsonPropertyName("payment_method_id")] string PaymentMethodId,
-    [property: JsonPropertyName("card_type")] string CardType,
-    [property: JsonPropertyName("issuer_id")] string IssuerId,
-    [property: JsonPropertyName("installments")] int Installments,
     [property: JsonPropertyName("payer_cpf")] string PayerCpf);
 
-public sealed record PixSubscriptionRequestDto(
+public sealed record PixHostedCheckoutRequestDto(
     [property: JsonPropertyName("plan_id")] string PlanId,
     [property: JsonPropertyName("payer_first_name")] string PayerFirstName,
     [property: JsonPropertyName("payer_last_name")] string PayerLastName,
     [property: JsonPropertyName("payer_cpf")] string PayerCpf);
 
-public sealed record BoletoSubscriptionRequestDto(
+public sealed record BoletoHostedCheckoutRequestDto(
     [property: JsonPropertyName("plan_id")] string PlanId,
     [property: JsonPropertyName("payer_first_name")] string PayerFirstName,
     [property: JsonPropertyName("payer_last_name")] string PayerLastName,

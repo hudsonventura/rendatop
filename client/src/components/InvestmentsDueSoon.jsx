@@ -167,7 +167,7 @@ export default function InvestmentsDueSoon({ investments, onArchive, onReinvest 
                                                 <span className="sr-only">Abrir menu</span>
                                             </Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-40">
+                                        <DropdownMenuContent align="end" className="w-60">
                                             <DropdownActionItemWithHint
                                                 disabled={!showReinvest}
                                                 onClick={() => {
@@ -186,7 +186,7 @@ export default function InvestmentsDueSoon({ investments, onArchive, onReinvest 
                                                 }}
                                             >
                                                 <Archive className="mr-2 h-4 w-4" />
-                                                Arquivar
+                                                Arquivar / Resgate Total
                                             </DropdownActionItemWithHint>
                                         </DropdownMenuContent>
                                     </DropdownMenu>

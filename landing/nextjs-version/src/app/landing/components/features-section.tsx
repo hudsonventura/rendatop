@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import {
   BarChart3,
   Zap,
@@ -12,9 +12,132 @@ import {
   Landmark,
   FlaskConical
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ScreenshotPlaceholder } from '@/components/screenshot-placeholder'
+
+interface DashboardScreenshot {
+  src: string
+  alt: string
+}
+
+interface ScreenshotCarouselProps {
+  images: DashboardScreenshot[]
+  activeIndex: number
+  onActiveIndexChange: (index: number) => void
+  onOpen?: () => void
+  expanded?: boolean
+}
+
+const dashboardScreenshots: DashboardScreenshot[] = [
+  {
+    src: '/dash1.png',
+    alt: 'Dashboard do RendaTop com vencimentos próximos e distribuição da carteira por banco',
+  },
+  {
+    src: '/dash2.png',
+    alt: 'Visão geral do dashboard do RendaTop',
+  },
+]
+
+function ScreenshotCarousel({
+  images,
+  activeIndex,
+  onActiveIndexChange,
+  onOpen,
+  expanded = false,
+}: ScreenshotCarouselProps) {
+  const showNavigation = images.length > 1
+  const goToPrevious = () => {
+    onActiveIndexChange((activeIndex - 1 + images.length) % images.length)
+  }
+
+  const goToNext = () => {
+    onActiveIndexChange((activeIndex + 1) % images.length)
+  }
+
+  const imageTrack = (
+    <div
+      className="flex w-full transition-transform duration-700 ease-in-out motion-reduce:transition-none"
+      style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+    >
+      {images.map((item, index) => (
+        <div
+          key={item.src}
+          className={expanded
+            ? 'flex h-[82vh] w-full shrink-0 items-center justify-center'
+            : 'aspect-[4/3] w-full shrink-0'}
+          aria-hidden={index !== activeIndex}
+        >
+          <img
+            src={item.src}
+            alt={index === activeIndex ? item.alt : ''}
+            className="h-full w-full object-contain"
+          />
+        </div>
+      ))}
+    </div>
+  )
+
+  return (
+    <div
+      className={expanded ? 'w-full' : 'w-full max-w-2xl'}
+      role="region"
+      aria-roledescription="carrossel"
+      aria-label="Capturas do dashboard do RendaTop"
+    >
+      <div className={`group relative overflow-hidden rounded-xl ${expanded ? 'bg-black/20' : 'border border-neutral-800 bg-background shadow-xl transition-shadow duration-300 hover:shadow-2xl'}`}>
+        {onOpen ? (
+          <button
+            type="button"
+            onClick={onOpen}
+            className="block w-full cursor-zoom-in"
+            aria-label={`Ampliar imagem ${activeIndex + 1} de ${images.length}`}
+          >
+            {imageTrack}
+          </button>
+        ) : imageTrack}
+
+        {showNavigation && (
+          <>
+            <button
+              type="button"
+              onClick={goToPrevious}
+              className="absolute left-3 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black/75"
+              aria-label="Ver captura anterior"
+            >
+              <ChevronLeft className="size-5" />
+            </button>
+            <button
+              type="button"
+              onClick={goToNext}
+              className="absolute right-3 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black/75"
+              aria-label="Ver próxima captura"
+            >
+              <ChevronRight className="size-5" />
+            </button>
+            <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+              {activeIndex + 1} / {images.length}
+            </span>
+          </>
+        )}
+      </div>
+
+      {showNavigation && (
+        <div className={`mt-3 flex justify-center gap-2 ${expanded ? 'text-white' : ''}`}>
+          {images.map((item, index) => (
+            <button
+              key={item.src}
+              type="button"
+              onClick={() => onActiveIndexChange(index)}
+              className={`h-2 rounded-full transition-all ${index === activeIndex ? 'w-7 bg-primary' : expanded ? 'w-2 bg-white/45 hover:bg-white/70' : 'w-2 bg-muted-foreground/35 hover:bg-muted-foreground/60'}`}
+              aria-label={`Ver captura ${index + 1}`}
+              aria-current={index === activeIndex ? 'true' : undefined}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export const mainFeatures = [
   {
@@ -61,20 +184,51 @@ export const fourthFeatures = [
     title: 'Comparação',
     description: 'A comparação permitirá analisar se o seu investimento é de fato interessante ou se pode ser melhor investido em outro banco.',
   },
+  {
+    icon: ChartNoAxesGantt,
+    title: 'Comprovante',
+    description: 'Importe seu comprovante de investimento e deixe o RendaTop preencher os dados para você.',
+  }
 ]
 
 
 export function FeaturesSection() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [dashboardImageIndex, setDashboardImageIndex] = useState(0)
+  const [dashboardGalleryOpen, setDashboardGalleryOpen] = useState(false)
+
+  const modalOpen = Boolean(selectedImage) || dashboardGalleryOpen
+
+  useEffect(() => {
+    if (dashboardScreenshots.length <= 1) return
+
+    const autoplayTimeout = window.setTimeout(() => {
+      setDashboardImageIndex((current) =>
+        (current + 1) % dashboardScreenshots.length)
+    }, 5000)
+
+    return () => window.clearTimeout(autoplayTimeout)
+  }, [dashboardImageIndex])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setSelectedImage(null)
+        setDashboardGalleryOpen(false)
+      }
+
+      if (dashboardGalleryOpen && e.key === 'ArrowLeft') {
+        setDashboardImageIndex((current) =>
+          (current - 1 + dashboardScreenshots.length) % dashboardScreenshots.length)
+      }
+
+      if (dashboardGalleryOpen && e.key === 'ArrowRight') {
+        setDashboardImageIndex((current) =>
+          (current + 1) % dashboardScreenshots.length)
       }
     }
 
-    if (selectedImage) {
+    if (modalOpen) {
       document.addEventListener('keydown', handleEscape)
       document.body.style.overflow = 'hidden'
     }
@@ -83,13 +237,13 @@ export function FeaturesSection() {
       document.removeEventListener('keydown', handleEscape)
       document.body.style.overflow = 'unset'
     }
-  }, [selectedImage])
+  }, [dashboardGalleryOpen, modalOpen])
 
   return (
     <>
       <section id="features" className="py-24 sm:py-32 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center mb-16">
+          <div data-scroll-reveal-item className="mx-auto max-w-2xl text-center mb-16">
             <Badge variant="outline" className="mb-4">Principais Recursos</Badge>
             <h2 className="text-3xl font-bold tracking-tight sm:text-5xl mb-4">
               Tudo o que você precisa para acompanhar seus investimentos no dia-a-dia
@@ -102,13 +256,15 @@ export function FeaturesSection() {
           </div>
 
           <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16 mb-24">
-            <img 
-              className="w-full h-auto max-w-2xl rounded-xl shadow-xl border border-neutral-800 cursor-pointer hover:shadow-2xl transition-shadow duration-300" 
-              src="dash1.png" 
-              alt="App screenshot" 
-              onClick={() => setSelectedImage('dash1.png')}
+            <div data-scroll-reveal-item>
+            <ScreenshotCarousel
+              images={dashboardScreenshots}
+              activeIndex={dashboardImageIndex}
+              onActiveIndexChange={setDashboardImageIndex}
+              onOpen={() => setDashboardGalleryOpen(true)}
             />
-            <div className="space-y-6">
+            </div>
+            <div data-scroll-reveal-item className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                   Acompanhamento claro desde a primeira tela
@@ -138,7 +294,7 @@ export function FeaturesSection() {
           </div>
 
           <div id="calendario"className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16">
-            <div className="space-y-6 order-2 lg:order-1">
+            <div data-scroll-reveal-item className="space-y-6 order-2 lg:order-1">
               <div className="space-y-4">
                 <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                   Operação da carteira com mais previsibilidade
@@ -166,6 +322,7 @@ export function FeaturesSection() {
              
             </div>
             <img 
+              data-scroll-reveal-item
               className="w-full h-auto max-w-2xl rounded-xl shadow-xl border border-neutral-800 order-1 lg:order-2 cursor-pointer hover:shadow-2xl transition-shadow duration-300" 
               src="calendar1.png" 
               alt="App screenshot" 
@@ -176,12 +333,13 @@ export function FeaturesSection() {
 
           <div id="controle" className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16 mb-24">
             <img 
+              data-scroll-reveal-item
               className="w-full h-auto max-w-2xl rounded-xl shadow-xl border border-neutral-800 cursor-pointer hover:shadow-2xl transition-shadow duration-300" 
               src="investments1.png" 
               alt="App screenshot" 
               onClick={() => setSelectedImage('investments1.png')}
             />
-            <div className="space-y-6">
+            <div data-scroll-reveal-item className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                   Acompanhe os rendimentos e descontos de cada investimento
@@ -211,7 +369,7 @@ export function FeaturesSection() {
 
 
           <div id="simulacao" className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16">
-            <div className="space-y-6 order-2 lg:order-1">
+            <div data-scroll-reveal-item className="space-y-6 order-2 lg:order-1">
               <div className="space-y-4">
                 <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                   Simulação e comparação de investimentos
@@ -239,6 +397,7 @@ export function FeaturesSection() {
              
             </div>
             <img 
+              data-scroll-reveal-item
               className="w-full h-auto max-w-2xl rounded-xl shadow-xl border border-neutral-800 order-1 lg:order-2 cursor-pointer hover:shadow-2xl transition-shadow duration-300" 
               src="new-investment1.png" 
               alt="App screenshot" 
@@ -251,23 +410,39 @@ export function FeaturesSection() {
       </section>
 
       {/* Modal com animação */}
-      {selectedImage && (
+      {modalOpen && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setSelectedImage(null)}
+          onClick={() => {
+            setSelectedImage(null)
+            setDashboardGalleryOpen(false)
+          }}
         >
           <div 
             className="relative max-w-7xl max-h-[90vh] w-full animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <img 
-              src={selectedImage} 
-              alt="Expanded screenshot" 
-              className="w-full h-auto rounded-xl shadow-2xl"
-            />
+            {dashboardGalleryOpen ? (
+              <ScreenshotCarousel
+                images={dashboardScreenshots}
+                activeIndex={dashboardImageIndex}
+                onActiveIndexChange={setDashboardImageIndex}
+                expanded
+              />
+            ) : selectedImage ? (
+              <img
+                src={selectedImage}
+                alt="Captura ampliada do RendaTop"
+                className="max-h-[86vh] w-full rounded-xl object-contain shadow-2xl"
+              />
+            ) : null}
             <button
-              onClick={() => setSelectedImage(null)}
+              onClick={() => {
+                setSelectedImage(null)
+                setDashboardGalleryOpen(false)
+              }}
               className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 text-white rounded-lg transition-colors duration-200 backdrop-blur-sm"
+              aria-label="Fechar visualização ampliada"
             >
               <X size={24} />
             </button>

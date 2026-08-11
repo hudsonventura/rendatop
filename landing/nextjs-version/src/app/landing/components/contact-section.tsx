@@ -58,7 +58,7 @@ export function ContactSection() {
   return (
     <section id="contact" className="py-24 sm:py-32">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center mb-16">
+        <div data-scroll-reveal-item className="mx-auto max-w-2xl text-center mb-16">
           <Badge variant="outline" className="mb-4">Contato</Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
             Quer conversar?
@@ -68,11 +68,11 @@ export function ContactSection() {
             Entre em contato com a gente! Envie um email ou uma mensagem pelo WhatApp . Estamos sempre abertos a ouvir nossos usuários e melhorar o Rendatop.
           </p>
           <div className="flex justify-center items-center gap-6 mt-6">
-            <a href="mailto:contato@rendatop.com.br" target='_blank' className="flex items-center space-x-2 cursor-pointer" rel="noopener noreferrer">
+            <a data-scroll-reveal-item href="mailto:contato@rendatop.com.br" target='_blank' className="flex items-center space-x-2 cursor-pointer" rel="noopener noreferrer">
               <Mail className="h-6 w-6" />
               <span className="text-sm font-medium">contato@rendatop.com.br</span>
             </a>
-            <a href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_PHONE}`} target='_blank' className="flex items-center space-x-2 cursor-pointer" rel="noopener noreferrer">
+            <a data-scroll-reveal-item href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_PHONE}`} target='_blank' className="flex items-center space-x-2 cursor-pointer" rel="noopener noreferrer">
               <MessageCircle className="h-6 w-6" />
               <span className="text-sm font-medium">WhatsApp</span>
             </a>

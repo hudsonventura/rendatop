@@ -31,7 +31,7 @@
                 <VerticalStackLayout Spacing="14">
                     <VerticalStackLayout Spacing="6">
                         <Label Text="Assunto" FontAttributes="Bold" TextColor="#111827" />
-                        <Entry x:Name="SubjectEntry" Placeholder="Resumo curto do problema" MaxLength="180" />
+                        <Entry x:Name="SubjectEntry" Placeholder="Assuntoteste" MaxLength="180" />
                     </VerticalStackLayout>
 
                     <VerticalStackLayout Spacing="6">

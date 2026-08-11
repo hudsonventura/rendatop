@@ -63,7 +63,7 @@ export function BlogSection({ backendBaseUrl }: BlogSectionProps) {
     <section id="blog" className="bg-muted/30 py-24 sm:py-32">
       <div id="screenshots" className="relative -top-24" />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-16 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div data-scroll-reveal-item className="mb-16 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
             <Badge variant="outline" className="mb-4">Blog</Badge>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -86,13 +86,13 @@ export function BlogSection({ backendBaseUrl }: BlogSectionProps) {
         {loading ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="h-[28rem] animate-pulse rounded-3xl border bg-card" />
+              <div key={index} data-scroll-reveal-item className="h-[28rem] animate-pulse rounded-3xl border bg-card" />
             ))}
           </div>
         ) : posts.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {posts.map((post) => (
-              <Link key={post.id} href={`/blog/${post.slug}`} className="group block">
+              <Link key={post.id} href={`/blog/${post.slug}`} data-scroll-reveal-item className="group block">
                 <Card className="h-full overflow-hidden rounded-3xl border bg-card py-0 transition-transform duration-300 group-hover:-translate-y-1">
                   <div className="aspect-[16/10] overflow-hidden border-b bg-muted">
                     {post.cover_image_url ? (
@@ -129,7 +129,7 @@ export function BlogSection({ backendBaseUrl }: BlogSectionProps) {
             ))}
           </div>
         ) : (
-          <Card className="rounded-3xl border-dashed">
+          <Card data-scroll-reveal-item className="rounded-3xl border-dashed">
             <CardContent className="px-6 py-16 text-center">
               <h3 className="text-xl font-semibold">Novos artigos chegando</h3>
               <p className="mt-3 text-muted-foreground">

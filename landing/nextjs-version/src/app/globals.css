@@ -153,6 +153,21 @@ html {
   scroll-behavior: smooth;
 }
 
+.scroll-reveal-item {
+  transition: opacity 700ms ease-out, transform 700ms ease-out !important;
+}
+
+.scroll-reveal-item-hidden {
+  opacity: 0 !important;
+  transform: translateY(2rem) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal-item {
+    transition: none;
+  }
+}
+
 /* Logo carousel animation */
 @keyframes logo-scroll {
   0% {

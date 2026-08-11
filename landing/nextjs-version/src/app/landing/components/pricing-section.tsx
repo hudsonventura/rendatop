@@ -6,6 +6,7 @@ import { Check, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { APP_CONFIG } from '@/config/app'
+import { API_CONFIG } from '@/config/api'
 
 interface Plan {
   id: string
@@ -47,15 +48,14 @@ export function PricingSection() {
   const [loading, setLoading] = useState(true)
 
   const clientBaseUrl = APP_CONFIG.BASE_URL;
+  const serverBaseUrl = API_CONFIG.BASE_URL;
 
   useEffect(() => {
-    const baseUrl = APP_CONFIG.BASE_URL;
 
-    
 
     const fetchPlans = async () => {
       try {
-        const response = await fetch(`${baseUrl}/public/subscription/plans`)
+        const response = await fetch(`${serverBaseUrl}/public/subscription/plans`)
         if (!response.ok) throw new Error('Falha ao carregar planos')
         const data = await response.json()
         setPlans(data)
@@ -72,7 +72,7 @@ export function PricingSection() {
   return (
     <section id="pricing" className="py-24 sm:py-32 bg-muted/40">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center mb-12">
+        <div data-scroll-reveal-item className="mx-auto max-w-2xl text-center mb-12">
           <Badge variant="outline" className="mb-4">Planos</Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
             Escolha o plano que faz sentido para a sua rotina
@@ -86,7 +86,7 @@ export function PricingSection() {
               <div>
                 <p className="font-semibold">Comece com 30 dias gratuitos do plano Pro</p>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  Ao criar sua conta, você recebe o plano Pro gratuitamente por 30 dias para desfrutar de todos os recursos do sistema. A degustação termina automaticamente, sem cobrança.
+                  Ao criar sua conta, você recebe o plano Pro gratuitamente por 30 dias para desfrutar de todos os recursos do sistema. Não é necessaŕio informar um numero de cartão de credito. Teste o sistema para saber se ele atende às suas espectativas antes de decidir sobre a assinatura. Aproveite esta oportunidade para explorar todas as funcionalidades e descobrir como o sistema pode facilitar sua rotina financeira.
                 </p>
               </div>
             </div>
@@ -119,6 +119,7 @@ export function PricingSection() {
                   return (
                     <div
                       key={plan.id}
+                      data-scroll-reveal-item
                       className={`p-8 grid grid-rows-subgrid row-span-3 gap-6 ${
                         isPopular
                           ? 'my-2 mx-4 rounded-xl bg-card border-transparent shadow-xl ring-1 ring-foreground/10 backdrop-blur'
@@ -164,7 +165,7 @@ export function PricingSection() {
           </div>
         )}
 
-        <div className="mt-16 text-center">
+        <div data-scroll-reveal-item className="mt-16 text-center">
           <p className="text-muted-foreground">
             Ficou em duvida sobre o melhor plano?{' '}
             <Button variant="link" className="p-0 h-auto cursor-pointer" asChild>

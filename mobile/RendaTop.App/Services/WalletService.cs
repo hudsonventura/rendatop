@@ -43,6 +43,13 @@ public sealed class WalletService
         return overview;
     }
 
+    public async Task<WalletDto> CreateAsync(string name, CancellationToken cancellationToken = default)
+        => await _apiClient.PostAsync<WalletRequestDto, WalletDto>(
+                "/Wallets",
+                new WalletRequestDto(name.Trim()),
+                cancellationToken)
+           ?? throw new ApiException("Resposta de carteira invalida.", 500);
+
     public void SetActiveWallet(Guid walletId)
     {
         if (walletId == Guid.Empty || walletId == ActiveWalletId)

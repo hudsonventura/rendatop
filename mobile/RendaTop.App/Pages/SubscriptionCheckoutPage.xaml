@@ -7,113 +7,93 @@
     BackgroundColor="#F8FAFC">
     <ScrollView>
         <VerticalStackLayout Padding="18,16,18,24" Spacing="16">
-            <Button
-                Text="Voltar"
-                ImageSource="icon_back_dark.svg"
-                ContentLayout="Left,10"
-                BackgroundColor="White"
-                BorderColor="#CBD5E1"
-                BorderWidth="1"
-                TextColor="#111827"
-                HorizontalOptions="Start"
-                Padding="14,10"
-                Clicked="OnBackClicked" />
 
             <VerticalStackLayout Spacing="4">
-                <Label x:Name="HeadingLabel" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
-                <Label x:Name="DescriptionLabel" TextColor="#64748B" />
+                <Label x:Name="HeadingLabel" Text="Preparando pagamento" FontSize="24" FontAttributes="Bold" TextColor="#111827" />
+                <Label Text="Pagamento processado com seguranca pelo Mercado Pago" TextColor="#64748B" />
             </VerticalStackLayout>
 
-            <Border BackgroundColor="#FFFBEB" Stroke="#F59E0B" Padding="12">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="12" />
-                </Border.StrokeShape>
-                <Label x:Name="BillingNoticeLabel" TextColor="#92400E" />
-            </Border>
-
-            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
-                <Button x:Name="CardTabButton" Text="Cartao" BackgroundColor="#111827" TextColor="White" Clicked="OnCardTabClicked" />
-                <Button x:Name="PixTabButton" Grid.Column="1" Text="PIX" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnPixTabClicked" />
-                <Button x:Name="BoletoTabButton" Grid.Column="2" Text="Boleto" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnBoletoTabClicked" />
-            </Grid>
-
-            <Border x:Name="NoticeBorder" BackgroundColor="#EFF6FF" Stroke="#93C5FD" Padding="12" IsVisible="False">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="12" />
-                </Border.StrokeShape>
-                <Label x:Name="NoticeLabel" TextColor="#1D4ED8" />
-            </Border>
+            <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
 
             <Border x:Name="ErrorBorder" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" Padding="12" IsVisible="False">
                 <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="12" />
+                    <RoundRectangle CornerRadius="8" />
                 </Border.StrokeShape>
                 <Label x:Name="ErrorLabel" TextColor="#991B1B" />
             </Border>
 
-            <ActivityIndicator x:Name="LoadingIndicator" Color="#22C55E" IsRunning="False" IsVisible="False" />
+            <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Resumo" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Plano" FontSize="12" TextColor="#64748B" />
+                            <Label x:Name="PlanLabel" Text="-" FontAttributes="Bold" TextColor="#111827" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4" HorizontalOptions="End">
+                            <Label Text="Valor" FontSize="12" TextColor="#64748B" HorizontalTextAlignment="End" />
+                            <Label x:Name="PriceLabel" Text="-" FontAttributes="Bold" TextColor="#111827" HorizontalTextAlignment="End" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
 
-            <VerticalStackLayout x:Name="CardSection" Spacing="12">
-                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="18" />
-                    </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="12">
-                        <Label Text="Cartao" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
-                        <Label x:Name="CardConfigLabel" TextColor="#64748B" />
-                        <WebView x:Name="CardWebView" HeightRequest="620" Navigating="OnCardWebViewNavigating" />
-                    </VerticalStackLayout>
-                </Border>
+            <Border BackgroundColor="#EFF6FF" Stroke="#93C5FD" Padding="14">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Pagamento no Mercado Pago" FontAttributes="Bold" TextColor="#1E3A8A" />
+                    <Label
+                        Text="As formas de pagamento disponiveis serao apresentadas no ambiente seguro do Mercado Pago."
+                        TextColor="#1D4ED8" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Button x:Name="CardButton" Text="Cartao" BackgroundColor="#111827" TextColor="White" Clicked="OnCardClicked" />
+                <Button x:Name="PixButton" Grid.Column="1" Text="PIX" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnPixClicked" />
+                <Button x:Name="BoletoButton" Grid.Column="2" Text="Boleto" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnBoletoClicked" />
+            </Grid>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="CPF do pagador" FontSize="13" TextColor="#475569" />
+                <Entry
+                    x:Name="CpfEntry"
+                    Keyboard="Numeric"
+                    Placeholder="000.000.000-00"
+                    MaxLength="14"
+                    TextChanged="OnCpfChanged" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout x:Name="PixSection" Spacing="12" IsVisible="False">
-                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="18" />
-                    </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="12">
-                        <Label Text="Pagamento via PIX" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
-                        <Entry x:Name="PixCpfEntry" Keyboard="Numeric" Placeholder="CPF" TextChanged="OnCpfChanged" />
-                        <Button x:Name="GeneratePixButton" Text="Gerar QR Code PIX" BackgroundColor="#111827" TextColor="White" Clicked="OnGeneratePixClicked" />
-                    </VerticalStackLayout>
-                </Border>
+            <Button
+                x:Name="ContinueButton"
+                Text="Ir para o Mercado Pago"
+                BackgroundColor="#111827"
+                TextColor="White"
+                HeightRequest="48"
+                IsEnabled="False"
+                Clicked="OnContinueClicked" />
 
-                <Border x:Name="PixResultBorder" BackgroundColor="White" Stroke="#E2E8F0" Padding="16" IsVisible="False">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="18" />
-                    </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="12">
-                        <Image x:Name="PixQrImage" HeightRequest="220" Aspect="AspectFit" IsVisible="False" />
-                        <Editor x:Name="PixCodeEditor" IsReadOnly="True" AutoSize="TextChanges" BackgroundColor="#F8FAFC" TextColor="#111827" />
-                        <Button Text="Copiar Chave PIX" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnCopyPixClicked" />
-                    </VerticalStackLayout>
-                </Border>
-            </VerticalStackLayout>
-
-            <VerticalStackLayout x:Name="BoletoSection" Spacing="12" IsVisible="False">
-                <Border BackgroundColor="White" Stroke="#E2E8F0" Padding="16">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="18" />
-                    </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="12">
-                        <Label Text="Pagamento via boleto" FontSize="18" FontAttributes="Bold" TextColor="#111827" />
-                        <Entry x:Name="BoletoCpfEntry" Keyboard="Numeric" Placeholder="CPF" TextChanged="OnCpfChanged" />
-                        <Button x:Name="GenerateBoletoButton" Text="Gerar boleto" BackgroundColor="#111827" TextColor="White" Clicked="OnGenerateBoletoClicked" />
-                    </VerticalStackLayout>
-                </Border>
-
-                <Border x:Name="BoletoResultBorder" BackgroundColor="White" Stroke="#E2E8F0" Padding="16" IsVisible="False">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="18" />
-                    </Border.StrokeShape>
-                    <VerticalStackLayout Spacing="12">
-                        <Image x:Name="BoletoImage" HeightRequest="140" Aspect="AspectFit" IsVisible="False" />
-                        <Editor x:Name="BoletoLineEditor" IsReadOnly="True" AutoSize="TextChanges" BackgroundColor="#F8FAFC" TextColor="#111827" />
-                        <Button Text="Copiar linha digitavel" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" Clicked="OnCopyBoletoLineClicked" />
-                        <Button x:Name="OpenBoletoButton" Text="Abrir boleto" BackgroundColor="White" BorderColor="#CBD5E1" BorderWidth="1" TextColor="#111827" IsVisible="False" Clicked="OnOpenBoletoClicked" />
-                    </VerticalStackLayout>
-                </Border>
-            </VerticalStackLayout>
+            <Border x:Name="CheckoutOpenedBorder" BackgroundColor="#F0FDF4" Stroke="#86EFAC" Padding="14" IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Checkout aberto" FontAttributes="Bold" TextColor="#166534" />
+                    <Label Text="Depois de concluir ou cancelar o pagamento, retorne ao RendaTop para atualizar o status da assinatura." TextColor="#166534" />
+                    <Button
+                        Text="Voltar para assinatura"
+                        BackgroundColor="White"
+                        BorderColor="#22C55E"
+                        BorderWidth="1"
+                        TextColor="#166534"
+                        Clicked="OnPaymentCompletedClicked" />
+                </VerticalStackLayout>
+            </Border>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

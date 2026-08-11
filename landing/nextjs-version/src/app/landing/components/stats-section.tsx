@@ -47,6 +47,7 @@ export function StatsSection() {
           {stats.map((stat, index) => (
             <Card
               key={index}
+              data-scroll-reveal-item
               className="text-center bg-background/60 backdrop-blur-sm border-border/50 py-0"
             >
               <CardContent className="p-6">

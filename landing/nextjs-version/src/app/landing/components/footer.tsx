@@ -73,7 +73,7 @@ export function LandingFooter() {
         </div>
 
         <div className="grid gap-8 grid-cols-4 lg:grid-cols-6">
-          <div className="col-span-4 lg:col-span-2 max-w-2xl">
+          <div data-scroll-reveal-item className="col-span-4 lg:col-span-2 max-w-2xl">
             <div className="flex items-center space-x-2 mb-4 max-lg:justify-center">
               <a href="https://RendaTop.com.br" target='_blank' className="flex items-center space-x-2 cursor-pointer" rel="noopener noreferrer">
                 <Logo size={32} />
@@ -100,7 +100,7 @@ export function LandingFooter() {
             </div>
           </div>
 
-          <div className='max-md:col-span-2 lg:col-span-1'>
+          <div data-scroll-reveal-item className='max-md:col-span-2 lg:col-span-1'>
             <h4 className="font-semibold mb-4">Produto</h4>
             <ul className="space-y-3">
               {footerLinks.product.map((link) => (
@@ -116,7 +116,7 @@ export function LandingFooter() {
             </ul>
           </div>
 
-          <div className='max-md:col-span-2 lg:col-span-1'>
+          <div data-scroll-reveal-item className='max-md:col-span-2 lg:col-span-1'>
             <h4 className="font-semibold mb-4">Empresa</h4>
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
@@ -132,7 +132,7 @@ export function LandingFooter() {
             </ul>
           </div>
 
-          <div className='max-md:col-span-2 lg:col-span-1'>
+          <div data-scroll-reveal-item className='max-md:col-span-2 lg:col-span-1'>
             <h4 className="font-semibold mb-4">Recursos</h4>
             <ul className="space-y-3">
               {footerLinks.resources.map((link) => (
@@ -148,7 +148,7 @@ export function LandingFooter() {
             </ul>
           </div>
 
-          <div className='max-md:col-span-2 lg:col-span-1'>
+          <div data-scroll-reveal-item className='max-md:col-span-2 lg:col-span-1'>
             <h4 className="font-semibold mb-4">Legal</h4>
             <ul className="space-y-3">
               {footerLinks.legal.map((link) => (
@@ -167,7 +167,7 @@ export function LandingFooter() {
 
         <Separator className="my-8" />
 
-        <div className="flex flex-col lg:flex-row justify-between items-center gap-2">
+        <div data-scroll-reveal-item className="flex flex-col lg:flex-row justify-between items-center gap-2">
           <div className="flex flex-col sm:flex-row items-center gap-2 text-muted-foreground text-sm">
             <div className="flex items-center gap-1">
               <span>Made with</span>

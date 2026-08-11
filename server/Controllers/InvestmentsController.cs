@@ -103,6 +103,37 @@ public class InvestmentsController : AuthenticatedController
         return dueDate.Value.Date <= DateTime.UtcNow.Date.AddDays(EarlyMaturityWindowDays);
     }
 
+    private void ArchiveInvestmentWithRedemption(Investment investment, DateTime redemptionDate)
+    {
+        var calculatorType = typeof(ICalculator).Assembly.GetType(
+            $"server.Domain.Calculator_{investment.index}");
+
+        if (calculatorType == null)
+            throw new ExpectedException($"Tipo de calculo nao encontrado: Calculator_{investment.index}");
+
+        var calculator = (ICalculator)Activator.CreateInstance(calculatorType, _context)!;
+        var currentLiquidValue = calculator.Calculate(investment.ToRequest()).FirstOrDefault()?.value_liq ?? 0m;
+        var redeemedValue = _context.redemptions
+            .Where(redemption => redemption.investment.id == investment.id)
+            .Sum(redemption => (decimal?)redemption.value) ?? 0m;
+        var remainingValue = Math.Max(0m, currentLiquidValue - redeemedValue);
+
+        if (remainingValue > 0m)
+        {
+            _context.redemptions.Add(new Redemption
+            {
+                investment = investment,
+                title = "Resgate ao arquivar",
+                date = redemptionDate,
+                value = remainingValue,
+                is_archive_redemption = true,
+            });
+        }
+
+        investment.archived = true;
+        _context.investments.Update(investment);
+    }
+
     private static string? BuildInvestmentLimitRestrictionMessage(Plan plan, int count, int limit, bool canCreate, bool isOverLimit)
     {
         if (limit == int.MaxValue)
@@ -299,11 +330,11 @@ public class InvestmentsController : AuthenticatedController
         var calculators = new Dictionary<IdexesType, ICalculator>();
         var result = new List<MonthlyTaxProjectionResponse>();
 
-        // Do mês atual voltamos 11 meses; depois projetamos os 12 meses seguintes.
-        for (var monthOffset = -11; monthOffset <= 12; monthOffset++)
+        // Exibe os 12 meses concluídos e projeta 12 meses, começando pelo mês atual.
+        for (var monthOffset = -12; monthOffset <= 11; monthOffset++)
         {
             var monthStart = currentMonth.AddMonths(monthOffset);
-            var cutoff = monthOffset == 0 ? now : monthStart.AddMonths(1).AddTicks(-1);
+            var cutoff = monthStart.AddMonths(1).AddTicks(-1);
             decimal liquidEarnings = 0m;
             decimal irValue = 0m;
             decimal iofValue = 0m;
@@ -356,7 +387,7 @@ public class InvestmentsController : AuthenticatedController
                 roundedIrValue,
                 roundedIofValue,
                 roundedIrValue + roundedIofValue,
-                monthOffset > 0));
+                monthOffset >= 0));
         }
 
         return result;
@@ -543,8 +574,7 @@ public class InvestmentsController : AuthenticatedController
 
         if (replacementSource is not null)
         {
-            replacementSource.archived = true;
-            _context.investments.Update(replacementSource);
+            ArchiveInvestmentWithRedemption(replacementSource, now);
         }
 
         if (request.ai_extracted)
@@ -656,8 +686,20 @@ public class InvestmentsController : AuthenticatedController
         if (request.archived && !CanArchiveOrReinvestBeforeDueDate(investment.due_date))
             throw new ExpectedException("Somente investimentos vencidos ou a até 5 dias corridos do vencimento podem ser arquivados.");
 
-        investment.archived = request.archived;
-        _context.investments.Update(investment);
+        if (request.archived && !investment.archived)
+        {
+            ArchiveInvestmentWithRedemption(investment, DateTime.UtcNow);
+        }
+        else if (!request.archived && investment.archived)
+        {
+            var automaticRedemptions = _context.redemptions
+                .Where(redemption => redemption.investment.id == investment.id && redemption.is_archive_redemption)
+                .ToList();
+
+            _context.redemptions.RemoveRange(automaticRedemptions);
+            investment.archived = false;
+            _context.investments.Update(investment);
+        }
         _context.SaveChanges();
 
         return NoContent();

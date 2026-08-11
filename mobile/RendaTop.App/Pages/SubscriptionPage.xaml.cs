@@ -7,26 +7,16 @@ namespace RendaTop.App.Pages;
 public partial class SubscriptionPage : ContentPage
 {
     private readonly SubscriptionService _subscriptions;
-    private readonly UserSettingsService _settingsService;
-    private readonly AppPlatformService _platform;
-    private readonly StoreBillingService _storeBilling;
     private readonly NotificationTitleView _titleView;
     private IReadOnlyList<PlanDto> _plans = [];
     private SubscriptionOverviewDto? _overview;
-    private UserSettingsDto? _settings;
     private CancellationTokenSource? _pollCts;
 
     public SubscriptionPage(
         SubscriptionService subscriptions,
-        UserSettingsService settingsService,
-        AppPlatformService platform,
-        StoreBillingService storeBilling,
         NotificationService notifications)
     {
         _subscriptions = subscriptions;
-        _settingsService = settingsService;
-        _platform = platform;
-        _storeBilling = storeBilling;
         InitializeComponent();
         _titleView = NotificationChrome.Apply(this, "Assinatura", notifications);
     }
@@ -54,13 +44,11 @@ public partial class SubscriptionPage : ContentPage
         {
             var plansTask = _subscriptions.GetPlansAsync();
             var overviewTask = _subscriptions.GetOverviewAsync();
-            var settingsTask = _settingsService.GetAsync();
 
-            await Task.WhenAll(plansTask, overviewTask, settingsTask);
+            await Task.WhenAll(plansTask, overviewTask);
 
             _plans = plansTask.Result;
             _overview = overviewTask.Result;
-            _settings = settingsTask.Result;
 
             BindPlans();
             BindOverview();
@@ -197,18 +185,6 @@ public partial class SubscriptionPage : ContentPage
 
         if (row.Plan.Price <= 0)
             return;
-
-        if (_platform.UsesNativeStoreBilling)
-        {
-            var checkout = _storeBilling.GetCheckoutInfo(row.Plan);
-            await Shell.Current.GoToAsync(
-                $"{nameof(StoreSubscriptionCheckoutPage)}?planId={row.Plan.Id}");
-
-            if (!checkout.IsNativePurchaseEnabled)
-                ShowNotice(checkout.BlockingReason ?? "Checkout nativo indisponivel.");
-
-            return;
-        }
 
         await Shell.Current.GoToAsync($"{nameof(SubscriptionCheckoutPage)}?planId={row.Plan.Id}");
     }

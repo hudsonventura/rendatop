@@ -187,7 +187,6 @@ public class SubscriptionController : AuthenticatedController
         }
     }
 
-
     /// <summary>
     /// Cria/atualiza assinatura com pagamento via cartão
     /// </summary>

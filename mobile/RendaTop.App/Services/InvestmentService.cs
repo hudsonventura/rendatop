@@ -1,4 +1,5 @@
 using RendaTop.App.Models;
+using System.Net.Http.Headers;
 
 namespace RendaTop.App.Services;
 
@@ -82,6 +83,27 @@ public sealed class InvestmentService
     {
         var banks = await _apiClient.GetAsync<List<BankDto>>("/Banks", cancellationToken);
         return banks ?? [];
+    }
+
+    public async Task<InvestmentDocumentExtractionDto> ExtractInvestmentFromDocumentAsync(
+        FileResult file,
+        CancellationToken cancellationToken = default)
+    {
+        if (file is null || string.IsNullOrWhiteSpace(file.FileName))
+            throw new ApiException("Selecione um arquivo para ler o comprovante.", 400);
+
+        await using var stream = await file.OpenReadAsync();
+        using var content = new MultipartFormDataContent();
+        using var fileContent = new StreamContent(stream);
+
+        if (!string.IsNullOrWhiteSpace(file.ContentType))
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+
+        content.Add(fileContent, "file", file.FileName);
+
+        return await _apiClient.PostMultipartAsync<InvestmentDocumentExtractionDto>(
+                   "/Investments/extract", content, cancellationToken)
+               ?? throw new ApiException("A leitura do comprovante nao retornou dados.", 502);
     }
 
     public async Task<Guid> CreateInvestmentAsync(InvestmentRequestDto request, CancellationToken cancellationToken = default)
