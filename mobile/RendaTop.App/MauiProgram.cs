@@ -31,6 +31,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<AuthService>();
 		builder.Services.AddSingleton<InvestmentCacheService>();
 		builder.Services.AddSingleton<InvestmentService>();
+		builder.Services.AddSingleton<SharedInvestmentDocumentService>();
 		builder.Services.AddSingleton<CalendarService>();
 		builder.Services.AddSingleton<NotificationService>();
 		builder.Services.AddSingleton<WalletService>();

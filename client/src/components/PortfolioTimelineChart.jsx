@@ -5,7 +5,7 @@ import { useTheme } from "next-themes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { addDays, diffInDays, getInvestmentLiquidValueAtDate, startOfDay } from "@/utils/investment-timeline"
+import { addDays, diffInDays, getInvestmentLiquidValueAtDate, getInvestmentLiquidValueWithoutRedemptionsAtDate, startOfDay } from "@/utils/investment-timeline"
 
 const CHART_COLORS = [
     "var(--chart-1)",
@@ -57,6 +57,17 @@ function getBankKey(bankName) {
         .toLowerCase()}`
 }
 
+function isCurrentlyActiveInvestment(investment, today) {
+    if (!investment || investment.archived) return false
+    if (investment.due_date) {
+        const dueDate = startOfDay(new Date(investment.due_date))
+        if (!Number.isNaN(dueDate.getTime()) && dueDate < today) {
+            return false
+        }
+    }
+    return true
+}
+
 function buildTimelineData(investments) {
     const validInvestments = (investments ?? []).filter((investment) => investment?.date_buy)
     if (validInvestments.length === 0) return []
@@ -91,6 +102,8 @@ function buildTimelineData(investments) {
     }, startOfDay(new Date(validInvestments[0].date_buy)))
 
     const today = startOfDay(new Date())
+    const activeInvestmentsForProjection = validInvestments.filter((inv) => isCurrentlyActiveInvestment(inv, today))
+
     const lastInvestmentDate = validInvestments.reduce((latest, investment) => {
         if (!investment?.due_date) return latest
 
@@ -107,6 +120,7 @@ function buildTimelineData(investments) {
     for (let offset = 0; offset <= totalDays; offset += 1) {
         const currentDate = addDays(firstInvestmentDate, offset)
         const bankTotals = Object.fromEntries(bankSeries.map(({ key }) => [key, 0]))
+        let totalWithoutRedemptions = 0
 
         for (const investment of validInvestments) {
             const value = getInvestmentLiquidValueAtDate(investment, currentDate)
@@ -114,11 +128,16 @@ function buildTimelineData(investments) {
             bankTotals[bankKey] += value
         }
 
+        for (const investment of activeInvestmentsForProjection) {
+            totalWithoutRedemptions += getInvestmentLiquidValueWithoutRedemptionsAtDate(investment, currentDate)
+        }
+
         const liquidValue = Object.values(bankTotals).reduce((sum, value) => sum + value, 0)
 
         chartData.push({
             date: currentDate.toISOString(),
             liquidValue: Number(liquidValue.toFixed(2)),
+            noRedemptionsValue: Number(totalWithoutRedemptions.toFixed(2)),
             ...Object.fromEntries(
                 Object.entries(bankTotals).map(([key, value]) => [key, Number(value.toFixed(2))])
             ),
@@ -179,6 +198,7 @@ export default function PortfolioTimelineChart({ investments }) {
         return Array.isArray(result) ? { chartData: result, bankSeries: [] } : result
     }, [investments])
     const todayIso = React.useMemo(() => startOfDay(new Date()).toISOString(), [])
+    const today = React.useMemo(() => startOfDay(new Date()), [])
     const [selectedBanks, setSelectedBanks] = React.useState([])
 
     React.useEffect(() => {
@@ -194,19 +214,32 @@ export default function PortfolioTimelineChart({ investments }) {
             return chartData
         }
 
+        const visibleBankKeys = new Set(visibleBankSeries.map((series) => series.key))
+        const visibleInvestmentsForProjection = (investments ?? []).filter((investment) => {
+            if (!isCurrentlyActiveInvestment(investment, today)) return false
+            const bankName = getBankName(investment)
+            return visibleBankKeys.has(getBankKey(bankName))
+        })
+
         return chartData.map((point) => {
+            const currentDate = new Date(point.date)
             const liquidValue = visibleBankSeries.reduce(
                 (sum, series) => sum + Number(point[series.key] ?? 0),
                 0
             )
+            const noRedemptionsValue = visibleInvestmentsForProjection.reduce((sum, investment) => {
+                return sum + getInvestmentLiquidValueWithoutRedemptionsAtDate(investment, currentDate)
+            }, 0)
 
             return {
                 ...point,
                 liquidValue: Number(liquidValue.toFixed(2)),
+                noRedemptionsValue: Number(noRedemptionsValue.toFixed(2)),
             }
         })
-    }, [bankSeries.length, chartData, visibleBankSeries])
+    }, [bankSeries.length, chartData, visibleBankSeries, investments, today])
     const totalLineColor = resolvedTheme === "dark" ? "#FFFFFF" : "#6B7280"
+    const noRedemptionsColor = "#10B981"
 
     if (!investments) {
         return <TimelineSkeleton />
@@ -233,9 +266,11 @@ export default function PortfolioTimelineChart({ investments }) {
             <CardHeader className="pb-2">
                 <CardTitle>Evolução da carteira</CardTitle>
                 <CardDescription>
-                    <b>Valor líquido</b> de todos seus investimento <small>(incluindo itens arquivados)</small>
+                    <b>Valor líquido</b> de todos seus investimentos <small>(incluindo itens arquivados)</small>
                     <br />
-                    <small>As linhas de valores no gráfico consideram o valor inicial, o valor liquido atual e o valor final previsto no vencimento de cada investimento.</small>
+                    <small>As linhas de valores consideram a evolução inicial, o valor líquido atual e a projeção final nos vencimentos.</small>
+                    <br />
+                    <small className="text-emerald-600 font-medium">Linha verde tracejada: Projeção de rendimento líquido dos investimentos <b>ativos hoje</b>, considerando <b>nenhum resgate</b> até o vencimento do último investimento.</small>
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -296,6 +331,10 @@ export default function PortfolioTimelineChart({ investments }) {
                                     <stop offset="5%" stopColor={totalLineColor} stopOpacity={0.80} />
                                     <stop offset="95%" stopColor={totalLineColor} stopOpacity={0.03} />
                                 </linearGradient>
+                                <linearGradient id="portfolio-no-redemptions-fill" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={noRedemptionsColor} stopOpacity={0.20} />
+                                    <stop offset="95%" stopColor={noRedemptionsColor} stopOpacity={0.01} />
+                                </linearGradient>
                                 {bankSeries.map((series) => (
                                     <linearGradient key={series.key} id={`fill-${series.key}`} x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor={series.color} stopOpacity={0.16} />
@@ -341,6 +380,18 @@ export default function PortfolioTimelineChart({ investments }) {
                             />
                             <Area
                                 type="linear"
+                                dataKey="noRedemptionsValue"
+                                stroke={noRedemptionsColor}
+                                strokeWidth={3}
+                                strokeDasharray="6 4"
+                                fill="url(#portfolio-no-redemptions-fill)"
+                                fillOpacity={1}
+                                dot={false}
+                                activeDot={{ r: 5, stroke: noRedemptionsColor, strokeWidth: 2 }}
+                                name="Projeção (sem resgates)"
+                            />
+                            <Area
+                                type="linear"
                                 dataKey="liquidValue"
                                 stroke={totalLineColor}
                                 strokeWidth={4}
@@ -348,7 +399,7 @@ export default function PortfolioTimelineChart({ investments }) {
                                 fillOpacity={1}
                                 dot={false}
                                 activeDot={{ r: 5, stroke: totalLineColor, strokeWidth: 2 }}
-                                name="Total"
+                                name="Total (com resgates)"
                             />
                             {visibleBankSeries.map((series) => (
                                 <Area
@@ -372,3 +423,4 @@ export default function PortfolioTimelineChart({ investments }) {
         </Card>
     )
 }
+

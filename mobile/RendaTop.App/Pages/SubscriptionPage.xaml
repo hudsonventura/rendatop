@@ -36,29 +36,26 @@
                                 <RoundRectangle CornerRadius="18" />
                             </Border.StrokeShape>
                             <VerticalStackLayout Spacing="14">
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                    <VerticalStackLayout Spacing="6">
-                                        <HorizontalStackLayout Spacing="8">
-                                            <Label Text="{Binding Name}" FontSize="20" FontAttributes="Bold" TextColor="#111827" />
-                                            <Border x:Name="PlanBadge" BackgroundColor="{Binding BadgeBackground}" StrokeThickness="0" Padding="10,4" IsVisible="{Binding HasBadge}">
-                                                <Border.StrokeShape>
-                                                    <RoundRectangle CornerRadius="999" />
-                                                </Border.StrokeShape>
-                                                <Label Text="{Binding BadgeText}" FontSize="11" FontAttributes="Bold" TextColor="{Binding BadgeTextColor}" />
-                                            </Border>
-                                        </HorizontalStackLayout>
-                                        <Label Text="{Binding PriceLabel}" FontSize="28" FontAttributes="Bold" TextColor="#111827" />
-                                    </VerticalStackLayout>
-                                    <Button
-                                        Grid.Column="1"
-                                        Text="{Binding ActionLabel}"
-                                        VerticalOptions="Start"
-                                        BackgroundColor="{Binding ActionBackground}"
-                                        BorderColor="{Binding ActionBorder}"
-                                        BorderWidth="{Binding ActionBorderWidth}"
-                                        TextColor="{Binding ActionTextColor}"
-                                        Clicked="OnPlanActionClicked" />
-                                </Grid>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="{Binding Name}" FontSize="20" FontAttributes="Bold" TextColor="#111827" />
+                                    <Border x:Name="PlanBadge" BackgroundColor="{Binding BadgeBackground}" StrokeThickness="0" Padding="10,4" IsVisible="{Binding HasBadge}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="999" />
+                                        </Border.StrokeShape>
+                                        <Label Text="{Binding BadgeText}" FontSize="11" FontAttributes="Bold" TextColor="{Binding BadgeTextColor}" />
+                                    </Border>
+                                </HorizontalStackLayout>
+
+                                <Label Text="{Binding PriceLabel}" FontSize="28" FontAttributes="Bold" TextColor="#111827" />
+
+                                <Button
+                                    Text="{Binding ActionLabel}"
+                                    HorizontalOptions="Fill"
+                                    BackgroundColor="{Binding ActionBackground}"
+                                    BorderColor="{Binding ActionBorder}"
+                                    BorderWidth="{Binding ActionBorderWidth}"
+                                    TextColor="{Binding ActionTextColor}"
+                                    Clicked="OnPlanActionClicked" />
 
                                 <CollectionView ItemsSource="{Binding FeatureItems}" SelectionMode="None">
                                     <CollectionView.ItemTemplate>

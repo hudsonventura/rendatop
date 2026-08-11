@@ -18,12 +18,17 @@ public sealed class SubscriptionService
         => await _apiClient.GetAsync<SubscriptionOverviewDto>("/subscription/overview", cancellationToken)
            ?? new SubscriptionOverviewDto();
 
-    public async Task<PaymentResultDto> StartHostedCheckoutAsync(string planId, CancellationToken cancellationToken = default)
-        => await _apiClient.PostAsync<HostedSubscriptionCheckoutRequestDto, PaymentResultDto>(
-               "/subscription/checkout",
-               new HostedSubscriptionCheckoutRequestDto(planId),
-               cancellationToken)
-           ?? throw new ApiException("Resposta invalida ao criar o checkout do Mercado Pago.", 500);
+    public async Task<PaymentResultDto> StartCardCheckoutAsync(CardHostedCheckoutRequestDto request, CancellationToken cancellationToken = default)
+        => await _apiClient.PostAsync<CardHostedCheckoutRequestDto, PaymentResultDto>("/subscription/card", request, cancellationToken)
+           ?? throw new ApiException("Resposta invalida ao criar o checkout de cartao.", 500);
+
+    public async Task<PaymentResultDto> StartPixCheckoutAsync(PixHostedCheckoutRequestDto request, CancellationToken cancellationToken = default)
+        => await _apiClient.PostAsync<PixHostedCheckoutRequestDto, PaymentResultDto>("/subscription/pix", request, cancellationToken)
+           ?? throw new ApiException("Resposta invalida ao criar o checkout PIX.", 500);
+
+    public async Task<PaymentResultDto> StartBoletoCheckoutAsync(BoletoHostedCheckoutRequestDto request, CancellationToken cancellationToken = default)
+        => await _apiClient.PostAsync<BoletoHostedCheckoutRequestDto, PaymentResultDto>("/subscription/boleto", request, cancellationToken)
+           ?? throw new ApiException("Resposta invalida ao criar o checkout de boleto.", 500);
 
     public async Task<PaymentResultDto> GetPaymentStatusAsync(string paymentId, CancellationToken cancellationToken = default)
         => await _apiClient.GetAsync<PaymentResultDto>($"/subscription/payment-status/{paymentId}", cancellationToken)

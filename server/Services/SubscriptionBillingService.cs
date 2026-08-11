@@ -78,14 +78,6 @@ public class SubscriptionBillingService
         return await CreateInitialHostedSubscriptionAsync(userId, plan, paymentMethod, cancellationToken);
     }
 
-    public Task<PaymentResult> CreateHostedSubscriptionCheckoutAsync(
-        Guid userId,
-        Plan plan,
-        CancellationToken cancellationToken = default)
-    {
-        return CreateInitialHostedSubscriptionAsync(userId, plan, "mercado_pago", cancellationToken);
-    }
-
     public async Task<PaymentResult> CreateInitialPixSubscriptionAsync(
         Guid userId,
         Plan plan,

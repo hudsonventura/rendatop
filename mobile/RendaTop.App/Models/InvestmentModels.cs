@@ -160,6 +160,42 @@ public sealed record InvestmentRequestDto
     public bool AiExtracted { get; init; }
 }
 
+public sealed record InvestmentDocumentExtractionDto
+{
+    [JsonPropertyName("title")]
+    public string? Title { get; init; }
+
+    [JsonPropertyName("investment_type")]
+    public int? InvestmentType { get; init; }
+
+    [JsonPropertyName("bank_code")]
+    public int? BankCode { get; init; }
+
+    [JsonPropertyName("date_buy")]
+    public DateTime? DateBuy { get; init; }
+
+    [JsonPropertyName("due_date")]
+    public DateTime? DueDate { get; init; }
+
+    [JsonPropertyName("value")]
+    public decimal? Value { get; init; }
+
+    [JsonPropertyName("index")]
+    public int? Index { get; init; }
+
+    [JsonPropertyName("index_percent")]
+    public decimal? IndexPercent { get; init; }
+
+    [JsonPropertyName("taxes")]
+    public bool? Taxes { get; init; }
+
+    [JsonPropertyName("liquidez_diaria")]
+    public bool? DailyLiquidity { get; init; }
+
+    [JsonPropertyName("notes")]
+    public string? Notes { get; init; }
+}
+
 public sealed record ArchiveInvestmentRequestDto
 {
     [JsonPropertyName("archived")]

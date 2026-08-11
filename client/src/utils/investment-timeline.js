@@ -41,7 +41,8 @@ function interpolateValue(startValue, endValue, startDate, endDate, targetDate) 
     return startValue + ((endValue - startValue) * progress)
 }
 
-function getBaseInvestmentValueAtDate(investment, date) {
+function getBaseInvestmentValueAtDate(investment, date, options = {}) {
+    const { keepMaturedValue = false } = options
     const initialValue = getOriginalInvestedValue(investment)
     if (initialValue <= 0 || !investment.date_buy) return 0
 
@@ -58,7 +59,7 @@ function getBaseInvestmentValueAtDate(investment, date) {
 
     if (finishDate && !Number.isNaN(finishDate.getTime())) {
         if (targetDate > finishDate) {
-            return 0
+            return keepMaturedValue ? finalFullValue : 0
         }
 
         if (finishDate <= today) {
@@ -130,3 +131,8 @@ export function getInvestmentLiquidValueAtDate(investment, date) {
 
     return getBaseInvestmentValueAtDate(investment, targetDate) * remainingShare
 }
+
+export function getInvestmentLiquidValueWithoutRedemptionsAtDate(investment, date) {
+    return getBaseInvestmentValueAtDate(investment, date, { keepMaturedValue: true })
+}
+

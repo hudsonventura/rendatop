@@ -8,6 +8,7 @@ import InvestmentsDueSoon from "@/components/InvestmentsDueSoon";
 import BanksPieChart from "@/components/BanksPieChart";
 import PortfolioTimelineChart from "@/components/PortfolioTimelineChart";
 import MonthlyNetTaxChart from "@/components/MonthlyNetTaxChart";
+import ApplicationsRedemptionsChart from "@/components/ApplicationsRedemptionsChart";
 import Logged from "@/components/Logged";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -151,7 +152,7 @@ const Home = () => {
         <>
             <Logged />
             <BaseLayout title="Dashboard" description="Veja a distribuição por banco e os vencimentos dos próximos 30 dias">
-                <div className="px-4 lg:px-6 space-y-6">
+                <div className="grid gap-6 px-4 lg:grid-cols-2 lg:px-6">
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
                             <h2 className="text-lg font-semibold tracking-tight">Vencimentos dos próximos 30 dias</h2>
@@ -171,6 +172,7 @@ const Home = () => {
                             />
                         )}
                     </div>
+                    <ApplicationsRedemptionsChart investments={loadingInvestments ? null : investments} />
                 </div>
                 <BanksPieChart investments={loadingInvestments ? null : investments} />
                 <MonthlyNetTaxChart data={loadingInvestments ? null : monthlyTaxProjection} />
