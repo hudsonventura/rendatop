@@ -40,6 +40,12 @@ public class Redemption
     /// </summary>
     public decimal value { get; set; }
 
+    /// <summary>
+    /// Indica que o resgate foi registrado automaticamente ao arquivar o investimento.
+    /// Esse registro é removido caso o investimento seja desarquivado.
+    /// </summary>
+    public bool is_archive_redemption { get; set; }
+
 
     public Redemption(){}
     

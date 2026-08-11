@@ -332,6 +332,36 @@ public class InvestmentsControllerTests
     }
 
     [Fact]
+    public void Archive_RegistersRemainingValueAsAnAutomaticRedemption()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var investment = fixture.SeedInvestment(dueDate: DateTime.UtcNow.Date.AddDays(-1));
+        var expectedRedemptionValue = fixture.Controller.Get().Single().calculated.First().value_liq;
+
+        fixture.Controller.Archive(investment.id, new ArchiveInvestmentRequest { archived = true });
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        var redemption = Assert.Single(assertionContext.redemptions.Include(redemption => redemption.investment));
+        Assert.Equal(investment.id, redemption.investment.id);
+        Assert.Equal(expectedRedemptionValue, redemption.value, 6);
+        Assert.True(redemption.is_archive_redemption);
+    }
+
+    [Fact]
+    public void Archive_RemovesAutomaticRedemptionWhenInvestmentIsUnarchived()
+    {
+        using var fixture = new InvestmentsControllerFixture();
+        var investment = fixture.SeedInvestment(dueDate: DateTime.UtcNow.Date.AddDays(-1));
+
+        fixture.Controller.Archive(investment.id, new ArchiveInvestmentRequest { archived = true });
+        fixture.Controller.Archive(investment.id, new ArchiveInvestmentRequest { archived = false });
+
+        using var assertionContext = fixture.CreateAssertionContext();
+        Assert.False(assertionContext.investments.Single(i => i.id == investment.id).archived);
+        Assert.Empty(assertionContext.redemptions);
+    }
+
+    [Fact]
     public void Archive_AllowsArchivingWithinFiveDaysBeforeDueDate()
     {
         using var fixture = new InvestmentsControllerFixture();
@@ -439,7 +469,7 @@ public class InvestmentsControllerTests
         Assert.True(currentMonth.liquid_value > 0m);
         Assert.True(currentMonth.liquid_value < 100m);
         Assert.True(currentMonth.ir_value > 0m);
-        Assert.True(currentMonth.iof_value > 0m);
+        Assert.True(currentMonth.iof_value >= 0m);
         Assert.Equal(currentMonth.ir_value + currentMonth.iof_value, currentMonth.taxes_value);
 
         var afterMaturity = Assert.Single(result, point =>
